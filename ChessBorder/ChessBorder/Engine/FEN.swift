@@ -1,0 +1,93 @@
+import Foundation
+
+extension ChessGame {
+    /// FEN for Fairy-Stockfish (10×10 border chess, ranks 10→1 top to bottom).
+    func toFEN() -> String {
+        var ranks: [String] = []
+        for row in 0..<BoardConstants.size {
+            ranks.append(fenRank(row: row))
+        }
+        let placement = ranks.joined(separator: "/")
+        let side = activeColor == .white ? "w" : "b"
+        let castle = fenCastling()
+        let ep = enPassantTarget?.engineNotation ?? "-"
+        return "\(placement) \(side) \(castle) \(ep) \(halfmoveClock) \(fullmoveNumber)"
+    }
+
+    private func fenRank(row: Int) -> String {
+        var result = ""
+        var empty = 0
+        for col in 0..<BoardConstants.size {
+            if let piece = board[row][col] {
+                if empty > 0 {
+                    result += String(empty)
+                    empty = 0
+                }
+                result += fenCharacter(for: piece)
+            } else {
+                empty += 1
+            }
+        }
+        if empty > 0 {
+            result += String(empty)
+        }
+        return result
+    }
+
+    private func fenCharacter(for piece: Piece) -> String {
+        let ch = String(piece.kind.rawValue)
+        return piece.color == .white ? ch : ch.lowercased()
+    }
+
+    private func fenCastling() -> String {
+        var s = ""
+        if castlingRights.whiteKingSide { s += "K" }
+        if castlingRights.whiteQueenSide { s += "Q" }
+        if castlingRights.blackKingSide { s += "k" }
+        if castlingRights.blackQueenSide { s += "q" }
+        return s.isEmpty ? "-" : s
+    }
+
+    /// Parse standard UCI (e2e4) for human/bot moves on the inner 8×8.
+    func move(from uci: String) -> Move? {
+        matchMove(uci: uci, preferEngineCoordinates: false)
+    }
+
+    /// Parse Fairy-Stockfish UCI (10×10 files a–j, ranks 1–10).
+    func move(fromEngineUCI uci: String) -> Move? {
+        matchMove(uci: uci, preferEngineCoordinates: true)
+    }
+
+    private func matchMove(uci: String, preferEngineCoordinates: Bool) -> Move? {
+        let trimmed = uci.trimmingCharacters(in: .whitespaces).lowercased()
+
+        let from: Square?
+        let to: Square?
+        let promotion: PieceKind?
+
+        if preferEngineCoordinates, let parsed = UCIParser.parseEngineMove(trimmed) {
+            from = parsed.from
+            to = parsed.to
+            promotion = parsed.promotion
+        } else {
+            guard trimmed.count >= 4 else { return nil }
+            let fromStr = String(trimmed.prefix(2))
+            let toStr = String(trimmed.dropFirst(2).prefix(2))
+            let promoChar = trimmed.count > 4 ? trimmed.last! : nil
+            from = Square.fromStandardNotation(fromStr) ?? Square.fromEngineNotation(fromStr)
+            to = Square.fromStandardNotation(toStr) ?? Square.fromEngineNotation(toStr)
+            promotion = promoChar.flatMap { ch in
+                PieceKind(rawValue: Character(String(ch).uppercased()))
+            }
+        }
+
+        guard let from, let to, to.isValid else { return nil }
+
+        let candidates = legalMoves(for: activeColor).filter {
+            $0.from == from && $0.to == to && $0.promotion == promotion
+        }
+        return candidates.first ?? legalMoves(for: activeColor).first {
+            $0.from == from && $0.to == to
+        }
+    }
+}

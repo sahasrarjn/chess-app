@@ -1,0 +1,32 @@
+Chess Border
+Copyright (C) 2026 Sahasra Ranjan
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+---
+
+## Why GPL v3?
+
+This app embeds or bundles **Fairy-Stockfish** / **Stockfish** (GPL v3 chess engines).
+Linking or combining with GPL software requires distributing this app under GPL v3
+and providing corresponding source code.
+
+## Commercial sale
+
+You **may sell** this app (Mac App Store, your website, etc.) under GPL v3.
+Buyers receive the same rights: run, modify, and redistribute the software.
+You must provide source code to users who receive the binary — typically via
+a public Git repository and/or a "Source code" link in the app.
+
+See also: [Stockfish license FAQ](https://stockfishchess.org/about/)

@@ -1,0 +1,9 @@
+.DS_Store
+build/
+DerivedData/
+ChessBorder/build/
+ChessBorder/ChessBorder/Resources/Engine/fairy-stockfish
+ChessBorder/ChessBorder/Resources/Engine/fairy-stockfish-ios
+ChessBorder/build/fairy-stockfish/
+*.xcuserstate
+xcuserdata/

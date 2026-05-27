@@ -1,0 +1,105 @@
+import SwiftUI
+
+struct HomeView: View {
+    @State private var selectedMode: GameMode?
+    @State private var selectedDifficulty: BotDifficulty = .medium
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                BoardTheme.background.ignoresSafeArea()
+
+                VStack(spacing: 32) {
+                    VStack(spacing: 8) {
+                        Image(systemName: "square.grid.3x3.bottomleft.filled")
+                            .font(.system(size: 48))
+                            .foregroundStyle(BoardTheme.accent)
+
+                        Text("Chess Border")
+                            .font(.largeTitle.bold())
+                            .foregroundStyle(.white)
+
+                        Text("Standard chess on a 10×10 board\nwith room to maneuver on every side")
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+                    .padding(.top, 40)
+
+                    VStack(spacing: 14) {
+                        ForEach(GameMode.allCases) { mode in
+                            if mode == .vsBot {
+                                VStack(spacing: 10) {
+                                    NavigationLink {
+                                        GameView(mode: .vsBot, difficulty: selectedDifficulty)
+                                    } label: {
+                                        ModeButtonLabel(title: mode.rawValue, subtitle: "Single player vs computer")
+                                    }
+
+                                    Picker("Difficulty", selection: $selectedDifficulty) {
+                                        ForEach(BotDifficulty.allCases) { level in
+                                            Text(level.rawValue).tag(level)
+                                        }
+                                    }
+                                    .pickerStyle(.segmented)
+                                    .padding(.horizontal, 4)
+                                }
+                            } else {
+                                NavigationLink {
+                                    GameView(mode: mode)
+                                } label: {
+                                    ModeButtonLabel(title: mode.rawValue, subtitle: "Two players, one iPhone")
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 24)
+
+                    Spacer()
+
+                    VStack(spacing: 4) {
+                        Text("Bot: \(BotProvider.engineName)")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.45))
+                        Text("Pieces: Lichess Cburnett · GPL v3 app")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.45))
+                    }
+                    .padding(.bottom, 24)
+                }
+            }
+            .chessAppNavigationChromeHidden()
+        }
+    }
+}
+
+private struct ModeButtonLabel: View {
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.headline)
+            Text(subtitle)
+                .font(.caption)
+                .opacity(0.75)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .foregroundStyle(.white)
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.white.opacity(0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(BoardTheme.accent.opacity(0.35), lineWidth: 1)
+                )
+        )
+    }
+}
+
+#Preview {
+    HomeView()
+}

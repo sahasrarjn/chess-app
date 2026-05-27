@@ -1,8 +1,11 @@
 import SwiftUI
 
 struct HomeView: View {
-    @State private var selectedMode: GameMode?
     @State private var selectedDifficulty: BotDifficulty = .medium
+    #if os(iOS)
+    @State private var engineServerURL = BotServerConfig.urlString
+    @State private var engineAPIKey = BotServerConfig.apiKeyString
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -34,7 +37,7 @@ struct HomeView: View {
                                     NavigationLink {
                                         GameView(mode: .vsBot, difficulty: selectedDifficulty)
                                     } label: {
-                                        ModeButtonLabel(title: mode.rawValue, subtitle: "Single player vs computer")
+                                        ModeButtonLabel(title: mode.rawValue, subtitle: botModeSubtitle)
                                     }
 
                                     Picker("Difficulty", selection: $selectedDifficulty) {
@@ -44,6 +47,39 @@ struct HomeView: View {
                                     }
                                     .pickerStyle(.segmented)
                                     .padding(.horizontal, 4)
+
+                                    #if os(iOS)
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text("Engine server")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.white.opacity(0.7))
+                                        TextField("https://your-engine.example.com", text: $engineServerURL)
+                                            .textInputAutocapitalization(.never)
+                                            .autocorrectionDisabled()
+                                            .keyboardType(.URL)
+                                            .font(.caption)
+                                            .padding(10)
+                                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                                            .onChange(of: engineServerURL) { _, newValue in
+                                                BotServerConfig.urlString = newValue
+                                            }
+                                        TextField("API key (optional)", text: $engineAPIKey)
+                                            .textInputAutocapitalization(.never)
+                                            .autocorrectionDisabled()
+                                            .font(.caption)
+                                            .padding(10)
+                                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                                            .onChange(of: engineAPIKey) { _, newValue in
+                                                BotServerConfig.apiKeyString = newValue
+                                            }
+                                        if BotProvider.needsServerConfiguration {
+                                            Text("Required on iPhone — deploy with server/aws/deploy.sh")
+                                                .font(.caption2)
+                                                .foregroundStyle(.orange.opacity(0.9))
+                                        }
+                                    }
+                                    .padding(.horizontal, 4)
+                                    #endif
                                 }
                             } else {
                                 NavigationLink {
@@ -71,6 +107,14 @@ struct HomeView: View {
             }
             .chessAppNavigationChromeHidden()
         }
+    }
+
+    private var botModeSubtitle: String {
+        #if os(iOS) && !targetEnvironment(simulator)
+        return "Fairy-Stockfish via your server"
+        #else
+        return "Single player vs Fairy-Stockfish"
+        #endif
     }
 }
 

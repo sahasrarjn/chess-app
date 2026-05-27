@@ -23,6 +23,7 @@ final class GameViewModel: ObservableObject {
     @Published var boardFlipped = false
     @Published var previewPly: Int?
     @Published var activeMoveAnimation: ActiveMoveAnimation?
+    @Published private(set) var botEngineError: String?
 
     let mode: GameMode
     let botDifficulty: BotDifficulty
@@ -280,6 +281,7 @@ final class GameViewModel: ObservableObject {
         boardFlipped = false
         previewPly = nil
         activeMoveAnimation = nil
+        botEngineError = nil
         notifyChange()
     }
 
@@ -306,6 +308,7 @@ final class GameViewModel: ObservableObject {
             return
         }
         isThinking = true
+        botEngineError = nil
         BotLogging.debug("maybePlayBotMove: started ply=\(game.recordedMoves.count)")
 
         Task { @MainActor in
@@ -349,16 +352,15 @@ final class GameViewModel: ObservableObject {
                 return
             }
 
-            BotLogging.debug("maybePlayBotMove: primary move failed, trying first legal")
-            if let fallback = self.game.legalMoves().first,
-               let piece = self.game.piece(at: fallback.from),
-               self.game.applyMove(fallback) {
-                BotLogging.debug("maybePlayBotMove: applied fallback \(fallback.uci)")
-                self.beginMoveAnimation(move: fallback, piece: piece)
-                self.notifyChange()
-            } else {
-                BotLogging.debug("maybePlayBotMove: no move applied")
-            }
+            BotLogging.debug("maybePlayBotMove: no move applied")
+            #if os(iOS)
+            self.botEngineError = BotServerConfig.isConfigured
+                ? "Engine server did not return a move. Check the URL and server logs."
+                : "Set your engine server URL on the home screen (iPhone requires a remote Fairy-Stockfish)."
+            #else
+            self.botEngineError = "Bot engine unavailable."
+            #endif
+            self.notifyChange()
         }
     }
 
@@ -378,6 +380,9 @@ final class GameViewModel: ObservableObject {
     var statusText: String {
         switch result {
         case .ongoing:
+            if let botEngineError, mode == .vsBot {
+                return botEngineError
+            }
             if isBrowsingHistory {
                 return "Reviewing move \(displayedPly) of \(livePly)"
             }

@@ -4,8 +4,9 @@ An iPhone chess app with a **chess.com-inspired UI** and a **10×10 board**: sta
 
 ## Features (v1)
 
-- **Play vs Bot** — Easy / Medium / Hard via **Fairy-Stockfish** (GPL v3) on Mac; built-in minimax fallback on iOS until in-process engine ships
+- **Play vs Bot** — Fairy-Stockfish locally on Mac/Simulator; **remote engine server** on physical iPhone (see `server/`)
 - **Play with Friend** — pass-and-play on one iPhone, board auto-flips each turn
+- **Web** — same modes in the browser (`web/`), no online multiplayer
 - Standard FIDE rules: castling, en passant, promotion, check/checkmate/stalemate, 50-move rule
 - Legal move dots, last-move highlight, check highlight, pawn promotion picker
 - No online multiplayer (by design for v1)
@@ -112,30 +113,46 @@ cd ChessBorder && ./run.sh ios
 
 ### Bot on iPhone vs Mac
 
-| Platform | Bot engine |
-|----------|------------|
-| **Mac app** | Fairy-Stockfish (full strength, fast) |
-| **iOS Simulator** (on Mac) | Fairy-Stockfish via bundled subprocess |
-| **Physical iPhone** | Built-in minimax fallback (v0) |
+| Platform | Engine |
+|----------|--------|
+| **Mac app** | Fairy-Stockfish (local) |
+| **iOS Simulator** | Fairy-Stockfish (local) |
+| **Physical iPhone** | **Your server** (`server/`) — no minimax |
 
-**Can Fairy-Stockfish run locally on a real iPhone?** Not with the current subprocess approach. iOS does not allow spawning a separate engine binary from the app bundle the way macOS does — even if we cross-compiled an `iphoneos` binary. The reliable path for a future v1 is to **link Fairy-Stockfish in-process** as a static library (how most iOS chess apps ship Stockfish). For v0, play vs bot on a physical iPhone uses the built-in minimax; Mac and Simulator get Fairy-Stockfish.
+Local Stockfish on a real iPhone is not viable via subprocess (iOS sandbox). The app calls your deployed Fairy-Stockfish HTTP API instead.
+
+**Deploy the engine server:**
+
+```bash
+docker compose -f server/docker-compose.yml up --build
+```
+
+In the app home screen, set **Engine server** to your HTTPS URL (or `http://LAN_IP:8080` on the same Wi‑Fi for dev). Details: [server/README.md](server/README.md).
 
 If the iOS simulator runtime is missing, install it via **Xcode → Settings → Components**.
+
+## Web (browser)
+
+```bash
+docker compose -f server/docker-compose.yml up --build   # engine for bot
+cd web && npm install && npm run dev
+```
+
+Open http://localhost:5173/play/ — see [web/README.md](web/README.md).
 
 ## Project structure
 
 ```
-ChessBorder/
+chess-app/
 ├── ChessBorder/
-│   ├── Engine/          # 10×10 rules, move generation, validation
-│   ├── Bot/             # Fairy-Stockfish (Mac) + minimax fallback
-│   ├── ViewModels/
-│   ├── Views/           # SwiftUI UI
-│   ├── Models/
-│   ├── Theme/
-│   └── Assets.xcassets/ # Cburnett piece SVGs
-├── project.yml
-└── ChessBorder.xcodeproj
+│   ├── ChessBorder/
+│   │   ├── Engine/
+│   │   ├── Bot/             # Local + remote Fairy-Stockfish
+│   │   └── Views/
+│   ├── project.yml
+│   └── ChessBorder.xcodeproj
+├── web/                     # Browser client (Vite + TypeScript)
+└── server/                  # Dockerized Fairy-Stockfish API for iPhone + web bot
 ```
 
 ## License

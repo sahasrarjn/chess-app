@@ -1,0 +1,128 @@
+import { DMG_URL, OTA_INSTALL_URL } from "./release";
+
+export const landingHTML = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chess Border — 10×10 chess with a border twist</title>
+<meta name="description" content="Chess Border: classic chess on an 8×8 board surrounded by a one-square border. Play pass-and-play or vs a Fairy-Stockfish bot on Mac and iPhone.">
+<link rel="icon" href="/logo.png" type="image/png">
+<link rel="apple-touch-icon" href="/logo.png">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0c1117;
+    --surface: #141b24;
+    --border: rgba(255,255,255,.08);
+    --text: #f4f4f5;
+    --muted: #a1a1aa;
+    --accent: #10b981;
+    --light: #e8edf2;
+    --dark: #2d4a3e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: radial-gradient(1200px 600px at 50% -10%, rgba(16,185,129,.12), transparent), var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 24px; }
+  nav { display: flex; align-items: center; gap: 12px; padding: 8px 0 32px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 17px; }
+  .brand img { width: 32px; height: 32px; border-radius: 8px; }
+  .hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center; padding: 24px 0 56px; }
+  @media (max-width: 760px) { .hero { grid-template-columns: 1fr; } }
+  h1 { font-size: clamp(2rem, 4vw, 2.75rem); line-height: 1.12; letter-spacing: -.03em; }
+  .sub { margin-top: 14px; color: var(--muted); max-width: 34rem; }
+  .cta { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 12px 20px; border-radius: 999px; font-weight: 600; font-size: 14px;
+    text-decoration: none; border: 1px solid transparent;
+  }
+  .btn-primary { background: var(--accent); color: #04120d; }
+  .btn-ghost { border-color: var(--border); color: var(--text); background: var(--surface); }
+  .board {
+    aspect-ratio: 1; border-radius: 18px; overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: 0 24px 80px rgba(0,0,0,.45);
+    display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr);
+  }
+  .sq { }
+  .sq.border { background: #1a3d32; }
+  .sq.light { background: var(--light); }
+  .sq.dark { background: var(--dark); }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding-bottom: 48px; }
+  @media (max-width: 640px) { .cards { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 22px;
+  }
+  .card h2 { font-size: 1.1rem; margin-bottom: 8px; }
+  .card p, .card ol { color: var(--muted); font-size: 14px; }
+  .card ol { margin: 12px 0 0 18px; }
+  .card li { margin: 6px 0; }
+  footer { color: var(--muted); font-size: 13px; padding: 24px 0 40px; border-top: 1px solid var(--border); }
+  footer a { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand"><img src="/logo.png" width="32" height="32" alt=""> Chess Border</div>
+  </nav>
+
+  <section class="hero">
+    <div>
+      <h1>Chess on a 10×10 board.<br>The border matters.</h1>
+      <p class="sub">Classic FIDE rules on an inner 8×8, plus a one-square border you can step onto. Pass-and-play or vs Fairy-Stockfish — on Mac, iPhone, or in your browser.</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="/play/">Play in browser</a>
+        <a class="btn btn-ghost" href="${DMG_URL}">Download for Mac</a>
+        <a class="btn btn-ghost" href="${OTA_INSTALL_URL}">Install on iPhone</a>
+      </div>
+    </div>
+    <div class="board" aria-hidden="true">
+      ${Array.from({ length: 100 }, (_, i) => {
+        const r = Math.floor(i / 10);
+        const c = i % 10;
+        const onBorder = r === 0 || r === 9 || c === 0 || c === 9;
+        const innerR = r - 1;
+        const innerC = c - 1;
+        const light = !onBorder && (innerR + innerC) % 2 === 0;
+        const cls = onBorder ? "border" : light ? "light" : "dark";
+        return `<div class="sq ${cls}"></div>`;
+      }).join("")}
+    </div>
+  </section>
+
+  <section class="cards">
+    <div class="card">
+      <h2>Install on Mac</h2>
+      <p>Signed with Developer ID and notarized by Apple.</p>
+      <ol>
+        <li><a href="${DMG_URL}">Download ChessBorder.dmg</a></li>
+        <li>Drag <strong>Chess Border</strong> into Applications</li>
+        <li>Open from Applications (not from inside the DMG)</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h2>Install on iPhone</h2>
+      <p>Personal ad-hoc build — your device must be registered in the developer profile.</p>
+      <ol>
+        <li>Open this page in <strong>Safari</strong> on your iPhone</li>
+        <li>Tap <a href="${OTA_INSTALL_URL}">Install on iPhone</a></li>
+        <li>Settings → General → VPN &amp; Device Management → trust the developer</li>
+        <li>Enter the engine API key on the home screen (one time)</li>
+      </ol>
+    </div>
+  </section>
+
+  <footer>
+    Chess Border · <a href="/play/">Play in browser</a> · <a href="${DMG_URL}">Mac download</a> · Engine API at <a href="/health">/health</a>
+  </footer>
+</div>
+</body>
+</html>`;

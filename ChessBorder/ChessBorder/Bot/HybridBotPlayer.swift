@@ -1,8 +1,11 @@
 import Foundation
 
-/// Uses Fairy-Stockfish when bundled; falls back to built-in minimax on device / if engine fails.
+/// Local Fairy-Stockfish (Mac / iOS Simulator) → remote server (physical iPhone) → macOS minimax fallback only.
 struct HybridBotPlayer: BotPlayer {
+    private let remote = RemoteEngineBot()
+    #if os(macOS)
     private let minimax = MinimaxBotPlayer()
+    #endif
 
     func chooseMove(in game: ChessGame, difficulty: BotDifficulty) async -> Move? {
         let legal = game.legalMoves()
@@ -13,18 +16,53 @@ struct HybridBotPlayer: BotPlayer {
 
         if EngineBundle.isFairyStockfishAvailable,
            let move = await FairyStockfishBot.shared.chooseMove(in: game, difficulty: difficulty) {
-            BotLogging.debug("chooseMove: engine \(move.uci)")
+            BotLogging.debug("chooseMove: local engine \(move.uci)")
             return move
         }
 
+        if BotServerConfig.isConfigured,
+           let move = await remote.chooseMove(in: game, difficulty: difficulty) {
+            BotLogging.debug("chooseMove: remote engine \(move.uci)")
+            return move
+        }
+
+        #if os(macOS)
         if let move = await minimax.chooseMove(in: game, difficulty: difficulty),
            move.from.isValid, move.to.isValid {
             BotLogging.debug("chooseMove: minimax fallback \(move.uci)")
             return move
         }
+        #endif
 
-        let fallback = legal.first
-        BotLogging.debug("chooseMove: random fallback \(fallback?.uci ?? "none")")
-        return fallback
+        BotLogging.debug("chooseMove: no engine available")
+        return nil
+    }
+}
+
+enum BotProvider {
+    static func player() -> any BotPlayer {
+        HybridBotPlayer()
+    }
+
+    static var engineName: String {
+        if EngineBundle.isFairyStockfishAvailable {
+            return "Fairy-Stockfish (local)"
+        }
+        if BotServerConfig.isConfigured {
+            return "Fairy-Stockfish (server)"
+        }
+        #if os(iOS)
+        return "Engine server not configured"
+        #else
+        return "Minimax fallback"
+        #endif
+    }
+
+    static var needsServerConfiguration: Bool {
+        #if os(iOS) && !targetEnvironment(simulator)
+        return !EngineBundle.isFairyStockfishAvailable && !BotServerConfig.isConfigured
+        #else
+        return false
+        #endif
     }
 }

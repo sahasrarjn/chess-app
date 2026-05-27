@@ -22,15 +22,6 @@ enum BotDifficulty: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Fairy-Stockfish search budget (milliseconds).
-    var searchMovetimeMs: Int {
-        switch self {
-        case .easy: 300
-        case .medium: 500
-        case .hard: 900
-        }
-    }
-
     var randomness: Double {
         switch self {
         case .easy: 0.35

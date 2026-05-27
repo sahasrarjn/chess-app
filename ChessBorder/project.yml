@@ -45,6 +45,7 @@ targets:
       properties:
         CFBundleDisplayName: Chess Border
         UILaunchScreen: {}
+        EngineServerURL: https://chess-engine.sahasraranjan.workers.dev
 
   ChessBorderMac:
     type: application
@@ -70,11 +71,14 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.sahasraranjan.chessborder.mac
       PRODUCT_NAME: Chess Border
+      DEVELOPMENT_TEAM: K89NSAWKXN
+      CODE_SIGN_STYLE: Automatic
       MARKETING_VERSION: "1.0.0"
       CURRENT_PROJECT_VERSION: "1"
       INFOPLIST_KEY_CFBundleDisplayName: Chess Border
       GENERATE_INFOPLIST_FILE: YES
       ENABLE_TESTABILITY: YES
+      CODE_SIGN_ENTITLEMENTS: ChessBorder/ChessBorder.entitlements
     info:
       path: ChessBorder/Info-mac.plist
       properties:

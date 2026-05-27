@@ -145,38 +145,3 @@ actor FairyStockfishBot: BotPlayer {
         return move == "(none)" ? nil : move
     }
 }
-
-extension BotDifficulty {
-    var targetElo: Int {
-        switch self {
-        case .easy: 1200
-        case .medium: 1600
-        case .hard: 2200
-        }
-    }
-
-    var minimumThinkingDuration: Duration {
-        switch self {
-        case .easy: .milliseconds(150)
-        case .medium: .milliseconds(200)
-        case .hard: .milliseconds(300)
-        }
-    }
-}
-
-enum BotProvider {
-    static func player() -> any BotPlayer {
-        HybridBotPlayer()
-    }
-
-    static var engineName: String {
-        if EngineBundle.isFairyStockfishAvailable {
-            return "Fairy-Stockfish"
-        }
-        #if os(iOS) && !targetEnvironment(simulator)
-        return "Built-in minimax (device)"
-        #else
-        return "Built-in minimax"
-        #endif
-    }
-}

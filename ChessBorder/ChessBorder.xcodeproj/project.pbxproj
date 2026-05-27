@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0388C84C3737D710304A4EA2 /* ChessBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 641458CF36924B909D13651C /* ChessBot.swift */; };
+		0621CCFF7EE1C6208E0931C6 /* BotServerConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 077CC73AF9FF87AAD4027FED /* BotServerConfig.swift */; };
 		072D1B151011DB14089AB3EF /* MoveNotation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 907A49B2C8531C4C828DD6AB /* MoveNotation.swift */; };
 		08C89A0DAB61DD63B7A6FFA0 /* GameViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2898D2FF9EE958488B06A438 /* GameViewModel.swift */; };
 		10CFAFB9CA3E661C28D1AD37 /* Move.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84D1F5F5E3F0F306D945D5D7 /* Move.swift */; };
@@ -19,6 +20,7 @@
 		37F47809DCB8323A27847E9D /* BoardTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB05B3595E69DCB456B559B7 /* BoardTheme.swift */; };
 		3FB0F20BCD71E588D3F3189A /* GameMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83AFD65A0999E58B59EF7AD4 /* GameMode.swift */; };
 		4122CEBFC4B50C3FB43190A6 /* BoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D510979D96F6D7F382FAFDD5 /* BoardView.swift */; };
+		47096B720787B5B4F67D4CF4 /* BotDifficulty+Engine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6256C2B541B88DF31B937CE /* BotDifficulty+Engine.swift */; };
 		47C7142E2290CD876002289C /* BotPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44658DA8FEEAEE875CEC56C1 /* BotPlayer.swift */; };
 		4C8D2C2C8BC5062DB9CCF566 /* BotLogging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8205CA20A5DC79CBF61239CA /* BotLogging.swift */; };
 		4DD2CBEC68C9365087349719 /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47D9330D945C0EDDC3BBA1D4 /* GameView.swift */; };
@@ -27,6 +29,7 @@
 		5B768C97CD951E2DB0765704 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41A41F6F73FA8C0F107B5E4B /* HomeView.swift */; };
 		6051AD8DDC21AADFC5584A86 /* BotPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44658DA8FEEAEE875CEC56C1 /* BotPlayer.swift */; };
 		6190CB419C4C101DA81F8CD0 /* ChessBorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DFE99402032904F40BF126D /* ChessBorderApp.swift */; };
+		67B464F7CAA76CCF1D037C4F /* BotServerConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 077CC73AF9FF87AAD4027FED /* BotServerConfig.swift */; };
 		68DD750E7706DE2E592042E2 /* ChessBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 641458CF36924B909D13651C /* ChessBot.swift */; };
 		6C05706EA52C95619E368039 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = DAA256F81A7C116124306A68 /* Info.plist */; };
 		71E4D717968A143828538D77 /* BoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D510979D96F6D7F382FAFDD5 /* BoardView.swift */; };
@@ -47,8 +50,10 @@
 		B6CAFC8CB73FB8002A877FD3 /* HybridBotPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 651BC030E32722D0B826D180 /* HybridBotPlayer.swift */; };
 		BCC243C9E66E4131D3D486F7 /* FairyStockfishBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6445AB9B4709C280E598091 /* FairyStockfishBot.swift */; };
 		C568AC1B1AAF6F730A3F2FB8 /* BotLogging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8205CA20A5DC79CBF61239CA /* BotLogging.swift */; };
+		C9326EE3EF6DF85CB2EF473A /* BotDifficulty+Engine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6256C2B541B88DF31B937CE /* BotDifficulty+Engine.swift */; };
 		C9B5C4DB2EA70FE9F3664839 /* UCIParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5D422DAC760ECA795133D3E /* UCIParser.swift */; };
 		CA3EF8C7995F898AB2C8A895 /* GameMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83AFD65A0999E58B59EF7AD4 /* GameMode.swift */; };
+		CC76CF5887B2847D7B952914 /* RemoteEngineBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05004D65C19BDD9787D070B6 /* RemoteEngineBot.swift */; };
 		CC936391B858E3E87D2559D1 /* EngineBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82F0440ACD9F88E3B4DAB6C3 /* EngineBundle.swift */; };
 		D0BD684C64E53C68A8636985 /* Info-mac.plist in Resources */ = {isa = PBXBuildFile; fileRef = 534C1FCB9C1C475282833070 /* Info-mac.plist */; };
 		D620849E130B3276EA35A014 /* UCIParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5D422DAC760ECA795133D3E /* UCIParser.swift */; };
@@ -57,6 +62,7 @@
 		DD08507ACD822C10AAC6C69F /* Piece.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17F81A527E32095EAB109CA7 /* Piece.swift */; };
 		E2E46C8E1C880FB76A890758 /* FairyStockfishBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6445AB9B4709C280E598091 /* FairyStockfishBot.swift */; };
 		EF68489A71C589594AEBC8B5 /* GameViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2898D2FF9EE958488B06A438 /* GameViewModel.swift */; };
+		F7757C16C5CDF478818FD41D /* RemoteEngineBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05004D65C19BDD9787D070B6 /* RemoteEngineBot.swift */; };
 		F82E0ECF4BAA030657FB9BE5 /* FEN.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3BB49AF50BCA870CDEC628B /* FEN.swift */; };
 		F848A6D48197D21CFAA2ECDE /* ChessGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = 388F6D0DDEE3BDDD255524D4 /* ChessGame.swift */; };
 		FC64422BEE637C40EE8B35D9 /* variants.ini in CopyFiles */ = {isa = PBXBuildFile; fileRef = 6F8D99E4EB6E52E62423A54D /* variants.ini */; };
@@ -98,6 +104,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		05004D65C19BDD9787D070B6 /* RemoteEngineBot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteEngineBot.swift; sourceTree = "<group>"; };
+		077CC73AF9FF87AAD4027FED /* BotServerConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotServerConfig.swift; sourceTree = "<group>"; };
 		17F81A527E32095EAB109CA7 /* Piece.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Piece.swift; sourceTree = "<group>"; };
 		18447ED22F132F3581AA37D4 /* fairy-stockfish-ios */ = {isa = PBXFileReference; path = "fairy-stockfish-ios"; sourceTree = "<group>"; };
 		218437219F0F7123CABBE08B /* ChessBorder.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ChessBorder.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -123,7 +131,9 @@
 		88423B33C2EBE9FEF281B471 /* BotEvalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotEvalTests.swift; sourceTree = "<group>"; };
 		907A49B2C8531C4C828DD6AB /* MoveNotation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoveNotation.swift; sourceTree = "<group>"; };
 		ACFF1ABE9D507EF35EBAD2A7 /* UCIProcessClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UCIProcessClient.swift; sourceTree = "<group>"; };
+		B6256C2B541B88DF31B937CE /* BotDifficulty+Engine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BotDifficulty+Engine.swift"; sourceTree = "<group>"; };
 		C6445AB9B4709C280E598091 /* FairyStockfishBot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FairyStockfishBot.swift; sourceTree = "<group>"; };
+		C6647E500A3CB17B36A3F7CE /* ChessBorder.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ChessBorder.entitlements; sourceTree = "<group>"; };
 		C7D400D7C64F9C599A1ED64E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D510979D96F6D7F382FAFDD5 /* BoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardView.swift; sourceTree = "<group>"; };
 		DAA256F81A7C116124306A68 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -224,11 +234,14 @@
 		B0D7A275C6F1B9119163D8BF /* Bot */ = {
 			isa = PBXGroup;
 			children = (
+				B6256C2B541B88DF31B937CE /* BotDifficulty+Engine.swift */,
 				8205CA20A5DC79CBF61239CA /* BotLogging.swift */,
 				44658DA8FEEAEE875CEC56C1 /* BotPlayer.swift */,
+				077CC73AF9FF87AAD4027FED /* BotServerConfig.swift */,
 				641458CF36924B909D13651C /* ChessBot.swift */,
 				C6445AB9B4709C280E598091 /* FairyStockfishBot.swift */,
 				651BC030E32722D0B826D180 /* HybridBotPlayer.swift */,
+				05004D65C19BDD9787D070B6 /* RemoteEngineBot.swift */,
 			);
 			path = Bot;
 			sourceTree = "<group>";
@@ -247,6 +260,7 @@
 			isa = PBXGroup;
 			children = (
 				C7D400D7C64F9C599A1ED64E /* Assets.xcassets */,
+				C6647E500A3CB17B36A3F7CE /* ChessBorder.entitlements */,
 				6DFE99402032904F40BF126D /* ChessBorderApp.swift */,
 				534C1FCB9C1C475282833070 /* Info-mac.plist */,
 				DAA256F81A7C116124306A68 /* Info.plist */,
@@ -329,6 +343,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
+					31A01FAA2D3C39749D9DD8B8 = {
+						DevelopmentTeam = K89NSAWKXN;
+						ProvisioningStyle = Automatic;
+					};
 					642346BADCF3063DB914A3A4 = {
 						DevelopmentTeam = K89NSAWKXN;
 						ProvisioningStyle = Automatic;
@@ -392,8 +410,10 @@
 			files = (
 				916FCFCC54D989001EC82393 /* BoardTheme.swift in Sources */,
 				4122CEBFC4B50C3FB43190A6 /* BoardView.swift in Sources */,
+				C9326EE3EF6DF85CB2EF473A /* BotDifficulty+Engine.swift in Sources */,
 				C568AC1B1AAF6F730A3F2FB8 /* BotLogging.swift in Sources */,
 				47C7142E2290CD876002289C /* BotPlayer.swift in Sources */,
+				0621CCFF7EE1C6208E0931C6 /* BotServerConfig.swift in Sources */,
 				97B0FCF07104D3E4C264EE9A /* ChessBorderApp.swift in Sources */,
 				0388C84C3737D710304A4EA2 /* ChessBot.swift in Sources */,
 				AD5587B6102765330361FDCC /* ChessGame.swift in Sources */,
@@ -410,6 +430,7 @@
 				072D1B151011DB14089AB3EF /* MoveNotation.swift in Sources */,
 				DD08507ACD822C10AAC6C69F /* Piece.swift in Sources */,
 				528CDA5EC4E148B377A150C8 /* PlatformChrome.swift in Sources */,
+				F7757C16C5CDF478818FD41D /* RemoteEngineBot.swift in Sources */,
 				C9B5C4DB2EA70FE9F3664839 /* UCIParser.swift in Sources */,
 				AB0F8D6042262BA76BB83392 /* UCIProcessClient.swift in Sources */,
 			);
@@ -421,8 +442,10 @@
 			files = (
 				37F47809DCB8323A27847E9D /* BoardTheme.swift in Sources */,
 				71E4D717968A143828538D77 /* BoardView.swift in Sources */,
+				47096B720787B5B4F67D4CF4 /* BotDifficulty+Engine.swift in Sources */,
 				4C8D2C2C8BC5062DB9CCF566 /* BotLogging.swift in Sources */,
 				6051AD8DDC21AADFC5584A86 /* BotPlayer.swift in Sources */,
+				67B464F7CAA76CCF1D037C4F /* BotServerConfig.swift in Sources */,
 				6190CB419C4C101DA81F8CD0 /* ChessBorderApp.swift in Sources */,
 				68DD750E7706DE2E592042E2 /* ChessBot.swift in Sources */,
 				F848A6D48197D21CFAA2ECDE /* ChessGame.swift in Sources */,
@@ -439,6 +462,7 @@
 				7A259C67AE88B7BA914C154B /* MoveNotation.swift in Sources */,
 				AD397CDF27AD968B25966CF1 /* Piece.swift in Sources */,
 				D6FC7E71A1C4990B5F5552C1 /* PlatformChrome.swift in Sources */,
+				CC76CF5887B2847D7B952914 /* RemoteEngineBot.swift in Sources */,
 				D620849E130B3276EA35A014 /* UCIParser.swift in Sources */,
 				13507C7F16B3FDD7955D9BD4 /* UCIProcessClient.swift in Sources */,
 			);
@@ -515,8 +539,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = ChessBorder/ChessBorder.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = K89NSAWKXN;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "ChessBorder/Info-mac.plist";
@@ -576,8 +603,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = ChessBorder/ChessBorder.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = K89NSAWKXN;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "ChessBorder/Info-mac.plist";

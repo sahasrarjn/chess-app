@@ -7,3 +7,10 @@ ChessBorder/ChessBorder/Resources/Engine/fairy-stockfish-ios
 ChessBorder/build/fairy-stockfish/
 *.xcuserstate
 xcuserdata/
+web/node_modules/
+web/dist/
+server/worker/public/play/
+server/worker/node_modules/
+server/worker/.dev.vars
+server/worker/.wrangler/
+.env

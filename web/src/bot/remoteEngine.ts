@@ -3,7 +3,7 @@ import { matchEngineMove } from "../engine/fen";
 import { toFEN } from "../engine/fen";
 import type { BotDifficulty, Move } from "../engine/types";
 import { difficultyElo, difficultyMovetime } from "../engine/types";
-import { engineApiBase, getApiKey } from "./engineConfig";
+import { engineApiBase } from "./engineConfig";
 
 export async function fetchBotMove(
   game: ChessGame,
@@ -12,8 +12,6 @@ export async function fetchBotMove(
   const base = engineApiBase();
   const url = `${base || ""}/v1/move`;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const apiKey = getApiKey();
-  if (apiKey) headers["X-API-Key"] = apiKey;
 
   const res = await fetch(url, {
     method: "POST",

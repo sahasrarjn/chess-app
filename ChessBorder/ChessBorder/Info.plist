@@ -29,7 +29,5 @@
 	</dict>
 	<key>EngineServerURL</key>
 	<string>https://chess-engine.sahasraranjan.workers.dev</string>
-	<key>EngineServerAPIKey</key>
-	<string>14f4a94c81365d35f51ae0fd0bba45bf</string>
 </dict>
 </plist>

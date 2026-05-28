@@ -27,6 +27,10 @@ class UCIEngine:
         self._send("isready")
         self._wait_for("readyok")
 
+    def ping(self) -> None:
+        self._send("isready")
+        self._wait_for("readyok")
+
     def best_move(self, fen: str, elo: int, movetime_ms: int) -> str:
         with self._lock:
             self._send("stop")

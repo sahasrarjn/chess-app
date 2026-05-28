@@ -18,22 +18,45 @@ Skipped on purpose (too expensive for a personal bot):
 ## Deploy
 
 ```bash
-# Optional: protect the API
-export API_KEY="$(openssl rand -hex 16)"
-
+export ALERT_EMAIL="you@example.com"   # optional 5xx alarm
 chmod +x server/aws/deploy.sh
 ./server/aws/deploy.sh
 ```
 
-First run builds the Docker image (compiles Fairy-Stockfish — ~10 min), pushes to ECR, and creates the App Runner service.
+First run builds the Docker image (compiles Fairy-Stockfish — ~10 min), pushes to ECR, and creates the App Runner service. The backend `API_KEY` is stored in App Runner env vars — **not** in client apps.
 
-Output includes an **HTTPS URL** like `https://xxxxx.us-east-1.awsapprunner.com`. Paste that into the iPhone app **Engine server** field (and **API key** if you set `API_KEY`).
+Then deploy the Cloudflare worker:
+
+```bash
+./server/worker/deploy.sh
+```
 
 ## Update after code changes
 
 ```bash
 ./server/aws/deploy.sh
+./server/worker/deploy.sh
 ```
+
+## Rotate API key
+
+```bash
+./scripts/rotate-api-key.sh
+```
+
+No iPhone/web rebuild required. See [SECURITY.md](../../SECURITY.md).
+
+## Billing alarm (optional, us-east-1 only)
+
+```bash
+aws cloudformation deploy \
+  --stack-name chess-border-billing \
+  --template-file server/aws/monitoring.yaml \
+  --parameter-overrides AlertEmail=you@example.com MonthlyBudgetUsd=25 \
+  --region us-east-1
+```
+
+Confirm the SNS subscription email after deploy.
 
 ## Tear down
 

@@ -3,21 +3,36 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field, field_validator
 
-from engine import UCIEngine
+from engine_manager import EngineManager
+from validation import validate_fen
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 ENGINE_BIN = Path(os.environ.get("ENGINE_BIN", "/usr/local/bin/fairy-stockfish"))
 VARIANTS_INI = Path(os.environ.get("VARIANTS_INI", "/app/variants.ini"))
 API_KEY = os.environ.get("API_KEY", "")
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+MAX_BODY_BYTES = int(os.environ.get("MAX_BODY_BYTES", "4096"))
 
-engine: UCIEngine | None = None
+engine: EngineManager | None = None
 
 
 @asynccontextmanager
@@ -27,7 +42,9 @@ async def lifespan(_: FastAPI):
         raise RuntimeError(f"Engine binary not found: {ENGINE_BIN}")
     if not VARIANTS_INI.is_file():
         raise RuntimeError(f"variants.ini not found: {VARIANTS_INI}")
-    engine = UCIEngine(ENGINE_BIN, VARIANTS_INI)
+    if not API_KEY:
+        logger.warning("API_KEY is not set; engine API is open to anyone who can reach this host")
+    engine = EngineManager(ENGINE_BIN, VARIANTS_INI)
     yield
     if engine:
         engine.close()
@@ -35,27 +52,59 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="Border Chess Engine", version="1.0.0", lifespan=lifespan)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if ALLOWED_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=ALLOWED_ORIGINS,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "X-API-Key"],
+    )
+
+
+@app.middleware("http")
+async def limit_body_size(request: Request, call_next):
+    if request.method == "POST" and request.url.path == "/v1/move":
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > MAX_BODY_BYTES:
+            return JSONResponse(status_code=413, content={"detail": "Request body too large"})
+    return await call_next(request)
 
 
 class MoveRequest(BaseModel):
-    fen: str = Field(..., min_length=10)
+    fen: str = Field(..., min_length=10, max_length=200)
     elo: int = Field(1600, ge=800, le=3200)
     movetime_ms: int = Field(500, ge=50, le=30_000)
+
+    @field_validator("fen")
+    @classmethod
+    def check_fen(cls, value: str) -> str:
+        try:
+            return validate_fen(value)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
 
 
 class MoveResponse(BaseModel):
     uci: str
 
 
+def require_api_key(x_api_key: str | None) -> None:
+    if API_KEY and x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "engine": "fairy-stockfish", "variant": "chessborder"}
+def health():
+    ready = engine is not None and engine.is_ready()
+    payload = {
+        "status": "ok" if ready else "degraded",
+        "engine_ready": ready,
+        "engine": "fairy-stockfish",
+        "variant": "chessborder",
+    }
+    if not ready:
+        return JSONResponse(status_code=503, content=payload)
+    return payload
 
 
 @app.post("/v1/move", response_model=MoveResponse)
@@ -63,12 +112,21 @@ def move(
     req: MoveRequest,
     x_api_key: str | None = Header(default=None, alias="X-API-Key"),
 ) -> MoveResponse:
-    if API_KEY and x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid API key")
+    require_api_key(x_api_key)
+
     if engine is None:
         raise HTTPException(status_code=503, detail="Engine not ready")
+    if not engine.is_ready():
+        raise HTTPException(status_code=503, detail="Engine not ready")
+
     try:
         uci = engine.best_move(req.fen, req.elo, req.movetime_ms)
         return MoveResponse(uci=uci)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError:
+        logger.exception("Engine move failed after restart")
+        raise HTTPException(status_code=503, detail="Engine unavailable") from None
+    except Exception:
+        logger.exception("Unexpected engine failure")
+        raise HTTPException(status_code=500, detail="Engine error") from None

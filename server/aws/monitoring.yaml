@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Optional monthly billing alarm for the Border Chess engine stack (deploy in us-east-1).
+
+Parameters:
+  AlertEmail:
+    Type: String
+    Description: Email address for billing alarm notifications
+  MonthlyBudgetUsd:
+    Type: Number
+    Default: 25
+    Description: Alarm when estimated monthly charges exceed this amount
+
+Resources:
+  BillingAlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: chess-border-billing-alerts
+
+  BillingAlarmSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref BillingAlarmTopic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+
+  BillingAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: chess-border-monthly-billing
+      AlarmDescription: Estimated AWS charges exceeded the configured monthly budget
+      Namespace: AWS/Billing
+      MetricName: EstimatedCharges
+      Dimensions:
+        - Name: Currency
+          Value: USD
+      Statistic: Maximum
+      Period: 21600
+      EvaluationPeriods: 1
+      Threshold: !Ref MonthlyBudgetUsd
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref BillingAlarmTopic
+
+Outputs:
+  BillingAlarmTopicArn:
+    Value: !Ref BillingAlarmTopic

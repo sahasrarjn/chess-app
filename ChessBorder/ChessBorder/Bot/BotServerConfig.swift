@@ -1,6 +1,7 @@
 import Foundation
 
 /// Remote Fairy-Stockfish server — configured in Info.plist (not shown in UI).
+/// Production builds point at the Cloudflare worker URL only; the worker holds the backend API key.
 enum BotServerConfig {
     static var baseURL: URL? {
         normalizedURL(from: urlString)

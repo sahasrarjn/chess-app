@@ -1,9 +1,10 @@
 # Chess Engine — Cloudflare Worker
 
-Landing page, browser game (`/play/`), iPhone OTA install, and engine API proxy.
+Public landing page, browser game (`/play/`), iPhone OTA install link, and **rate-limited** engine API proxy.
 
 ```
-Browser / iPhone  →  chess-engine.<you>.workers.dev  →  AWS App Runner (Fairy-Stockfish)
+Browser / iPhone  →  chess-engine.<you>.workers.dev  →  AWS App Runner
+                         (no client API key)              (X-API-Key secret)
 ```
 
 ## Deploy
@@ -11,24 +12,25 @@ Browser / iPhone  →  chess-engine.<you>.workers.dev  →  AWS App Runner (Fair
 ### 1. Engine backend (AWS App Runner)
 
 ```bash
-./server/aws/deploy.sh
+ALERT_EMAIL=you@example.com ./server/aws/deploy.sh
 ```
 
 ### 2. Cloudflare Worker
 
 ```bash
-cd server/worker
-npm install
-npx wrangler secret put ENGINE_ORIGIN
-npx wrangler secret put API_KEY
-npm run deploy
+./server/worker/deploy.sh
 ```
+
+Creates a KV namespace for rate limiting on first deploy and syncs secrets:
+
+- `ENGINE_ORIGIN` — App Runner URL
+- `API_KEY` — backend key (never shipped to clients)
 
 **Public site:** `https://chess-engine.sahasraranjan.workers.dev`
 
 ### 3. iPhone app
 
-Engine URL + API key are baked into `Info.plist`. Publish IPA:
+Only the **worker URL** is baked into `Info.plist` — no API key. Publish IPA:
 
 ```bash
 cd ChessBorder
@@ -37,9 +39,22 @@ cd ChessBorder
 npm run deploy   # in server/worker — includes /play/ web build if configured
 ```
 
+## Tuning
+
+In `wrangler.toml`:
+
+| Setting | Default | Purpose |
+|---------|---------|---------|
+| `PUBLIC_MAX_MOVETIME_MS` | `5000` | Cap bot think time for anonymous users |
+| `RATE_LIMIT_PER_MINUTE` | `30` | Max `/v1/move` requests per IP per minute |
+
 ## Local dev
 
 ```bash
 docker compose -f server/docker-compose.yml up
 cd server/worker && npm run dev
 ```
+
+## Security
+
+See [SECURITY.md](../../SECURITY.md).

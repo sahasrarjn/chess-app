@@ -1,5 +1,4 @@
 const URL_KEY = "chessborder.engineUrl";
-const API_KEY_KEY = "chessborder.apiKey";
 
 export function getEngineUrl(): string {
   const stored = localStorage.getItem(URL_KEY)?.trim();
@@ -13,24 +12,14 @@ export function setEngineUrl(url: string): void {
   else localStorage.removeItem(URL_KEY);
 }
 
-export function getApiKey(): string {
-  return localStorage.getItem(API_KEY_KEY)?.trim() ?? "";
-}
-
-export function setApiKey(key: string): void {
-  const trimmed = key.trim();
-  if (trimmed) localStorage.setItem(API_KEY_KEY, trimmed);
-  else localStorage.removeItem(API_KEY_KEY);
-}
-
 export function isEngineConfigured(): boolean {
   return getEngineUrl().length > 0;
 }
 
 /**
  * API base URL for bot requests.
- * Browsers must call the same origin (Cloudflare worker); direct App Runner URLs
- * fail with "Failed to fetch" due to CORS.
+ * Browsers call the same origin (Cloudflare worker). The worker adds the backend
+ * API key server-side; clients never need a secret.
  */
 export function engineApiBase(): string {
   if (typeof window === "undefined") return "";

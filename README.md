@@ -90,7 +90,7 @@ Regenerate Xcode project after editing `project.yml`: `xcodegen generate` (from 
 1. Connect your iPhone via USB and trust the Mac.
 2. Open `ChessBorder/ChessBorder.xcodeproj` in Xcode.
 3. Select the **ChessBorder** scheme (not ChessBorderMac).
-4. Select your **Apple Developer team** under Signing & Capabilities (team is preconfigured in `project.yml` as `K89NSAWKXN`).
+4. Select your **Apple Developer team** under Signing & Capabilities (team is preconfigured in `project.yml` as `LG3L588JT3`).
 5. Choose your iPhone as the run destination.
 6. Press **Run** (⌘R).
 
@@ -116,7 +116,7 @@ Local Stockfish on a real iPhone is not viable via subprocess (iOS sandbox). The
 docker compose -f server/docker-compose.yml up --build
 ```
 
-Engine URL and API key are set in `ChessBorder/Info.plist` (`EngineServerURL`, `EngineServerAPIKey`). Details: [server/README.md](server/README.md).
+Engine URL is set in `ChessBorder/Info.plist` (`EngineServerURL` → Cloudflare worker). The backend API key lives in worker/AWS secrets only — see [SECURITY.md](SECURITY.md) and [server/README.md](server/README.md).
 
 If the iOS simulator runtime is missing, install it via **Xcode → Settings → Components**.
 

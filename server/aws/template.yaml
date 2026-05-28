@@ -9,7 +9,14 @@ Parameters:
     Type: String
     NoEcho: true
     Default: ""
-    Description: Optional API key (X-API-Key header). Leave empty to disable.
+    Description: Required in production (X-API-Key header). Only the Cloudflare worker should know this value.
+  AlertEmail:
+    Type: String
+    Default: ""
+    Description: Optional email for CloudWatch alarm notifications (5xx spike).
+
+Conditions:
+  HasAlertEmail: !Not [!Equals [!Ref AlertEmail, ""]]
 
 Resources:
   AppRunnerECRAccessRole:
@@ -63,6 +70,40 @@ Resources:
         Timeout: 5
         HealthyThreshold: 1
         UnhealthyThreshold: 3
+
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Condition: HasAlertEmail
+    Properties:
+      TopicName: chess-border-engine-alerts
+
+  AlertSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlertEmail
+    Properties:
+      TopicArn: !Ref AlertTopic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+
+  High5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlertEmail
+    Properties:
+      AlarmName: !Sub "${AWS::StackName}-5xx"
+      AlarmDescription: App Runner 5xx responses exceeded threshold
+      Namespace: AWS/AppRunner
+      MetricName: 5xxStatusResponses
+      Dimensions:
+        - Name: ServiceName
+          Value: chess-border-engine
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 20
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlertTopic
 
 Outputs:
   ServiceUrl:

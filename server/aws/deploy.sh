@@ -12,11 +12,13 @@ ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 ECR_URI="${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/${REPO_NAME}"
 IMAGE_URI="${ECR_URI}:${IMAGE_TAG}"
 
-API_KEY="${API_KEY:-$(openssl rand -hex 16)}"
+API_KEY="${API_KEY:-$(openssl rand -hex 32)}"
 
 echo "==> Account ${ACCOUNT} region ${REGION}"
 echo "==> Image ${IMAGE_URI}"
-echo "==> API key (save for iPhone app): ${API_KEY}"
+echo "==> Backend API key generated for this deploy (stored in AWS; not printed)."
+echo "    Sync to Cloudflare with: API_KEY=<key> ./server/worker/deploy.sh"
+echo "    Or run: ./scripts/rotate-api-key.sh"
 
 echo "==> Ensuring ECR repository exists"
 aws ecr describe-repositories --repository-names "$REPO_NAME" --region "$REGION" >/dev/null 2>&1 \
@@ -38,6 +40,9 @@ echo "==> Pushing to ECR"
 docker push "${IMAGE_URI}"
 
 PARAMS=(ImageUri="${IMAGE_URI}" ApiKey="${API_KEY}")
+if [[ -n "${ALERT_EMAIL:-}" ]]; then
+  PARAMS+=(AlertEmail="${ALERT_EMAIL}")
+fi
 
 echo "==> Deploying CloudFormation stack ${STACK_NAME}"
 aws cloudformation deploy \
@@ -59,7 +64,8 @@ echo "Deployed."
 echo "  Engine URL: ${SERVICE_URL}"
 echo "  Health:     curl ${SERVICE_URL}/health"
 echo ""
-echo "In the iPhone app home screen, set Engine server to:"
-echo "  ${SERVICE_URL}"
-echo "And API key to:"
-echo "  ${API_KEY}"
+echo "Next:"
+echo "  1. Sync Cloudflare worker secrets: API_KEY=<key> ./server/worker/deploy.sh"
+echo "  2. Or rotate end-to-end: ./scripts/rotate-api-key.sh"
+echo ""
+echo "Clients (iPhone/web) should use the worker URL only — not App Runner directly."

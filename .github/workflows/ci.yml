@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  worker:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server/worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: server/worker/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s server -p "test_*.py"
+      - run: docker compose -f server/docker-compose.yml up --build -d
+      - run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8081/health >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Engine container did not become healthy in time" >&2
+          docker compose -f server/docker-compose.yml logs
+          exit 1
+      - run: bash server/test_integration.sh http://localhost:8081
+      - if: always()
+        run: docker compose -f server/docker-compose.yml down -v
+
+  mac-tests:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Xcode project
+        working-directory: ChessBorder
+        run: |
+          if command -v xcodegen >/dev/null; then
+            xcodegen generate
+          fi
+      - name: Run ChessBorder unit tests
+        working-directory: ChessBorder
+        run: |
+          set -euo pipefail
+          if [[ ! -d ChessBorder.xcodeproj ]]; then
+            echo "Skipping macOS tests: Xcode project not generated (install xcodegen locally to enable)."
+            exit 0
+          fi
+          xcodebuild \
+            -project ChessBorder.xcodeproj \
+            -scheme ChessBorderMac \
+            -destination 'platform=macOS' \
+            -only-testing:ChessBorderTests \
+            test

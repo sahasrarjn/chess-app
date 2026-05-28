@@ -24,10 +24,15 @@ COPY --from=engine-build /usr/local/bin/fairy-stockfish /usr/local/bin/fairy-sto
 COPY ChessBorder/ChessBorder/Resources/Engine/variants.ini /app/variants.ini
 COPY server/requirements.txt /app/requirements.txt
 COPY server/engine.py /app/engine.py
+COPY server/engine_manager.py /app/engine_manager.py
+COPY server/validation.py /app/validation.py
 COPY server/main.py /app/main.py
 
 WORKDIR /app
 RUN pip install --no-cache-dir -r requirements.txt
+
+RUN useradd --create-home --shell /usr/sbin/nologin engine
+USER engine
 
 ENV ENGINE_BIN=/usr/local/bin/fairy-stockfish
 ENV VARIANTS_INI=/app/variants.ini

@@ -125,6 +125,7 @@
 		641458CF36924B909D13651C /* ChessBot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessBot.swift; sourceTree = "<group>"; };
 		651BC030E32722D0B826D180 /* HybridBotPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HybridBotPlayer.swift; sourceTree = "<group>"; };
 		679CCAACD5276A2F0453E88C /* ChessBorderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChessBorderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		67E4798FA9879BA230E5DA0D /* ChessBorderAppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ChessBorderAppStore.entitlements; sourceTree = "<group>"; };
 		6DFE99402032904F40BF126D /* ChessBorderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessBorderApp.swift; sourceTree = "<group>"; };
 		6F8D99E4EB6E52E62423A54D /* variants.ini */ = {isa = PBXFileReference; path = variants.ini; sourceTree = "<group>"; };
 		8205CA20A5DC79CBF61239CA /* BotLogging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotLogging.swift; sourceTree = "<group>"; };
@@ -266,6 +267,7 @@
 				C7D400D7C64F9C599A1ED64E /* Assets.xcassets */,
 				C6647E500A3CB17B36A3F7CE /* ChessBorder.entitlements */,
 				6DFE99402032904F40BF126D /* ChessBorderApp.swift */,
+				67E4798FA9879BA230E5DA0D /* ChessBorderAppStore.entitlements */,
 				534C1FCB9C1C475282833070 /* Info-mac.plist */,
 				DAA256F81A7C116124306A68 /* Info.plist */,
 				B0D7A275C6F1B9119163D8BF /* Bot */,
@@ -348,11 +350,11 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					31A01FAA2D3C39749D9DD8B8 = {
-						DevelopmentTeam = K89NSAWKXN;
+						DevelopmentTeam = LG3L588JT3;
 						ProvisioningStyle = Automatic;
 					};
 					642346BADCF3063DB914A3A4 = {
-						DevelopmentTeam = K89NSAWKXN;
+						DevelopmentTeam = LG3L588JT3;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -548,8 +550,8 @@
 				CODE_SIGN_ENTITLEMENTS = ChessBorder/ChessBorder.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = K89NSAWKXN;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = LG3L588JT3;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "ChessBorder/Info-mac.plist";
@@ -588,8 +590,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = K89NSAWKXN;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = LG3L588JT3;
 				INFOPLIST_FILE = ChessBorder/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Border Chess";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -612,8 +614,8 @@
 				CODE_SIGN_ENTITLEMENTS = ChessBorder/ChessBorder.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = K89NSAWKXN;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = LG3L588JT3;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "ChessBorder/Info-mac.plist";
@@ -715,8 +717,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = K89NSAWKXN;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = LG3L588JT3;
 				INFOPLIST_FILE = ChessBorder/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Border Chess";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

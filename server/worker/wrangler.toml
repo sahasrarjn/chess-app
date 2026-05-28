@@ -2,6 +2,13 @@ name = "chess-engine"
 main = "src/index.ts"
 compatibility_date = "2026-05-01"
 
+[observability]
+enabled = true
+
+[vars]
+PUBLIC_MAX_MOVETIME_MS = "5000"
+RATE_LIMIT_PER_MINUTE = "30"
+
 [assets]
 directory = "./public"
 binding = "ASSETS"
@@ -10,4 +17,4 @@ run_worker_first = true
 # Public URL: https://chess-engine.<your-subdomain>.workers.dev
 # Secrets (wrangler secret put):
 #   ENGINE_ORIGIN — App Runner URL from server/aws/deploy.sh
-#   API_KEY       — same key as AWS stack (optional but recommended)
+#   API_KEY       — same key as AWS stack (required for production)

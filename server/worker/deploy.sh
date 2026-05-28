@@ -5,6 +5,42 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 STACK_NAME="${STACK_NAME:-chess-border-engine}"
 REGION="${AWS_REGION:-us-east-1}"
+WORKER_DIR="${ROOT}/server/worker"
+WRANGLER_TOML="${WORKER_DIR}/wrangler.toml"
+
+ensure_rate_limit_kv() {
+  if grep -q 'binding = "RATE_LIMIT"' "$WRANGLER_TOML"; then
+    return
+  fi
+
+  echo "==> Creating Cloudflare KV namespace for rate limiting"
+  cd "$WORKER_DIR"
+  local id
+  id="$(npx wrangler kv namespace list --json 2>/dev/null \
+    | python3 -c "import json,sys; ns=[n for n in json.load(sys.stdin) if n.get('title')=='RATE_LIMIT']; print(ns[0]['id'] if ns else '')" \
+    || true)"
+  if [[ -z "$id" ]]; then
+    id="$(npx wrangler kv namespace create RATE_LIMIT 2>&1 \
+      | sed -n 's/.*id = "\([^"]*\)".*/\1/p' \
+      | head -1)"
+  fi
+  if [[ -z "$id" ]]; then
+    echo "FATAL: could not create or locate RATE_LIMIT KV namespace" >&2
+    exit 1
+  fi
+  python3 - "$WRANGLER_TOML" "$id" <<'PY'
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+block = f'\n[[kv_namespaces]]\nbinding = "RATE_LIMIT"\nid = "{sys.argv[2]}"\n'
+text = path.read_text()
+if "[assets]" in text:
+    text = text.replace("[assets]", block + "\n[assets]", 1)
+else:
+    text += block
+path.write_text(text)
+PY
+}
 
 ORIGIN="$(aws cloudformation describe-stacks \
   --stack-name "$STACK_NAME" \
@@ -18,8 +54,9 @@ if [[ -z "$ORIGIN" ]]; then
 fi
 
 echo "==> Engine origin: $ORIGIN"
-cd "${ROOT}/server/worker"
+cd "$WORKER_DIR"
 npm install
+ensure_rate_limit_kv
 
 echo "$ORIGIN" | npx wrangler secret put ENGINE_ORIGIN
 
@@ -47,4 +84,4 @@ fi
 
 npm run deploy
 echo ""
-echo "Configure iPhone app Engine server to your workers.dev URL (see wrangler output)."
+echo "Public clients should use your workers.dev URL only (no embedded API key)."

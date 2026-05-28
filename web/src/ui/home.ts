@@ -1,9 +1,7 @@
 import { checkEngineHealth } from "../bot/remoteEngine";
 import {
-  getApiKey,
   getEngineUrl,
   isEngineConfigured,
-  setApiKey,
   setEngineUrl,
 } from "../bot/engineConfig";
 import type { BotDifficulty } from "../engine/types";
@@ -74,24 +72,24 @@ export function renderHome(
 
     if (settingsOpen) {
       const panel = el("div", "settings-panel");
-      panel.appendChild(el("label", "", "Engine server URL (optional, dev only)"));
+      panel.appendChild(el("label", "", "Engine server URL (local dev only)"));
       const urlInput = document.createElement("input");
       urlInput.type = "url";
-      urlInput.placeholder = "Leave empty — web uses this site automatically";
+      urlInput.placeholder = "Leave empty — production uses this site automatically";
       urlInput.value = getEngineUrl();
       panel.appendChild(urlInput);
 
-      panel.appendChild(el("label", "", "API key (optional)"));
-      const keyInput = document.createElement("input");
-      keyInput.type = "password";
-      keyInput.placeholder = "X-API-Key if your server requires it";
-      keyInput.value = getApiKey();
-      panel.appendChild(keyInput);
+      panel.appendChild(
+        el(
+          "p",
+          "engine-status",
+          "Production bot traffic goes through this site. No API key is needed in the browser."
+        )
+      );
 
       const saveBtn = el("button", "", "Save");
       saveBtn.onclick = () => {
         setEngineUrl(urlInput.value);
-        setApiKey(keyInput.value);
         updateEngineStatus(statusEl);
       };
       panel.appendChild(saveBtn);

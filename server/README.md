@@ -1,62 +1,68 @@
 # Border Chess — Engine Server
 
-Self-hosted **Fairy-Stockfish** HTTP API for the iPhone app. Physical iOS devices cannot run the engine locally, so the app calls this server instead of using minimax.
+Self-hosted **Fairy-Stockfish** HTTP API for the iPhone app and web bot. Physical iOS devices cannot run the engine locally, so clients call the **Cloudflare worker**, which proxies to this backend.
 
 ## Production (recommended)
 
-**HTTPS front door:** [chess-engine.sahasraranjan.workers.dev](https://chess-engine.sahasraranjan.workers.dev) (Cloudflare Worker, free)  
-**Engine backend:** AWS App Runner (~$6–9/mo) — Fairy-Stockfish in Docker
+**Public HTTPS:** [chess-engine.sahasraranjan.workers.dev](https://chess-engine.sahasraranjan.workers.dev)  
+**Private backend:** AWS App Runner (~$6–9/mo)
 
-The iPhone app reads the engine URL and API key from `Info.plist` (not shown in the UI).
-
-```bash
-# Redeploy worker after AWS stack changes
-API_KEY=your-key ./server/worker/deploy.sh
+```
+iPhone / browser  →  Cloudflare Worker  →  App Runner (this server)
+                         ↑ rate limit            ↑ X-API-Key (secret)
+                         ↑ no client key
 ```
 
-See [server/worker/README.md](worker/README.md) and [server/aws/](aws/) for details.
+### Deploy / update
+
+```bash
+# 1. Backend (generates API_KEY if unset; stores it in AWS only)
+ALERT_EMAIL=you@example.com ./server/aws/deploy.sh
+
+# 2. Worker (syncs ENGINE_ORIGIN + API_KEY secrets, enables rate limiting)
+./server/worker/deploy.sh
+
+# 3. Rotate a leaked key (no app rebuild needed)
+./scripts/rotate-api-key.sh
+```
+
+See [SECURITY.md](../SECURITY.md) for the API key model.
 
 ## Quick start (Docker, local)
 
 ```bash
 docker compose -f server/docker-compose.yml up --build
+bash server/test_integration.sh http://localhost:8081
 ```
 
-Test:
+Local Docker runs **without** `API_KEY` by default (open on localhost). For parity with production:
 
 ```bash
-curl http://localhost:8080/health
-
-curl -X POST http://localhost:8080/v1/move \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "fen": "........../.rnbqkbnr./.pppppppp./......../......../......../......../.PPPPPPPP./.RNBQKBNR./.......... w KQkq - 0 1",
-    "elo": 1600,
-    "movetime_ms": 300
-  }'
+API_KEY=dev-secret docker compose -f server/docker-compose.yml up --build
+API_KEY=dev-secret bash server/test_integration.sh http://localhost:8081
 ```
 
-Response: `{"uci":"e2e4"}` (engine uses 10×10 coordinates, e.g. `h9g7` for Nf6).
+## Client configuration
 
-## iPhone app configuration
+| Client | Engine URL | API key |
+|--------|------------|---------|
+| **iPhone app** | Worker URL in `Info.plist` | None (worker adds it) |
+| **Web (production)** | Same origin as `/play/` | None |
+| **Web (local dev)** | Empty (Vite proxy) or custom URL | None |
 
-Default URL (already in `Info.plist`):
-
-`https://chess-engine.sahasraranjan.workers.dev`
-
-On the home screen, paste your **API key** under **Engine server** (same key as AWS / worker secrets).
-
-**Note:** The native iOS/Mac app bakes URL + API key into `Info.plist` instead — no user-facing fields.
+Do **not** put the backend `API_KEY` in mobile apps or browser storage.
 
 ## API
 
 | Method | Path | Headers | Body | Response |
 |--------|------|---------|------|----------|
-| GET | `/health` | — | — | `{"status":"ok",...}` |
-| POST | `/v1/move` | `X-API-Key` (if configured) | `{ "fen", "elo", "movetime_ms" }` | `{ "uci" }` |
+| GET | `/health` | — | — | `{"status":"ok","engine_ready":true,...}` |
+| POST | `/v1/move` | `X-API-Key` (if `API_KEY` set) | `{ "fen", "elo", "movetime_ms" }` | `{ "uci" }` |
+
+FEN must match the 10×10 `chessborder` variant. Invalid FEN returns `400`.
 
 ## Why not engine inside Cloudflare Workers?
 
-Workers have no subprocess and no WASM threads for full Fairy-Stockfish. The worker is a thin HTTPS proxy; the real engine runs on App Runner.
+Workers have no subprocess and no WASM threads for full Fairy-Stockfish. The worker validates input, rate-limits, and proxies; the real engine runs on App Runner.
 
 Mac app and iOS Simulator continue to use local Fairy-Stockfish when available.

@@ -21,7 +21,7 @@ Distribution uses **Apple’s install and auto-update** (Mac App Store / TestFli
 
 **Bundle ID:** `com.sahasraranjan.chessborder.mac`  
 **Product name:** Border Chess  
-**Team ID:** `K89NSAWKXN`
+**Team ID:** `LG3L588JT3` (personal — Sahasra Ranjan)
 
 ### 1. One-time App Store Connect setup
 

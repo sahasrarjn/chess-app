@@ -64,7 +64,7 @@ struct HomeView: View {
                         Text("Bot: \(BotProvider.engineName)")
                             .font(.caption2)
                             .foregroundStyle(.white.opacity(0.45))
-                        Text("Pieces: Lichess Chessnut")
+                        Text("Pieces: Lichess Maestro")
                             .font(.caption2)
                             .foregroundStyle(.white.opacity(0.45))
                     }

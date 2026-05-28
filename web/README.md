@@ -51,4 +51,4 @@ Optional **Engine settings** on the home screen: custom server URL and API key (
 
 - TypeScript game engine (ported from Swift `ChessGame.swift`)
 - Vite + vanilla DOM UI
-- Lichess Cburnett piece SVGs (same as the app)
+- Lichess Maestro piece SVGs (same as the app)

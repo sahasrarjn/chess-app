@@ -105,16 +105,19 @@ struct CapturedPiecesBar: View {
     let capturedByWhite: [Piece]
     let capturedByBlack: [Piece]
 
+    private let pieceSize: CGFloat = 20
+
     var body: some View {
-        HStack {
+        HStack(alignment: .top, spacing: 6) {
             capturedStack(capturedByBlack, alignment: .leading)
-            Spacer()
+                .frame(maxWidth: .infinity, alignment: .leading)
             materialDelta
-            Spacer()
+                .frame(minWidth: 28)
             capturedStack(capturedByWhite, alignment: .trailing)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .padding(.horizontal, 8)
-        .frame(height: 22)
+        .frame(minHeight: pieceSize + 4)
     }
 
     @ViewBuilder
@@ -124,14 +127,15 @@ struct CapturedPiecesBar: View {
             Text(delta > 0 ? "+\(delta)" : "\(delta)")
                 .font(.caption2.weight(.bold).monospaced())
                 .foregroundStyle(BoardTheme.accent)
+                .padding(.top, 2)
         }
     }
 
     private func capturedStack(_ pieces: [Piece], alignment: HorizontalAlignment) -> some View {
-        HStack(spacing: 2) {
+        CapturedPiecesFlow(spacing: 2, rowSpacing: 2) {
             ForEach(Array(sortedCaptures(pieces).enumerated()), id: \.offset) { _, piece in
                 PieceView(piece: piece)
-                    .frame(width: 16, height: 16)
+                    .frame(width: pieceSize, height: pieceSize)
             }
         }
         .frame(maxWidth: .infinity, alignment: alignment == .leading ? .leading : .trailing)
@@ -143,5 +147,54 @@ struct CapturedPiecesBar: View {
 
     private func materialScore(_ pieces: [Piece]) -> Int {
         pieces.reduce(0) { $0 + $1.kind.value / 100 }
+    }
+}
+
+private struct CapturedPiecesFlow: Layout {
+    var spacing: CGFloat = 2
+    var rowSpacing: CGFloat = 2
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .infinity
+        guard maxWidth.isFinite, maxWidth > 0 else {
+            return CGSize(width: proposal.width ?? 0, height: 0)
+        }
+
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var contentWidth: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x + size.width > maxWidth, x > 0 {
+                x = 0
+                y += rowHeight + rowSpacing
+                rowHeight = 0
+            }
+            rowHeight = max(rowHeight, size.height)
+            x += size.width + spacing
+            contentWidth = max(contentWidth, min(x - spacing, maxWidth))
+        }
+
+        return CGSize(width: contentWidth, height: y + rowHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX
+        var y = bounds.minY
+        var rowHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x + size.width > bounds.maxX, x > bounds.minX {
+                x = bounds.minX
+                y += rowHeight + rowSpacing
+                rowHeight = 0
+            }
+            subview.place(at: CGPoint(x: x, y: y), proposal: ProposedSize(width: size.width, height: size.height))
+            rowHeight = max(rowHeight, size.height)
+            x += size.width + spacing
+        }
     }
 }

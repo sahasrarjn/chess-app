@@ -124,21 +124,19 @@ struct SquareView: View {
     }
 
     private var rankLabelForOverlay: String? {
-        guard BoardConstants.playableRange.contains(square.row) else { return nil }
         let leftCol = viewModel.boardFlipped
-            ? BoardConstants.playableRange.upperBound
-            : BoardConstants.playableRange.lowerBound
+            ? BoardConstants.size - 1
+            : 0
         guard square.col == leftCol else { return nil }
-        return BoardConstants.standardRankLabel(row: square.row)
+        return BoardConstants.engineRankLabel(row: square.row)
     }
 
     private var fileLabelForOverlay: String? {
-        guard BoardConstants.playableRange.contains(square.col) else { return nil }
         let bottomRow = viewModel.boardFlipped
-            ? BoardConstants.playableRange.lowerBound
-            : BoardConstants.playableRange.upperBound
+            ? 0
+            : BoardConstants.size - 1
         guard square.row == bottomRow else { return nil }
-        return BoardConstants.standardFileLabel(col: square.col)
+        return BoardConstants.engineFileLabel(col: square.col)
     }
 
     private var coordinateLabelColor: Color {

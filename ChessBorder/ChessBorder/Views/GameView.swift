@@ -167,19 +167,26 @@ struct GameView: View {
     }
 
     private var actionButtons: some View {
-        HStack(spacing: 12) {
-            if viewModel.livePly > 0 {
-                Button("Undo") { viewModel.undo() }
-                    .buttonStyle(SecondaryGameButtonStyle())
-                    .disabled(viewModel.isBrowsingHistory || viewModel.isThinking)
+        VStack(spacing: 12) {
+            if viewModel.canRetryBot {
+                Button("Retry Bot Move") { viewModel.retryBotMove() }
+                    .buttonStyle(PrimaryGameButtonStyle())
             }
 
-            Button("New Game") { viewModel.newGame() }
-                .buttonStyle(SecondaryGameButtonStyle())
+            HStack(spacing: 12) {
+                if viewModel.livePly > 0 {
+                    Button("Undo") { viewModel.undo() }
+                        .buttonStyle(SecondaryGameButtonStyle())
+                        .disabled(viewModel.isBrowsingHistory || viewModel.isThinking)
+                }
 
-            Button("Resign") { showResignConfirm = true }
-                .buttonStyle(SecondaryGameButtonStyle())
-                .disabled(viewModel.result != .ongoing)
+                Button("New Game") { viewModel.newGame() }
+                    .buttonStyle(SecondaryGameButtonStyle())
+
+                Button("Resign") { showResignConfirm = true }
+                    .buttonStyle(SecondaryGameButtonStyle())
+                    .disabled(viewModel.result != .ongoing)
+            }
         }
         .padding(.horizontal)
         .padding(.bottom, 8)

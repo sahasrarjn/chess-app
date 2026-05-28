@@ -77,6 +77,17 @@ export class GameController {
     );
   }
 
+  get canRetryBot(): boolean {
+    return (
+      this.mode === "vsBot" &&
+      this.botEngineError != null &&
+      this.game.activeColor === "black" &&
+      this.game.result.type === "ongoing" &&
+      !this.isThinking &&
+      !this.isBrowsingHistory
+    );
+  }
+
   squareKey(s: Square): string {
     return `${s.row},${s.col}`;
   }
@@ -225,6 +236,12 @@ export class GameController {
   toggleBoardFlip(): void {
     this.boardFlipped = !this.boardFlipped;
     this.notify();
+  }
+
+  retryBotMove(): void {
+    if (!this.canRetryBot) return;
+    this.botEngineError = null;
+    void this.maybePlayBotMove();
   }
 
   goToMove(ply: number): void {

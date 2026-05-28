@@ -118,6 +118,18 @@ export function standardRankLabel(row: number): string | null {
   return String(9 - row);
 }
 
+/** Engine file label (a–j) for the full 10×10 grid. */
+export function engineFileLabel(col: number): string | null {
+  if (col < 0 || col >= BOARD_SIZE) return null;
+  return String.fromCharCode(97 + col);
+}
+
+/** Engine rank label (1–10) for the full 10×10 grid. */
+export function engineRankLabel(row: number): string | null {
+  if (row < 0 || row >= BOARD_SIZE) return null;
+  return String(BOARD_SIZE - row);
+}
+
 export interface Move {
   from: Square;
   to: Square;

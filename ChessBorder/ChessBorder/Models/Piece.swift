@@ -108,4 +108,16 @@ enum BoardConstants {
         guard playableRange.contains(row) else { return nil }
         return String(9 - row)
     }
+
+    /// Engine file label (a–j) for the full 10×10 grid.
+    static func engineFileLabel(col: Int) -> String? {
+        guard (0..<size).contains(col) else { return nil }
+        return String(Character(UnicodeScalar(col + 97)!))
+    }
+
+    /// Engine rank label (1–10) for the full 10×10 grid.
+    static func engineRankLabel(row: Int) -> String? {
+        guard (0..<size).contains(row) else { return nil }
+        return String(size - row)
+    }
 }

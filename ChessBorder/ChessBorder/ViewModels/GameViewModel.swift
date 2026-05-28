@@ -61,6 +61,15 @@ final class GameViewModel: ObservableObject {
         mode == .vsBot && game.activeColor == .black && game.result == .ongoing && !isBrowsingHistory
     }
 
+    var canRetryBot: Bool {
+        mode == .vsBot
+            && botEngineError != nil
+            && game.activeColor == .black
+            && game.result == .ongoing
+            && !isThinking
+            && !isBrowsingHistory
+    }
+
     var canInteract: Bool {
         game.result == .ongoing && !isThinking && !isBotTurn && !isBrowsingHistory && activeMoveAnimation == nil
     }
@@ -263,6 +272,7 @@ final class GameViewModel: ObservableObject {
         if undone {
             activeMoveAnimation = nil
             returnToLivePosition()
+            botEngineError = nil
             notifyChange()
         }
         clearSelection()
@@ -287,6 +297,12 @@ final class GameViewModel: ObservableObject {
 
     func toggleBoardFlip() {
         boardFlipped.toggle()
+    }
+
+    func retryBotMove() {
+        guard canRetryBot else { return }
+        botEngineError = nil
+        maybePlayBotMove()
     }
 
     private func beginMoveAnimation(move: Move, piece: Piece) {

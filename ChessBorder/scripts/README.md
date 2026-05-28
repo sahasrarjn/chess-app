@@ -34,7 +34,7 @@ Distribution uses **Apple’s install and auto-update** (Mac App Store / TestFli
    - SKU: e.g. `chessborder-mac`
 3. Complete **App Information**, **Pricing**, **App Privacy**, and **Mac App Store** listing metadata (screenshots, description, category: Board Games).
 4. **GPL / open source (required):** Because the app bundles GPL v3 Fairy-Stockfish, provide source to users:
-   - Public repo: https://github.com/sahasraranjan/chess-app
+   - Public repo: https://github.com/sahasrarjn/chess-app
    - Add the source URL in the App Store description and/or support URL
    - Include GPL license text in the app (Settings/About) or link to `LICENSE` in the repo
    - Note: Apple’s store DRM vs GPL is debated; many GPL apps ship on the Mac App Store with a prominent source link. Direct download (`release-mac.sh`) avoids that debate.

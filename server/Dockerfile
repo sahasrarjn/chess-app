@@ -6,7 +6,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN git clone --depth 1 https://github.com/fairy-stockfish/Fairy-Stockfish.git /src
 WORKDIR /src/src
-RUN make -j"$(nproc)" build ARCH=x86-64-avx2 COMP=gcc largeboards=yes && \
+ARG TARGETARCH
+RUN case "$TARGETARCH" in \
+      amd64) ARCH=x86-64-avx2 ;; \
+      arm64) ARCH=armv8 ;; \
+      *) ARCH=general-64 ;; \
+    esac && \
+    make -j"$(nproc)" build ARCH=$ARCH COMP=gcc largeboards=yes && \
     cp stockfish /usr/local/bin/fairy-stockfish
 
 FROM python:3.12-slim-bookworm

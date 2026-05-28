@@ -21,6 +21,28 @@ final class BotEvalTests: XCTestCase {
         XCTAssertEqual(Square.fromStandardNotation("e4"), Square(row: 5, col: 5))
     }
 
+    func testEngineCoordinateLabelsCoverFullBoard() {
+        XCTAssertEqual(BoardConstants.engineFileLabel(col: 0), "a")
+        XCTAssertEqual(BoardConstants.engineFileLabel(col: 9), "j")
+        XCTAssertNil(BoardConstants.engineFileLabel(col: -1))
+        XCTAssertEqual(BoardConstants.engineRankLabel(row: 9), "1")
+        XCTAssertEqual(BoardConstants.engineRankLabel(row: 0), "10")
+        XCTAssertNil(BoardConstants.engineRankLabel(row: 10))
+
+        for col in 0..<BoardConstants.size {
+            XCTAssertEqual(
+                BoardConstants.engineFileLabel(col: col),
+                String(Square(row: 0, col: col).engineNotation.prefix(1))
+            )
+        }
+        for row in 0..<BoardConstants.size {
+            XCTAssertEqual(
+                BoardConstants.engineRankLabel(row: row),
+                String(Square(row: row, col: 0).engineNotation.dropFirst())
+            )
+        }
+    }
+
     func testStartingPositionBlackHasLegalMoves() {
         let game = ChessGame()
         XCTAssertEqual(game.activeColor, .white)

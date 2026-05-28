@@ -4,7 +4,7 @@ services:
       context: ..
       dockerfile: server/Dockerfile
     ports:
-      - "8080:8080"
+      - "8081:8080"
     environment:
       # Optional: set API_KEY and pass X-API-Key header from the app
       API_KEY: ${API_KEY:-}

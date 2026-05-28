@@ -4,8 +4,8 @@ import {
   BOARD_SIZE,
   pieceAssetName,
   type Piece,
-  standardFileLabel,
-  standardRankLabel,
+  engineFileLabel,
+  engineRankLabel,
   type BotDifficulty,
   type GameMode,
   type Square,
@@ -39,6 +39,7 @@ class GameScreen {
   private gridEl!: HTMLDivElement;
   private moveListEl!: HTMLDivElement;
   private undoBtn!: HTMLButtonElement;
+  private retryBtn!: HTMLButtonElement;
   private resignBtn!: HTMLButtonElement;
   private promotionEl: HTMLElement | null = null;
   private gameOverEl: HTMLElement | null = null;
@@ -77,8 +78,8 @@ class GameScreen {
     screen.appendChild(header);
 
     const capBar = el("div", "captured-bar");
-    this.capBlackEl = el("div", "");
-    this.capWhiteEl = el("div", "");
+    this.capBlackEl = el("div", "captured-side captured-side-black");
+    this.capWhiteEl = el("div", "captured-side captured-side-white");
     capBar.appendChild(this.capBlackEl);
     capBar.appendChild(this.capWhiteEl);
     screen.appendChild(capBar);
@@ -101,6 +102,11 @@ class GameScreen {
     this.undoBtn = el("button", "", "Undo") as HTMLButtonElement;
     this.undoBtn.onclick = () => this.ctrl.undo();
     controls.appendChild(this.undoBtn);
+
+    this.retryBtn = el("button", "primary", "Retry Bot") as HTMLButtonElement;
+    this.retryBtn.onclick = () => this.ctrl.retryBotMove();
+    this.retryBtn.hidden = true;
+    controls.appendChild(this.retryBtn);
 
     for (const label of ["◀", "▶", "Live"] as const) {
       const b = el("button", "", label);
@@ -165,8 +171,8 @@ class GameScreen {
 
         const cell: SquareCell = { btn, pieceImg: null, dot: null, ring: null };
 
-        const fileLabel = standardFileLabel(col);
-        const rankLabel = standardRankLabel(row);
+        const fileLabel = engineFileLabel(col);
+        const rankLabel = engineRankLabel(row);
         if (fileLabel && row === (this.ctrl.boardFlipped ? 0 : BOARD_SIZE - 1)) {
           btn.appendChild(el("span", "coord file", fileLabel));
         }
@@ -207,21 +213,19 @@ class GameScreen {
 
     this.capBlackEl.replaceChildren();
     this.capWhiteEl.replaceChildren();
-    this.capBlackEl.appendChild(this.renderCapturedLabel("Black", this.ctrl.capturedPieces("black", ply)));
-    this.capWhiteEl.appendChild(this.renderCapturedLabel("White", this.ctrl.capturedPieces("white", ply)));
+    this.capBlackEl.appendChild(this.renderCapturedSide(this.ctrl.capturedPieces("black", ply)));
+    this.capWhiteEl.appendChild(this.renderCapturedSide(this.ctrl.capturedPieces("white", ply)));
   }
 
-  private renderCapturedLabel(label: string, pieces: Piece[]): HTMLElement {
-    const wrap = el("div", "");
-    wrap.appendChild(el("span", "", `${label}: `));
+  private renderCapturedSide(pieces: Piece[]): HTMLElement {
     const row = el("div", "captured-pieces");
     for (const p of pieces) {
       const img = document.createElement("img");
       img.src = `${PIECE_BASE}${pieceAssetName(p)}.svg`;
+      img.alt = p.kind;
       row.appendChild(img);
     }
-    wrap.appendChild(row);
-    return wrap;
+    return row;
   }
 
   private updateBoard(): void {
@@ -339,6 +343,8 @@ class GameScreen {
   private updateControls(): void {
     this.undoBtn.disabled = this.ctrl.game.moveHistory.length === 0;
     this.resignBtn.disabled = this.ctrl.game.result.type !== "ongoing";
+    this.retryBtn.hidden = !this.ctrl.canRetryBot;
+    this.retryBtn.disabled = !this.ctrl.canRetryBot;
   }
 
   private updatePromotion(): void {

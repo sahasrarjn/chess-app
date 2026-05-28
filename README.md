@@ -34,7 +34,7 @@ Playable squares: files **b–i**, ranks **2–9** (1-indexed from White’s per
 | Component | Source | License | Notes |
 |-----------|--------|---------|-------|
 | **Bot engine** | [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish) | GPL v3 | Stockfish derivative; 10×10 via `variants.ini` |
-| **Chess pieces (Cburnett)** | [Lichess / lila](https://github.com/lichess-org/lila/tree/master/public/piece/cburnett) | CC BY-SA 3.0 / GPL | Bundled as SVG in `Assets.xcassets` |
+| **Chess pieces (Maestro)** | [Lichess / lila](https://github.com/lichess-org/lila/tree/master/public/piece/maestro) | See Lichess licensing | Bundled as SVG in `Assets.xcassets` |
 | **UI inspiration** | [ChessboardKit](https://github.com/rohanrhu/ChessboardKit) (MIT) | MIT | Patterns referenced; board is custom 10×10 |
 | **Project scaffolding** | [XcodeGen](https://github.com/yonaskolb/XcodeGen) | MIT | `project.yml` → `.xcodeproj` |
 
@@ -61,18 +61,18 @@ You **may sell the app commercially** (website, Gumroad, etc.) under GPL v3. You
 
 Many GPL apps charge money — users pay for convenience, support, and builds, not for proprietary code.
 
-**Mac App Store:** possible but legally debated (Apple DRM vs GPL). Direct download is simpler for GPL compliance.
+**Mac App Store:** possible but legally debated (Apple DRM vs GPL). Provide a public source link in the listing and app; see [ChessBorder/scripts/README.md](ChessBorder/scripts/README.md). Direct download (`release-mac.sh`) remains simpler for GPL compliance.
 
 ## Public distribution
 
 - **Web:** [chess-engine.sahasraranjan.workers.dev/play/](https://chess-engine.sahasraranjan.workers.dev/play/)
 - **iPhone:** OTA install from [chess-engine.sahasraranjan.workers.dev](https://chess-engine.sahasraranjan.workers.dev)
-
-Mac app (`ChessBorderMac`) is for local development only — not published on the homepage.
+- **Mac (App Store):** `./ChessBorder/scripts/release-appstore-mac.sh` — full workflow in [ChessBorder/scripts/README.md](ChessBorder/scripts/README.md)
+- **Mac (direct download):** `./ChessBorder/scripts/release-mac.sh` — Developer ID DMG + notarization
 
 ## Requirements
 
-- Xcode 16+ · iOS 17+ (iPhone) · macOS 14+ (dev builds only)
+- Xcode 16+ · iOS 17+ (iPhone) · macOS 14+ (Mac app + dev builds)
 
 ## Local development
 
@@ -146,4 +146,4 @@ chess-app/
 
 ## License
 
-GNU General Public License v3.0 — see [LICENSE](LICENSE). Chess piece SVGs: [Cburnett on Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces).
+GNU General Public License v3.0 — see [LICENSE](LICENSE). Source: [github.com/sahasrarjn/chess-app](https://github.com/sahasrarjn/chess-app). Chess piece SVGs: [Lichess Maestro](https://github.com/lichess-org/lila/tree/master/public/piece/maestro).

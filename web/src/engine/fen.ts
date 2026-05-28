@@ -38,7 +38,10 @@ function fenRank(game: ChessGame, row: number): string {
       empty += 1;
     }
   }
-  if (empty > 0) result += String(empty);
+  // Run-length "10" is invalid for API/engine FEN (digit 0); use dots like variants.ini.
+  if (empty > 0) {
+    result += empty >= BOARD_SIZE ? ".".repeat(empty) : String(empty);
+  }
   return result;
 }
 

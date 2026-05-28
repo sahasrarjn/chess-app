@@ -40,6 +40,8 @@ targets:
       path: ChessBorder/Info.plist
       properties:
         CFBundleDisplayName: Border Chess
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "4"
         UILaunchScreen:
           UIImageName: LaunchLogo
           UIColorName: LaunchBackground

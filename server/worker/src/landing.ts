@@ -1,12 +1,12 @@
-import { DMG_URL, OTA_INSTALL_URL } from "./release";
+import { OTA_INSTALL_URL } from "./release";
 
 export const landingHTML = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chess Border — 10×10 chess with a border twist</title>
-<meta name="description" content="Chess Border: classic chess on an 8×8 board surrounded by a one-square border. Play pass-and-play or vs a Fairy-Stockfish bot on Mac and iPhone.">
+<title>Border Chess — 10×10 chess with a border twist</title>
+<meta name="description" content="Border Chess: classic chess on an 8×8 board surrounded by a one-square border. Play in your browser or install on iPhone.">
 <link rel="icon" href="/logo.png" type="image/png">
 <link rel="apple-touch-icon" href="/logo.png">
 <style>
@@ -50,7 +50,6 @@ export const landingHTML = `<!doctype html>
     box-shadow: 0 24px 80px rgba(0,0,0,.45);
     display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr);
   }
-  .sq { }
   .sq.border { background: #1a3d32; }
   .sq.light { background: var(--light); }
   .sq.dark { background: var(--dark); }
@@ -71,16 +70,15 @@ export const landingHTML = `<!doctype html>
 <body>
 <div class="wrap">
   <nav>
-    <div class="brand"><img src="/logo.png" width="32" height="32" alt=""> Chess Border</div>
+    <div class="brand"><img src="/logo.png" width="32" height="32" alt=""> Border Chess</div>
   </nav>
 
   <section class="hero">
     <div>
       <h1>Chess on a 10×10 board.<br>The border matters.</h1>
-      <p class="sub">Classic FIDE rules on an inner 8×8, plus a one-square border you can step onto. Pass-and-play or vs Fairy-Stockfish — on Mac, iPhone, or in your browser.</p>
+      <p class="sub">Classic FIDE rules on an inner 8×8, plus a one-square border you can step onto. Play in your browser or install on iPhone — pass-and-play or vs Fairy-Stockfish.</p>
       <div class="cta">
         <a class="btn btn-primary" href="/play/">Play in browser</a>
-        <a class="btn btn-ghost" href="${DMG_URL}">Download for Mac</a>
         <a class="btn btn-ghost" href="${OTA_INSTALL_URL}">Install on iPhone</a>
       </div>
     </div>
@@ -100,12 +98,12 @@ export const landingHTML = `<!doctype html>
 
   <section class="cards">
     <div class="card">
-      <h2>Install on Mac</h2>
-      <p>Signed with Developer ID and notarized by Apple.</p>
+      <h2>Play in browser</h2>
+      <p>No install — works on desktop and mobile.</p>
       <ol>
-        <li><a href="${DMG_URL}">Download ChessBorder.dmg</a></li>
-        <li>Drag <strong>Chess Border</strong> into Applications</li>
-        <li>Open from Applications (not from inside the DMG)</li>
+        <li><a href="/play/">Open the game</a></li>
+        <li>Choose <strong>Play vs Bot</strong> or <strong>Play with Friend</strong></li>
+        <li>Works best in Safari or Chrome</li>
       </ol>
     </div>
     <div class="card">
@@ -115,13 +113,12 @@ export const landingHTML = `<!doctype html>
         <li>Open this page in <strong>Safari</strong> on your iPhone</li>
         <li>Tap <a href="${OTA_INSTALL_URL}">Install on iPhone</a></li>
         <li>Settings → General → VPN &amp; Device Management → trust the developer</li>
-        <li>Enter the engine API key on the home screen (one time)</li>
       </ol>
     </div>
   </section>
 
   <footer>
-    Chess Border · <a href="/play/">Play in browser</a> · <a href="${DMG_URL}">Mac download</a> · Engine API at <a href="/health">/health</a>
+    Border Chess · <a href="/play/">Play in browser</a> · <a href="${OTA_INSTALL_URL}">iPhone install</a>
   </footer>
 </div>
 </body>

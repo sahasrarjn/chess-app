@@ -8,8 +8,8 @@ struct PieceView: View {
         Image(piece.assetName)
             .resizable()
             .aspectRatio(contentMode: .fit)
-            .padding(elevated ? 2 : 4)
-            .scaleEffect(elevated ? 1.08 : 1.0)
+            .padding(elevated ? 1 : 2)
+            .scaleEffect(elevated ? 1.06 : 1.0)
             .shadow(color: elevated ? .black.opacity(0.35) : .clear, radius: elevated ? 5 : 0, y: elevated ? 2 : 0)
             .animation(.spring(response: 0.28, dampingFraction: 0.78), value: elevated)
     }
@@ -75,6 +75,8 @@ struct SquareView: View {
                 PieceView(piece: piece, elevated: isSelected)
                     .zIndex(isSelected ? 1 : 0)
             }
+
+            coordinateOverlay
         }
         .frame(width: squareSize, height: squareSize)
         .clipped()
@@ -84,6 +86,64 @@ struct SquareView: View {
                 viewModel.handleSquareTap(square)
             }
         }
+    }
+
+    @ViewBuilder
+    private var coordinateOverlay: some View {
+        let labelColor = coordinateLabelColor
+        let fontSize = max(8, squareSize * 0.18)
+
+        ZStack {
+            if let rank = rankLabelForOverlay {
+                VStack {
+                    HStack {
+                        Text(rank)
+                            .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+                            .foregroundStyle(labelColor)
+                            .padding(2)
+                        Spacer(minLength: 0)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+
+            if let file = fileLabelForOverlay {
+                VStack {
+                    Spacer(minLength: 0)
+                    HStack {
+                        Spacer(minLength: 0)
+                        Text(file)
+                            .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+                            .foregroundStyle(labelColor)
+                            .padding(2)
+                    }
+                }
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
+    private var rankLabelForOverlay: String? {
+        guard BoardConstants.playableRange.contains(square.row) else { return nil }
+        let leftCol = viewModel.boardFlipped
+            ? BoardConstants.playableRange.upperBound
+            : BoardConstants.playableRange.lowerBound
+        guard square.col == leftCol else { return nil }
+        return BoardConstants.standardRankLabel(row: square.row)
+    }
+
+    private var fileLabelForOverlay: String? {
+        guard BoardConstants.playableRange.contains(square.col) else { return nil }
+        let bottomRow = viewModel.boardFlipped
+            ? BoardConstants.playableRange.lowerBound
+            : BoardConstants.playableRange.upperBound
+        guard square.row == bottomRow else { return nil }
+        return BoardConstants.standardFileLabel(col: square.col)
+    }
+
+    private var coordinateLabelColor: Color {
+        let isLight = (square.row + square.col) % 2 == 0
+        return isLight ? Color.black.opacity(0.55) : Color.white.opacity(0.72)
     }
 }
 
@@ -139,26 +199,13 @@ struct BoardView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let labelWidth: CGFloat = 16
-            let fileLabelBand: CGFloat = 18
-            let availableWidth = geo.size.width - labelWidth - 4
-            let availableHeight = geo.size.height - fileLabelBand
-            let boardSize = min(availableWidth, availableHeight)
+            let boardSize = min(geo.size.width, geo.size.height)
             let squareSize = boardSize / CGFloat(BoardConstants.size)
 
-            HStack(alignment: .top, spacing: 4) {
-                rankLabels(height: squareSize)
-                    .frame(width: labelWidth)
-
-                VStack(spacing: 0) {
-                    boardGrid(squareSize: squareSize, boardSize: boardSize)
-                    fileLabels(width: squareSize)
-                        .padding(.top, 4)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            boardGrid(squareSize: squareSize, boardSize: boardSize)
+                .frame(width: boardSize, height: boardSize)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .aspectRatio(1, contentMode: .fit)
         .animation(.easeOut(duration: 0.2), value: viewModel.previewPly)
     }
 
@@ -180,10 +227,8 @@ struct BoardView: View {
                 }
             }
 
-            // Subtle frame around the playable 8×8 — border is part of the board, not a separate object.
             playableFrameOverlay(squareSize: squareSize, boardSize: boardSize)
         }
-        .frame(width: boardSize, height: boardSize)
         .overlay {
             if let animation = viewModel.activeMoveAnimation {
                 MoveAnimationOverlay(
@@ -222,42 +267,6 @@ struct BoardView: View {
                     y: (CGFloat(rowMin) + CGFloat(rowMax - rowMin + 1) / 2) * squareSize
                 )
                 .allowsHitTesting(false)
-        }
-    }
-
-    @ViewBuilder
-    private func rankLabels(height: CGFloat) -> some View {
-        VStack(spacing: 0) {
-            ForEach(displayRows, id: \.self) { row in
-                Group {
-                    if let label = BoardConstants.standardRankLabel(row: row) {
-                        Text(label)
-                    } else {
-                        Text(" ")
-                    }
-                }
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.45))
-                .frame(height: height)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func fileLabels(width: CGFloat) -> some View {
-        HStack(spacing: 0) {
-            ForEach(displayCols, id: \.self) { col in
-                Group {
-                    if let label = BoardConstants.standardFileLabel(col: col) {
-                        Text(label)
-                    } else {
-                        Text(" ")
-                    }
-                }
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.45))
-                .frame(width: width)
-            }
         }
     }
 }

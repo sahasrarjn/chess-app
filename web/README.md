@@ -1,6 +1,6 @@
-# Chess Border — Web
+# Border Chess — Web
 
-Browser version of Chess Border: **Play vs Bot** and **Play with Friend** (pass-and-play). Same 10×10 border board and rules as the iOS/Mac app. No online matchmaking.
+Browser version of Border Chess: **Play vs Bot** and **Play with Friend** (pass-and-play). Same 10×10 border board and rules as the iOS/Mac app. No online matchmaking.
 
 ## Run locally
 

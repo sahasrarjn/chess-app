@@ -72,7 +72,7 @@ cat > "$ROOT/build/manifest.plist" <<EOF
         <key>kind</key>
         <string>software</string>
         <key>title</key>
-        <string>Chess Border</string>
+        <string>Border Chess</string>
       </dict>
     </dict>
   </array>

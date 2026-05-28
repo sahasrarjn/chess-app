@@ -6,8 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$ROOT/.." && pwd)"
 DERIVED="$ROOT/build/DerivedData"
-APP_NAME="Chess Border"
-APP="$DERIVED/Build/Products/Release/Chess Border.app"
+APP_NAME="Border Chess"
+APP="$DERIVED/Build/Products/Release/Border Chess.app"
 DMG="$ROOT/build/ChessBorder.dmg"
 PROJECT="$ROOT/ChessBorder.xcodeproj"
 
@@ -51,7 +51,7 @@ trap 'rm -rf "$STAGE"' EXIT
 cp -R "$APP" "$STAGE/$APP_NAME.app"
 ln -s /Applications "$STAGE/Applications"
 rm -f "$DMG"
-hdiutil create -quiet -volname "Chess Border" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
+hdiutil create -quiet -volname "Border Chess" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
 
 if [[ -n "${DEVELOPER_ID:-}" && -n "$(chess_notary_mode)" ]]; then
   echo "==> Notarizing DMG (may take several minutes)…"

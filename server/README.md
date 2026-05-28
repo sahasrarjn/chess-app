@@ -1,4 +1,4 @@
-# Chess Border — Engine Server
+# Border Chess — Engine Server
 
 Self-hosted **Fairy-Stockfish** HTTP API for the iPhone app. Physical iOS devices cannot run the engine locally, so the app calls this server instead of using minimax.
 
@@ -7,7 +7,7 @@ Self-hosted **Fairy-Stockfish** HTTP API for the iPhone app. Physical iOS device
 **HTTPS front door:** [chess-engine.sahasraranjan.workers.dev](https://chess-engine.sahasraranjan.workers.dev) (Cloudflare Worker, free)  
 **Engine backend:** AWS App Runner (~$6–9/mo) — Fairy-Stockfish in Docker
 
-The iPhone app ships with the workers.dev URL in `Info.plist`. Enter the API key once on the home screen.
+The iPhone app reads the engine URL and API key from `Info.plist` (not shown in the UI).
 
 ```bash
 # Redeploy worker after AWS stack changes
@@ -45,6 +45,8 @@ Default URL (already in `Info.plist`):
 `https://chess-engine.sahasraranjan.workers.dev`
 
 On the home screen, paste your **API key** under **Engine server** (same key as AWS / worker secrets).
+
+**Note:** The native iOS/Mac app bakes URL + API key into `Info.plist` instead — no user-facing fields.
 
 ## API
 

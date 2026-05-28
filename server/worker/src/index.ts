@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { landingHTML } from "./landing";
-import { DMG_URL } from "./release";
 
 export type Env = {
   ENGINE_ORIGIN: string;
@@ -23,8 +22,6 @@ app.use("/v1/*", apiCors);
 app.get("/", (c) => c.html(landingHTML));
 
 app.get("/logo.png", (c) => c.env.ASSETS.fetch(c.req.raw));
-
-app.get("/ChessBorder.dmg", (c) => c.redirect(DMG_URL, 302));
 
 app.get("/health", async (c) => {
   const origin = c.env.ENGINE_ORIGIN?.replace(/\/$/, "");

@@ -28,7 +28,7 @@ sign_app() {
   fi
 
   echo "    signing app executable + bundle…"
-  sign_one "$app/Contents/MacOS/Chess Border" --entitlements "$ENTITLEMENTS"
+  sign_one "$app/Contents/MacOS/Border Chess" --entitlements "$ENTITLEMENTS"
   sign_one "$app" --entitlements "$ENTITLEMENTS"
   codesign --verify --deep --strict "$app"
   echo "    Developer ID signature OK"

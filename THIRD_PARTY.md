@@ -13,10 +13,12 @@ Build the engine for local development:
 ./ChessBorder/scripts/setup-engine.sh
 ```
 
-## Chess piece graphics (Cburnett)
+## Chess piece graphics (Chessnut)
 
-- **Source:** [Lichess lila](https://github.com/lichess-org/lila/tree/master/public/piece/cburnett)
-- **License:** CC BY-SA 3.0 / GPL (see Wikimedia Commons)
+- **Source:** [Lichess lila — chessnut](https://github.com/lichess-org/lila/tree/master/public/piece/chessnut)
+- **License:** See Lichess piece set licensing (community/open piece set)
+
+Previously used Cburnett; replaced with Chessnut for a cleaner, chess.com-adjacent look.
 
 ## ChessboardKit (UI inspiration)
 

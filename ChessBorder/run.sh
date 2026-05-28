@@ -22,7 +22,7 @@ case "$DEST" in
       -destination 'platform=macOS,arch=arm64' \
       -derivedDataPath "$DERIVED" \
       build
-    APP="$DERIVED/Build/Products/Debug/Chess Border.app"
+    APP="$DERIVED/Build/Products/Debug/Border Chess.app"
     echo "Launching: $APP"
     open "$APP"
     ;;

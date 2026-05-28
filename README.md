@@ -1,4 +1,4 @@
-# Chess Border
+# Border Chess
 
 An iPhone chess app with a **chess.com-inspired UI** and a **10×10 board**: standard FIDE chess on an inner 8×8, surrounded by **one empty square on every side** (top, bottom, left, and right). Pieces start in the same relative positions as normal chess, but kings, queens, and edge pawns can use the border for extra room.
 
@@ -63,38 +63,27 @@ Many GPL apps charge money — users pay for convenience, support, and builds, n
 
 **Mac App Store:** possible but legally debated (Apple DRM vs GPL). Direct download is simpler for GPL compliance.
 
+## Public distribution
+
+- **Web:** [chess-engine.sahasraranjan.workers.dev/play/](https://chess-engine.sahasraranjan.workers.dev/play/)
+- **iPhone:** OTA install from [chess-engine.sahasraranjan.workers.dev](https://chess-engine.sahasraranjan.workers.dev)
+
+Mac app (`ChessBorderMac`) is for local development only — not published on the homepage.
+
 ## Requirements
 
-- Xcode 16+ (command-line tools are enough to build)
-- **Mac (Apple Silicon):** macOS 14+ — native Mac app via `ChessBorderMac`
-- **iPhone:** iOS 17+ (portrait)
+- Xcode 16+ · iOS 17+ (iPhone) · macOS 14+ (dev builds only)
 
-## Run without opening Xcode (recommended on Mac)
-
-From the repo:
+## Local development
 
 ```bash
 cd ChessBorder
-./run.sh        # default: build + launch native Mac app
-./run.sh sim    # iOS Simulator (iPhone 17)
-./run.sh ios    # build .app for a physical iPhone (install via Xcode Devices)
+./run.sh sim    # iOS Simulator
+./run.sh mac    # Mac app (dev only)
+./run.sh ios    # build for physical iPhone
 ```
 
-Native Mac build output:
-
-`ChessBorder/build/DerivedData/Build/Products/Debug/Chess Border.app`
-
-You can also launch it directly:
-
-```bash
-open "ChessBorder/build/DerivedData/Build/Products/Debug/Chess Border.app"
-```
-
-After editing `project.yml`, regenerate the Xcode project:
-
-```bash
-cd ChessBorder && xcodegen generate
-```
+Regenerate Xcode project after editing `project.yml`: `xcodegen generate` (from `ChessBorder/`).
 
 ## Run on your iPhone
 
@@ -127,7 +116,7 @@ Local Stockfish on a real iPhone is not viable via subprocess (iOS sandbox). The
 docker compose -f server/docker-compose.yml up --build
 ```
 
-In the app home screen, set **Engine server** to your HTTPS URL (or `http://LAN_IP:8080` on the same Wi‑Fi for dev). Details: [server/README.md](server/README.md).
+Engine URL and API key are set in `ChessBorder/Info.plist` (`EngineServerURL`, `EngineServerAPIKey`). Details: [server/README.md](server/README.md).
 
 If the iOS simulator runtime is missing, install it via **Xcode → Settings → Components**.
 

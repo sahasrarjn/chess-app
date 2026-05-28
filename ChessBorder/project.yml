@@ -39,13 +39,16 @@ targets:
       TARGETED_DEVICE_FAMILY: "1"
       INFOPLIST_KEY_UILaunchScreen_Generation: YES
       INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
-      INFOPLIST_KEY_CFBundleDisplayName: Chess Border
+      INFOPLIST_KEY_CFBundleDisplayName: Border Chess
     info:
       path: ChessBorder/Info.plist
       properties:
-        CFBundleDisplayName: Chess Border
-        UILaunchScreen: {}
+        CFBundleDisplayName: Border Chess
+        UILaunchScreen:
+          UIImageName: LaunchLogo
+          UIColorName: LaunchBackground
         EngineServerURL: https://chess-engine.sahasraranjan.workers.dev
+        EngineServerAPIKey: 14f4a94c81365d35f51ae0fd0bba45bf
 
   ChessBorderMac:
     type: application
@@ -70,19 +73,19 @@ targets:
       - path: ChessBorder/Assets.xcassets
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.sahasraranjan.chessborder.mac
-      PRODUCT_NAME: Chess Border
+      PRODUCT_NAME: Border Chess
       DEVELOPMENT_TEAM: K89NSAWKXN
       CODE_SIGN_STYLE: Automatic
       MARKETING_VERSION: "1.0.0"
       CURRENT_PROJECT_VERSION: "1"
-      INFOPLIST_KEY_CFBundleDisplayName: Chess Border
+      INFOPLIST_KEY_CFBundleDisplayName: Border Chess
       GENERATE_INFOPLIST_FILE: YES
       ENABLE_TESTABILITY: YES
       CODE_SIGN_ENTITLEMENTS: ChessBorder/ChessBorder.entitlements
     info:
       path: ChessBorder/Info-mac.plist
       properties:
-        CFBundleDisplayName: Chess Border
+        CFBundleDisplayName: Border Chess
         LSMinimumSystemVersion: "14.0"
 
   ChessBorderTests:
@@ -95,7 +98,7 @@ targets:
     settings:
       GENERATE_INFOPLIST_FILE: YES
       PRODUCT_BUNDLE_IDENTIFIER: com.sahasraranjan.chessborder.tests
-      TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Chess Border.app/Contents/MacOS/Chess Border"
+      TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Border Chess.app/Contents/MacOS/Border Chess"
       BUNDLE_LOADER: "$(TEST_HOST)"
 
 schemes:

@@ -52,17 +52,9 @@ enum BotProvider {
             return "Fairy-Stockfish (server)"
         }
         #if os(iOS)
-        return "Engine server not configured"
+        return "Fairy-Stockfish"
         #else
         return "Minimax fallback"
-        #endif
-    }
-
-    static var needsServerConfiguration: Bool {
-        #if os(iOS) && !targetEnvironment(simulator)
-        return !EngineBundle.isFairyStockfishAvailable && !BotServerConfig.isConfigured
-        #else
-        return false
         #endif
     }
 }

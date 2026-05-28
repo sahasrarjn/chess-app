@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		013EE86B5109C7A16583599B /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D1A353C72F516AC4A79E174 /* SplashView.swift */; };
 		0388C84C3737D710304A4EA2 /* ChessBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 641458CF36924B909D13651C /* ChessBot.swift */; };
 		0621CCFF7EE1C6208E0931C6 /* BotServerConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 077CC73AF9FF87AAD4027FED /* BotServerConfig.swift */; };
 		072D1B151011DB14089AB3EF /* MoveNotation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 907A49B2C8531C4C828DD6AB /* MoveNotation.swift */; };
@@ -49,6 +50,7 @@
 		B015A229CDABB047C8FFB649 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41A41F6F73FA8C0F107B5E4B /* HomeView.swift */; };
 		B6CAFC8CB73FB8002A877FD3 /* HybridBotPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 651BC030E32722D0B826D180 /* HybridBotPlayer.swift */; };
 		BCC243C9E66E4131D3D486F7 /* FairyStockfishBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6445AB9B4709C280E598091 /* FairyStockfishBot.swift */; };
+		C10CE935821133205E96E891 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D1A353C72F516AC4A79E174 /* SplashView.swift */; };
 		C568AC1B1AAF6F730A3F2FB8 /* BotLogging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8205CA20A5DC79CBF61239CA /* BotLogging.swift */; };
 		C9326EE3EF6DF85CB2EF473A /* BotDifficulty+Engine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6256C2B541B88DF31B937CE /* BotDifficulty+Engine.swift */; };
 		C9B5C4DB2EA70FE9F3664839 /* UCIParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5D422DAC760ECA795133D3E /* UCIParser.swift */; };
@@ -112,6 +114,7 @@
 		2898D2FF9EE958488B06A438 /* GameViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewModel.swift; sourceTree = "<group>"; };
 		2FF8E07D7F0DABF876CB2527 /* ChessBorderMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChessBorderMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		388F6D0DDEE3BDDD255524D4 /* ChessGame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessGame.swift; sourceTree = "<group>"; };
+		3D1A353C72F516AC4A79E174 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		3D7693656EEDC87C59AD8C09 /* fairy-stockfish */ = {isa = PBXFileReference; path = "fairy-stockfish"; sourceTree = "<group>"; };
 		41A41F6F73FA8C0F107B5E4B /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		44658DA8FEEAEE875CEC56C1 /* BotPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotPlayer.swift; sourceTree = "<group>"; };
@@ -183,6 +186,7 @@
 				47D9330D945C0EDDC3BBA1D4 /* GameView.swift */,
 				41A41F6F73FA8C0F107B5E4B /* HomeView.swift */,
 				5EB5AA45251321006BFB27EE /* MoveListView.swift */,
+				3D1A353C72F516AC4A79E174 /* SplashView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -431,6 +435,7 @@
 				DD08507ACD822C10AAC6C69F /* Piece.swift in Sources */,
 				528CDA5EC4E148B377A150C8 /* PlatformChrome.swift in Sources */,
 				F7757C16C5CDF478818FD41D /* RemoteEngineBot.swift in Sources */,
+				C10CE935821133205E96E891 /* SplashView.swift in Sources */,
 				C9B5C4DB2EA70FE9F3664839 /* UCIParser.swift in Sources */,
 				AB0F8D6042262BA76BB83392 /* UCIProcessClient.swift in Sources */,
 			);
@@ -463,6 +468,7 @@
 				AD397CDF27AD968B25966CF1 /* Piece.swift in Sources */,
 				D6FC7E71A1C4990B5F5552C1 /* PlatformChrome.swift in Sources */,
 				CC76CF5887B2847D7B952914 /* RemoteEngineBot.swift in Sources */,
+				013EE86B5109C7A16583599B /* SplashView.swift in Sources */,
 				D620849E130B3276EA35A014 /* UCIParser.swift in Sources */,
 				13507C7F16B3FDD7955D9BD4 /* UCIProcessClient.swift in Sources */,
 			);
@@ -547,14 +553,14 @@
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "ChessBorder/Info-mac.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Chess Border";
+				INFOPLIST_KEY_CFBundleDisplayName = "Border Chess";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sahasraranjan.chessborder.mac;
-				PRODUCT_NAME = "Chess Border";
+				PRODUCT_NAME = "Border Chess";
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -572,7 +578,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.sahasraranjan.chessborder.tests;
 				SDKROOT = macosx;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Chess Border.app/Contents/MacOS/Chess Border";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Border Chess.app/Contents/MacOS/Border Chess";
 			};
 			name = Debug;
 		};
@@ -585,7 +591,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = K89NSAWKXN;
 				INFOPLIST_FILE = ChessBorder/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Chess Border";
+				INFOPLIST_KEY_CFBundleDisplayName = "Border Chess";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -611,14 +617,14 @@
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "ChessBorder/Info-mac.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Chess Border";
+				INFOPLIST_KEY_CFBundleDisplayName = "Border Chess";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sahasraranjan.chessborder.mac;
-				PRODUCT_NAME = "Chess Border";
+				PRODUCT_NAME = "Border Chess";
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -699,7 +705,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.sahasraranjan.chessborder.tests;
 				SDKROOT = macosx;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Chess Border.app/Contents/MacOS/Chess Border";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Border Chess.app/Contents/MacOS/Border Chess";
 			};
 			name = Release;
 		};
@@ -712,7 +718,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = K89NSAWKXN;
 				INFOPLIST_FILE = ChessBorder/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Chess Border";
+				INFOPLIST_KEY_CFBundleDisplayName = "Border Chess";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (

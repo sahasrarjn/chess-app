@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""HTTP API for Chess Border — Fairy-Stockfish on the server."""
+"""HTTP API for Border Chess — Fairy-Stockfish on the server."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ async def lifespan(_: FastAPI):
         engine.close()
 
 
-app = FastAPI(title="Chess Border Engine", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Border Chess Engine", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

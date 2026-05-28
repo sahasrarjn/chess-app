@@ -27,10 +27,10 @@ export function renderHome(
     const logo = document.createElement("img");
     logo.className = "home-logo";
     logo.src = `${import.meta.env.BASE_URL}logo.png`;
-    logo.alt = "Chess Border";
+    logo.alt = "Border Chess";
     home.appendChild(logo);
 
-    home.appendChild(el("h1", "", "Chess Border"));
+    home.appendChild(el("h1", "", "Border Chess"));
     home.appendChild(
       el(
         "p",

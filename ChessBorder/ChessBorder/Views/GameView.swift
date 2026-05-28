@@ -56,24 +56,26 @@ struct GameView: View {
         ZStack {
             BoardTheme.background.ignoresSafeArea()
 
-            VStack(spacing: 12) {
+            VStack(spacing: 6) {
                 header
 
                 CapturedPiecesBar(
                     capturedByWhite: viewModel.capturedByWhite,
                     capturedByBlack: viewModel.capturedByBlack
                 )
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 8)
 
                 Text(viewModel.statusText)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(BoardTheme.accent)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                    .padding(.horizontal, 8)
+                    .frame(minHeight: 20)
 
                 BoardView(viewModel: viewModel)
-                    .padding(.horizontal, 8)
-                    .opacity(viewModel.isThinking ? 0.85 : 1)
+                    .layoutPriority(1)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.horizontal, 2)
 
                 if !viewModel.recordedMoves.isEmpty {
                     MoveListView(
@@ -82,7 +84,8 @@ struct GameView: View {
                         livePly: viewModel.livePly,
                         onSelect: { viewModel.goToMove(ply: $0) }
                     )
-                    .padding(.horizontal, 12)
+                    .frame(maxHeight: 72)
+                    .padding(.horizontal, 8)
                 }
 
                 historyControls
@@ -134,6 +137,7 @@ struct GameView: View {
             }
         }
         .padding(.horizontal)
+        .padding(.top, 4)
     }
 
     private var historyControls: some View {

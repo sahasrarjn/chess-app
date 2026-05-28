@@ -1,12 +1,9 @@
-# Chess Engine — Cloudflare Worker (HTTPS front door)
+# Chess Engine — Cloudflare Worker
 
-Public **HTTPS** endpoint for the iPhone app, same pattern as [brain-server](https://brain-server.sahasraranjan.workers.dev/).
-
-Fairy-Stockfish cannot run *inside* Workers (no subprocess, no WASM threads for the full engine). This worker **proxies** to the Docker/App Runner backend where the real engine runs.
+Landing page, browser game (`/play/`), iPhone OTA install, and engine API proxy.
 
 ```
-iPhone app  →  chess-engine.<you>.workers.dev  →  AWS App Runner (Fairy-Stockfish)
-                     (free HTTPS)                    (~$6–9/mo)
+Browser / iPhone  →  chess-engine.<you>.workers.dev  →  AWS App Runner (Fairy-Stockfish)
 ```
 
 ## Deploy
@@ -17,47 +14,32 @@ iPhone app  →  chess-engine.<you>.workers.dev  →  AWS App Runner (Fairy-Stoc
 ./server/aws/deploy.sh
 ```
 
-Save the **ServiceUrl** and **API key** from the output.
-
 ### 2. Cloudflare Worker
 
 ```bash
 cd server/worker
 npm install
-npx wrangler secret put ENGINE_ORIGIN   # paste App Runner URL (no trailing slash)
-npx wrangler secret put API_KEY         # same key from deploy.sh
+npx wrangler secret put ENGINE_ORIGIN
+npx wrangler secret put API_KEY
 npm run deploy
 ```
 
-Your engine URL for the iPhone app:
-
-`https://chess-engine.sahasraranjan.workers.dev`  
-(subdomain matches your Cloudflare account, same as brain-server)
+**Public site:** `https://chess-engine.sahasraranjan.workers.dev`
 
 ### 3. iPhone app
 
-Home screen → **Engine server**: `https://chess-engine.sahasraranjan.workers.dev`  
-**API key**: paste the key from step 1.
+Engine URL + API key are baked into `Info.plist`. Publish IPA:
+
+```bash
+cd ChessBorder
+./scripts/release-ios.sh
+./scripts/publish-release.sh
+npm run deploy   # in server/worker — includes /play/ web build if configured
+```
 
 ## Local dev
 
 ```bash
-# Terminal 1 — engine
 docker compose -f server/docker-compose.yml up
-
-# Terminal 2 — worker proxy
-cd server/worker
-echo 'ENGINE_ORIGIN=http://127.0.0.1:8080' > .dev.vars
-echo 'API_KEY=dev' >> .dev.vars
-npm run dev
+cd server/worker && npm run dev
 ```
-
-## Cost
-
-| Piece | ~Monthly |
-|-------|----------|
-| Cloudflare Worker | **$0** (free tier covers personal use) |
-| App Runner 0.25 vCPU / 1 GB | **$6–9** |
-| **Total** | **~$6–9** |
-
-AWS-only URL works too, but Workers gives you a stable `*.workers.dev` HTTPS URL without managing certificates.

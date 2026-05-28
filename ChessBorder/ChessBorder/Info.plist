@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Chess Border</string>
+	<string>Border Chess</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -21,8 +21,15 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIImageName</key>
+		<string>LaunchLogo</string>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
 	<key>EngineServerURL</key>
 	<string>https://chess-engine.sahasraranjan.workers.dev</string>
+	<key>EngineServerAPIKey</key>
+	<string>14f4a94c81365d35f51ae0fd0bba45bf</string>
 </dict>
 </plist>

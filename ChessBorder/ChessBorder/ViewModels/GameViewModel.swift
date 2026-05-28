@@ -354,9 +354,7 @@ final class GameViewModel: ObservableObject {
 
             BotLogging.debug("maybePlayBotMove: no move applied")
             #if os(iOS)
-            self.botEngineError = BotServerConfig.isConfigured
-                ? "Engine server did not return a move. Check the URL and server logs."
-                : "Set your engine server URL on the home screen (iPhone requires a remote Fairy-Stockfish)."
+            self.botEngineError = "Bot engine unavailable. Try again in a moment."
             #else
             self.botEngineError = "Bot engine unavailable."
             #endif

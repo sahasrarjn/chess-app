@@ -27,9 +27,21 @@ export function isEngineConfigured(): boolean {
   return getEngineUrl().length > 0;
 }
 
-/** Base URL for engine API (empty = same origin). */
+/**
+ * API base URL for bot requests.
+ * Browsers must call the same origin (Cloudflare worker); direct App Runner URLs
+ * fail with "Failed to fetch" due to CORS.
+ */
 export function engineApiBase(): string {
-  const custom = getEngineUrl();
-  if (custom) return custom;
-  return "";
+  if (typeof window === "undefined") return "";
+  const pageOrigin = window.location.origin;
+  const stored = getEngineUrl();
+  if (!stored) return pageOrigin;
+  try {
+    const storedOrigin = new URL(stored).origin;
+    if (storedOrigin === pageOrigin) return stored;
+  } catch {
+    return pageOrigin;
+  }
+  return pageOrigin;
 }

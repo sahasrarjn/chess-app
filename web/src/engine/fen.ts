@@ -1,5 +1,13 @@
-import { BOARD_SIZE, engineNotation } from "./types";
+import {
+  BOARD_SIZE,
+  engineNotation,
+  fromEngineNotation,
+  fromStandardNotation,
+  type PieceKind,
+  type Square,
+} from "./types";
 import type { ChessGame } from "./chessGame";
+import { squaresEqual } from "./chessGame";
 import { parseEngineMove } from "./uci";
 
 export function toFEN(game: ChessGame): string {
@@ -43,26 +51,45 @@ function fenCastling(game: ChessGame): string {
   return s || "-";
 }
 
-export function matchEngineMove(game: ChessGame, uci: string) {
-  const parsed = parseEngineMove(uci.trim().toLowerCase());
-  if (!parsed) return null;
-  const { from, to, promotion } = parsed;
-  const candidates = game.legalMoves(game.activeColor).filter(
+/** Match Fairy-Stockfish UCI to a legal move (mirrors Swift move(fromEngineUCI:)). */
+export function matchEngineMove(game: ChessGame, uci: string): ReturnType<ChessGame["legalMoves"]>[0] | null {
+  const trimmed = uci.trim().toLowerCase();
+  if (trimmed.length < 4) return null;
+
+  let from: Square | null = null;
+  let to: Square | null = null;
+  let promotion: PieceKind | undefined;
+
+  const engineParsed = parseEngineMove(trimmed);
+  if (engineParsed) {
+    from = engineParsed.from;
+    to = engineParsed.to;
+    promotion = engineParsed.promotion;
+  } else {
+    const fromStr = trimmed.slice(0, 2);
+    const toStr = trimmed.slice(2, 4);
+    const promoChar = trimmed.length > 4 ? trimmed[4] : undefined;
+    from = fromStandardNotation(fromStr) ?? fromEngineNotation(fromStr);
+    to = fromStandardNotation(toStr) ?? fromEngineNotation(toStr);
+    if (promoChar && ["q", "r", "b", "n"].includes(promoChar)) {
+      promotion = promoChar.toUpperCase() as PieceKind;
+    }
+  }
+
+  if (!from || !to) return null;
+
+  const color = game.activeColor;
+  const candidates = game.legalMoves(color).filter(
     (m) =>
-      m.from.row === from.row &&
-      m.from.col === from.col &&
-      m.to.row === to.row &&
-      m.to.col === to.col &&
-      m.promotion === promotion
+      squaresEqual(m.from, from) &&
+      squaresEqual(m.to, to) &&
+      (promotion === undefined || m.promotion === promotion)
   );
+
   return (
     candidates[0] ??
-    game.legalMoves(game.activeColor).find(
-      (m) =>
-        m.from.row === from.row &&
-        m.from.col === from.col &&
-        m.to.row === to.row &&
-        m.to.col === to.col
+    game.legalMoves(color).find(
+      (m) => squaresEqual(m.from, from) && squaresEqual(m.to, to)
     ) ??
     null
   );

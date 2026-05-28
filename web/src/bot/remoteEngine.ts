@@ -25,11 +25,19 @@ export async function fetchBotMove(
     }),
   });
 
+  const text = await res.text();
   if (!res.ok) {
-    throw new Error(`Engine HTTP ${res.status}`);
+    let detail = text;
+    try {
+      const err = JSON.parse(text) as { error?: string; detail?: string };
+      detail = err.error ?? err.detail ?? text;
+    } catch {
+      /* use raw text */
+    }
+    throw new Error(detail || `Engine HTTP ${res.status}`);
   }
 
-  const data = (await res.json()) as { uci?: string };
+  const data = JSON.parse(text) as { uci?: string };
   if (!data.uci) return null;
   return matchEngineMove(game, data.uci);
 }

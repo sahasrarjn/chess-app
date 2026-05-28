@@ -17,9 +17,10 @@ import type {
 import {
   difficultyMinThinkMs,
   isPlayable,
+  moveUci,
 } from "../engine/types";
 
-export type GameListener = () => void;
+export type GameUpdateListener = () => void;
 
 export class GameController {
   game = new ChessGame();
@@ -35,7 +36,8 @@ export class GameController {
 
   constructor(
     readonly mode: GameMode,
-    readonly botDifficulty: BotDifficulty = "medium"
+    readonly botDifficulty: BotDifficulty = "medium",
+    private readonly onUpdate?: GameUpdateListener
   ) {}
 
   get livePly(): number {
@@ -87,17 +89,12 @@ export class GameController {
     return this.game.piece(at);
   }
 
-  subscribe(listener: GameListener): () => void {
-    const handler = () => listener();
-    // no-op wrapper for future event emitter
-    return () => void handler;
-  }
-
   notify(): void {
     this.revision++;
     if (this.mode === "localTwoPlayer" && !this.isBrowsingHistory) {
       this.boardFlipped = this.game.activeColor === "black";
     }
+    this.onUpdate?.();
   }
 
   handleSquareTap(square: Square): void {
@@ -191,6 +188,7 @@ export class GameController {
   cancelPromotion(): void {
     this.pendingPromotion = null;
     this.clearSelection();
+    this.notify();
   }
 
   undo(): void {
@@ -308,34 +306,53 @@ export class GameController {
     this.notify();
 
     const start = performance.now();
-    const snapshot = this.game.copy();
+    const plyAtRequest = this.game.recordedMoves.length;
 
     try {
-      const move = await fetchBotMove(snapshot, this.botDifficulty);
+      let applied = false;
+      let lastUci = "";
+
+      for (let attempt = 0; attempt < 2 && !applied; attempt++) {
+        if (this.game.recordedMoves.length !== plyAtRequest) return;
+
+        const snapshot = this.game.copy();
+        const move = await fetchBotMove(snapshot, this.botDifficulty);
+        lastUci = move ? moveUci(move) : "";
+
+        if (
+          this.mode !== "vsBot" ||
+          this.game.activeColor !== "black" ||
+          this.game.result.type !== "ongoing" ||
+          this.game.recordedMoves.length !== plyAtRequest
+        ) {
+          return;
+        }
+
+        if (move && this.game.applyMove(move)) {
+          applied = true;
+          break;
+        }
+      }
+
       const minMs = difficultyMinThinkMs(this.botDifficulty);
       const elapsed = performance.now() - start;
       if (elapsed < minMs) {
         await sleep(minMs - elapsed);
       }
 
-      if (
-        this.mode !== "vsBot" ||
-        this.game.activeColor !== "black" ||
-        this.game.result.type !== "ongoing"
-      ) {
-        return;
-      }
-
-      if (move && this.game.applyMove(move)) {
+      if (applied) {
         this.notify();
         return;
       }
 
-      this.botEngineError =
-        "Engine did not return a valid move. Start the server (docker compose) or set an engine URL in settings.";
-    } catch {
-      this.botEngineError =
-        "Cannot reach the chess engine. Run `docker compose -f server/docker-compose.yml up` locally, or set your engine server URL.";
+      if (this.game.recordedMoves.length !== plyAtRequest) return;
+
+      this.botEngineError = lastUci
+        ? `Engine move (${lastUci}) was not legal here — try Undo or New Game.`
+        : "Engine did not return a move. Try again.";
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.botEngineError = msg || "Cannot reach the chess engine.";
     } finally {
       this.isThinking = false;
       this.notify();

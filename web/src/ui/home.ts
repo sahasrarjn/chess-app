@@ -74,10 +74,10 @@ export function renderHome(
 
     if (settingsOpen) {
       const panel = el("div", "settings-panel");
-      panel.appendChild(el("label", "", "Engine server URL (optional)"));
+      panel.appendChild(el("label", "", "Engine server URL (optional, dev only)"));
       const urlInput = document.createElement("input");
       urlInput.type = "url";
-      urlInput.placeholder = "Leave empty to use this site / localhost proxy";
+      urlInput.placeholder = "Leave empty — web uses this site automatically";
       urlInput.value = getEngineUrl();
       panel.appendChild(urlInput);
 
@@ -102,7 +102,11 @@ export function renderHome(
       updateEngineStatus(statusEl);
     } else if (!isEngineConfigured()) {
       home.appendChild(
-        el("p", "engine-status", "Bot uses /v1/move on this host when the engine server is running.")
+        el(
+          "p",
+          "engine-status",
+          "Bot uses this site’s /v1/move API. Leave engine URL empty on web."
+        )
       );
     }
 

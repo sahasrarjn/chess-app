@@ -22,10 +22,27 @@ cd "${ROOT}/server/worker"
 npm install
 
 echo "$ORIGIN" | npx wrangler secret put ENGINE_ORIGIN
-if [[ -n "${API_KEY:-}" ]]; then
+
+if [[ -z "${API_KEY:-}" ]]; then
+  SERVICE_ARN="$(aws cloudformation describe-stacks \
+    --stack-name "$STACK_NAME" \
+    --region "$REGION" \
+    --query "Stacks[0].Outputs[?OutputKey=='ServiceArn'].OutputValue" \
+    --output text 2>/dev/null || true)"
+  if [[ -n "$SERVICE_ARN" ]]; then
+    API_KEY="$(aws apprunner describe-service \
+      --service-arn "$SERVICE_ARN" \
+      --region "$REGION" \
+      --query 'Service.SourceConfiguration.ImageRepository.ImageConfiguration.RuntimeEnvironmentVariables.API_KEY' \
+      --output text 2>/dev/null || true)"
+  fi
+fi
+
+if [[ -n "${API_KEY:-}" && "$API_KEY" != "None" ]]; then
   echo "$API_KEY" | npx wrangler secret put API_KEY
+  echo "==> Synced API_KEY secret from App Runner"
 else
-  echo "Tip: set API_KEY env var to sync the same key as AWS."
+  echo "Warning: could not read API_KEY from App Runner; set API_KEY env var and re-run." >&2
 fi
 
 npm run deploy

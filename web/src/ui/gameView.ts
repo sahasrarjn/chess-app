@@ -8,9 +8,17 @@ import {
   standardRankLabel,
   type BotDifficulty,
   type GameMode,
+  type Square,
 } from "../engine/types";
 
 const PIECE_BASE = `${import.meta.env.BASE_URL}pieces/`;
+
+type SquareCell = {
+  btn: HTMLButtonElement;
+  pieceImg: HTMLImageElement | null;
+  dot: HTMLSpanElement | null;
+  ring: HTMLSpanElement | null;
+};
 
 export function renderGame(
   root: HTMLElement,
@@ -18,283 +26,392 @@ export function renderGame(
   difficulty: BotDifficulty,
   onBack: () => void
 ): () => void {
-  const ctrl = new GameController(mode, difficulty);
-  let rafScheduled = false;
-  let gameOverShown = false;
+  const screen = new GameScreen(root, mode, difficulty, onBack);
+  screen.mount();
+  return () => screen.destroy();
+}
 
-  const scheduleRender = () => {
-    if (rafScheduled) return;
-    rafScheduled = true;
-    requestAnimationFrame(() => {
-      rafScheduled = false;
-      paint();
-    });
-  };
+class GameScreen {
+  private ctrl: GameController;
+  private statusEl!: HTMLDivElement;
+  private capBlackEl!: HTMLElement;
+  private capWhiteEl!: HTMLElement;
+  private gridEl!: HTMLDivElement;
+  private moveListEl!: HTMLDivElement;
+  private undoBtn!: HTMLButtonElement;
+  private resignBtn!: HTMLButtonElement;
+  private promotionEl: HTMLElement | null = null;
+  private gameOverEl: HTMLElement | null = null;
+  private gameOverShown = false;
 
-  const paint = () => {
-    root.innerHTML = "";
+  private squareCells = new Map<string, SquareCell>();
+  private displayedRows: number[] = [];
+  private displayedCols: number[] = [];
+  private lastMoveListLen = 0;
+  private lastCapturedPly = -1;
+  private lastFlip = false;
+
+  constructor(
+    private readonly root: HTMLElement,
+    private readonly mode: GameMode,
+    private readonly difficulty: BotDifficulty,
+    private readonly onBack: () => void
+  ) {
+    this.ctrl = new GameController(mode, difficulty, () => this.update());
+  }
+
+  mount(): void {
+    this.root.innerHTML = "";
     const screen = el("div", "game-screen");
 
     const header = el("div", "game-header");
     const back = el("button", "back", "← Back");
-    back.onclick = onBack;
+    back.onclick = () => this.onBack();
     header.appendChild(back);
     header.appendChild(
-      el("h2", "", mode === "vsBot" ? `Play vs Bot (${difficulty})` : "Play with Friend")
+      el("h2", "", this.mode === "vsBot" ? `Play vs Bot (${this.difficulty})` : "Play with Friend")
     );
     const flip = el("button", "", "Flip");
-    flip.onclick = () => {
-      ctrl.toggleBoardFlip();
-      scheduleRender();
-    };
+    flip.onclick = () => this.ctrl.toggleBoardFlip();
     header.appendChild(flip);
     screen.appendChild(header);
 
-    const displayedPly = ctrl.previewPly ?? ctrl.livePly;
-    const capWhite = ctrl.capturedPieces("white", displayedPly);
-    const capBlack = ctrl.capturedPieces("black", displayedPly);
-
     const capBar = el("div", "captured-bar");
-    capBar.appendChild(renderCaptured(capBlack, "Black"));
-    capBar.appendChild(renderCaptured(capWhite, "White"));
+    this.capBlackEl = el("div", "");
+    this.capWhiteEl = el("div", "");
+    capBar.appendChild(this.capBlackEl);
+    capBar.appendChild(this.capWhiteEl);
     screen.appendChild(capBar);
 
-    const status = el("div", `status-bar${ctrl.botEngineError ? " error" : ""}`);
-    status.textContent = ctrl.statusText();
-    screen.appendChild(status);
+    this.statusEl = el("div", "status-bar") as HTMLDivElement;
+    screen.appendChild(this.statusEl);
 
     const boardWrap = el("div", "board-wrap");
-    const frame = el("div", "board-frame");
-    boardWrap.appendChild(frame);
-
-    const grid = el("div", "board-grid");
-    const snap = ctrl.displaySnapshot;
-    const lastMove = snap.lastMove;
-
-    const rows = ctrl.boardFlipped
-      ? [...Array(BOARD_SIZE).keys()].reverse()
-      : [...Array(BOARD_SIZE).keys()];
-    const cols = ctrl.boardFlipped
-      ? [...Array(BOARD_SIZE).keys()].reverse()
-      : [...Array(BOARD_SIZE).keys()];
-
-    for (const row of rows) {
-      for (const col of cols) {
-        const square = { row, col };
-        const isLight = (row + col) % 2 === 0;
-        const btn = el("button", `square ${isLight ? "light" : "dark"}`);
-
-        const key = ctrl.squareKey(square);
-        if (ctrl.selectedSquare && squaresEqual(ctrl.selectedSquare, square)) {
-          btn.classList.add("selected");
-        }
-        if (lastMove && (squaresEqual(lastMove.from, square) || squaresEqual(lastMove.to, square))) {
-          btn.classList.add("last-move");
-        }
-        if (ctrl.isKingInCheck(square)) btn.classList.add("in-check");
-
-        if (ctrl.legalTargets.has(key) && !ctrl.captureTargets.has(key)) {
-          btn.appendChild(el("span", "legal-dot"));
-        }
-        if (ctrl.captureTargets.has(key)) {
-          btn.appendChild(el("span", "capture-ring"));
-        }
-
-        const piece = ctrl.piece(square);
-        if (piece) {
-          const img = document.createElement("img");
-          img.className = "piece-img";
-          img.src = `${PIECE_BASE}${pieceAssetName(piece)}.svg`;
-          img.alt = piece.kind;
-          btn.appendChild(img);
-        }
-
-        const fileLabel = standardFileLabel(col);
-        const rankLabel = standardRankLabel(row);
-        if (fileLabel && row === (ctrl.boardFlipped ? 0 : BOARD_SIZE - 1)) {
-          const c = el("span", "coord file", fileLabel);
-          btn.appendChild(c);
-        }
-        if (rankLabel && col === (ctrl.boardFlipped ? BOARD_SIZE - 1 : 0)) {
-          const c = el("span", "coord rank", rankLabel);
-          btn.appendChild(c);
-        }
-
-        btn.onclick = () => {
-          ctrl.handleSquareTap(square);
-          scheduleRender();
-        };
-        grid.appendChild(btn);
-      }
-    }
-    boardWrap.appendChild(grid);
+    boardWrap.appendChild(el("div", "board-frame"));
+    this.gridEl = el("div", "board-grid") as HTMLDivElement;
+    boardWrap.appendChild(this.gridEl);
     screen.appendChild(boardWrap);
 
     const moveWrap = el("div", "move-list-wrap");
-    const moveList = el("div", "move-list");
-    const moves = ctrl.game.recordedMoves;
-    let moveNum = 1;
-    for (let i = 0; i < moves.length; i++) {
-      const rec = moves[i];
-      if (rec.color === "white") {
-        const numSpan = el("span", "move-num", `${moveNum}.`);
-        moveList.appendChild(numSpan);
-        moveNum++;
-      }
-      const entry = el("button", "move-entry", rec.san);
-      if (ctrl.previewPly === rec.ply + 1 || (ctrl.previewPly == null && rec.ply === moves.length - 1)) {
-        entry.classList.add("active");
-      }
-      const ply = rec.ply + 1;
-      entry.onclick = () => {
-        ctrl.goToMove(ply);
-        scheduleRender();
-      };
-      moveList.appendChild(entry);
-    }
-    if (moves.length === 0) {
-      moveList.appendChild(el("span", "", "No moves yet"));
-    }
-    moveWrap.appendChild(moveList);
+    this.moveListEl = el("div", "move-list") as HTMLDivElement;
+    moveWrap.appendChild(this.moveListEl);
     screen.appendChild(moveWrap);
 
     const controls = el("div", "game-controls");
-    const undo = el("button", "", "Undo") as HTMLButtonElement;
-    undo.disabled = ctrl.game.moveHistory.length === 0;
-    undo.onclick = () => {
-      ctrl.undo();
-      scheduleRender();
-    };
-    controls.appendChild(undo);
+    this.undoBtn = el("button", "", "Undo") as HTMLButtonElement;
+    this.undoBtn.onclick = () => this.ctrl.undo();
+    controls.appendChild(this.undoBtn);
 
-    const histBack = el("button", "", "◀");
-    histBack.onclick = () => {
-      ctrl.stepBack();
-      scheduleRender();
-    };
-    controls.appendChild(histBack);
+    for (const label of ["◀", "▶", "Live"] as const) {
+      const b = el("button", "", label);
+      if (label === "◀") b.onclick = () => this.ctrl.stepBack();
+      if (label === "▶") b.onclick = () => this.ctrl.stepForward();
+      if (label === "Live") b.onclick = () => {
+        this.ctrl.previewPly = null;
+        this.update();
+      };
+      controls.appendChild(b);
+    }
 
-    const histFwd = el("button", "", "▶");
-    histFwd.onclick = () => {
-      ctrl.stepForward();
-      scheduleRender();
+    this.resignBtn = el("button", "danger", "Resign") as HTMLButtonElement;
+    this.resignBtn.onclick = () => {
+      if (confirm("Resign this game?")) this.ctrl.resignGame();
     };
-    controls.appendChild(histFwd);
-
-    const live = el("button", "", "Live");
-    live.onclick = () => {
-      ctrl.previewPly = null;
-      scheduleRender();
-    };
-    controls.appendChild(live);
-
-    const resign = el("button", "danger", "Resign") as HTMLButtonElement;
-    resign.disabled = ctrl.game.result.type !== "ongoing";
-    resign.onclick = () => {
-      if (confirm("Resign this game?")) {
-        ctrl.resignGame();
-        scheduleRender();
-      }
-    };
-    controls.appendChild(resign);
+    controls.appendChild(this.resignBtn);
 
     const newGame = el("button", "primary", "New Game");
     newGame.onclick = () => {
-      ctrl.newGame();
-      scheduleRender();
+      this.gameOverShown = false;
+      this.gameOverEl?.remove();
+      this.gameOverEl = null;
+      this.ctrl.newGame();
     };
     controls.appendChild(newGame);
 
     screen.appendChild(controls);
-    root.appendChild(screen);
+    this.root.appendChild(screen);
 
-    if (ctrl.pendingPromotion) {
-      screen.appendChild(buildPromotionPanel(ctrl, scheduleRender));
+    this.rebuildBoardGrid();
+    this.update();
+  }
+
+  destroy(): void {
+    this.promotionEl?.remove();
+    this.gameOverEl?.remove();
+    this.root.innerHTML = "";
+  }
+
+  private squareKey(row: number, col: number): string {
+    return `${row},${col}`;
+  }
+
+  private rebuildBoardGrid(): void {
+    this.squareCells.clear();
+    this.gridEl.replaceChildren();
+
+    this.displayedRows = this.ctrl.boardFlipped
+      ? [...Array(BOARD_SIZE).keys()].reverse()
+      : [...Array(BOARD_SIZE).keys()];
+    this.displayedCols = this.ctrl.boardFlipped
+      ? [...Array(BOARD_SIZE).keys()].reverse()
+      : [...Array(BOARD_SIZE).keys()];
+
+    for (const row of this.displayedRows) {
+      for (const col of this.displayedCols) {
+        const isLight = (row + col) % 2 === 0;
+        const btn = el("button", `square ${isLight ? "light" : "dark"}`) as HTMLButtonElement;
+        const square: Square = { row, col };
+        btn.onclick = () => this.ctrl.handleSquareTap(square);
+
+        const cell: SquareCell = { btn, pieceImg: null, dot: null, ring: null };
+
+        const fileLabel = standardFileLabel(col);
+        const rankLabel = standardRankLabel(row);
+        if (fileLabel && row === (this.ctrl.boardFlipped ? 0 : BOARD_SIZE - 1)) {
+          btn.appendChild(el("span", "coord file", fileLabel));
+        }
+        if (rankLabel && col === (this.ctrl.boardFlipped ? BOARD_SIZE - 1 : 0)) {
+          btn.appendChild(el("span", "coord rank", rankLabel));
+        }
+
+        this.squareCells.set(this.squareKey(row, col), cell);
+        this.gridEl.appendChild(btn);
+      }
+    }
+    this.lastFlip = this.ctrl.boardFlipped;
+  }
+
+  private update(): void {
+    if (this.ctrl.boardFlipped !== this.lastFlip) {
+      this.rebuildBoardGrid();
     }
 
+    this.updateStatus();
+    this.updateCaptured();
+    this.updateBoard();
+    this.updateMoveList();
+    this.updateControls();
+    this.updatePromotion();
+    this.updateGameOver();
+  }
+
+  private updateStatus(): void {
+    this.statusEl.textContent = this.ctrl.statusText();
+    this.statusEl.classList.toggle("error", !!this.ctrl.botEngineError);
+  }
+
+  private updateCaptured(): void {
+    const ply = this.ctrl.previewPly ?? this.ctrl.livePly;
+    if (ply === this.lastCapturedPly) return;
+    this.lastCapturedPly = ply;
+
+    this.capBlackEl.replaceChildren();
+    this.capWhiteEl.replaceChildren();
+    this.capBlackEl.appendChild(this.renderCapturedLabel("Black", this.ctrl.capturedPieces("black", ply)));
+    this.capWhiteEl.appendChild(this.renderCapturedLabel("White", this.ctrl.capturedPieces("white", ply)));
+  }
+
+  private renderCapturedLabel(label: string, pieces: Piece[]): HTMLElement {
+    const wrap = el("div", "");
+    wrap.appendChild(el("span", "", `${label}: `));
+    const row = el("div", "captured-pieces");
+    for (const p of pieces) {
+      const img = document.createElement("img");
+      img.src = `${PIECE_BASE}${pieceAssetName(p)}.svg`;
+      row.appendChild(img);
+    }
+    wrap.appendChild(row);
+    return wrap;
+  }
+
+  private updateBoard(): void {
+    const snap = this.ctrl.displaySnapshot;
+    const lastMove = snap.lastMove;
+    const sel = this.ctrl.selectedSquare;
+
+    for (const [key, cell] of this.squareCells) {
+      const [row, col] = key.split(",").map(Number);
+      const square: Square = { row, col };
+      const isLight = (row + col) % 2 === 0;
+
+      const classes = ["square", isLight ? "light" : "dark"];
+      if (sel && squaresEqual(sel, square)) classes.push("selected");
+      if (lastMove && (squaresEqual(lastMove.from, square) || squaresEqual(lastMove.to, square))) {
+        classes.push("last-move");
+      }
+      if (this.ctrl.isKingInCheck(square)) classes.push("in-check");
+
+      if (cell.btn.className !== classes.join(" ")) {
+        cell.btn.className = classes.join(" ");
+      }
+
+      const sk = this.ctrl.squareKey(square);
+      const showDot = this.ctrl.legalTargets.has(sk) && !this.ctrl.captureTargets.has(sk);
+      const showRing = this.ctrl.captureTargets.has(sk);
+
+      if (showDot && !cell.dot) {
+        cell.dot = el("span", "legal-dot");
+        cell.btn.appendChild(cell.dot);
+      } else if (!showDot && cell.dot) {
+        cell.dot.remove();
+        cell.dot = null;
+      }
+
+      if (showRing && !cell.ring) {
+        cell.ring = el("span", "capture-ring");
+        cell.btn.appendChild(cell.ring);
+      } else if (!showRing && cell.ring) {
+        cell.ring.remove();
+        cell.ring = null;
+      }
+
+      const piece = this.ctrl.piece(square);
+      const asset = piece ? `${PIECE_BASE}${pieceAssetName(piece)}.svg` : null;
+
+      if (!piece) {
+        if (cell.pieceImg) {
+          cell.pieceImg.remove();
+          cell.pieceImg = null;
+        }
+      } else if (!cell.pieceImg) {
+        cell.pieceImg = document.createElement("img");
+        cell.pieceImg.className = "piece-img";
+        cell.pieceImg.alt = piece.kind;
+        cell.pieceImg.src = asset!;
+        cell.btn.appendChild(cell.pieceImg);
+      } else if (cell.pieceImg.src !== asset) {
+        cell.pieceImg.src = asset!;
+        cell.pieceImg.alt = piece.kind;
+      }
+    }
+  }
+
+  private updateMoveList(): void {
+    const moves = this.ctrl.game.recordedMoves;
+    const preview = this.ctrl.previewPly;
+
+    if (moves.length < this.lastMoveListLen) {
+      this.moveListEl.replaceChildren();
+      this.lastMoveListLen = 0;
+    }
+
+    if (moves.length === 0 && this.lastMoveListLen === 0) {
+      this.moveListEl.replaceChildren(el("span", "", "No moves yet"));
+      return;
+    }
+
+    if (this.lastMoveListLen === 0 && moves.length > 0) {
+      this.moveListEl.replaceChildren();
+    }
+
+    let moveNum = Math.floor(this.lastMoveListLen / 2) + 1;
+    if (this.lastMoveListLen === 0) moveNum = 1;
+
+    for (let i = this.lastMoveListLen; i < moves.length; i++) {
+      const rec = moves[i];
+      if (rec.color === "white") {
+        this.moveListEl.appendChild(el("span", "move-num", `${moveNum}.`));
+        moveNum++;
+      }
+      const entry = el("button", "move-entry", rec.san) as HTMLButtonElement;
+      const ply = rec.ply + 1;
+      entry.onclick = () => this.ctrl.goToMove(ply);
+      this.moveListEl.appendChild(entry);
+    }
+
+    this.lastMoveListLen = moves.length;
+    this.moveListEl.scrollTop = this.moveListEl.scrollHeight;
+
+    const entries = this.moveListEl.querySelectorAll<HTMLButtonElement>("button.move-entry");
+    entries.forEach((btn, idx) => {
+      const rec = moves[idx];
+      const active =
+        preview === rec.ply + 1 || (preview == null && rec.ply === moves.length - 1);
+      btn.classList.toggle("active", active);
+    });
+
+    const empty = this.moveListEl.querySelector("span:not(.move-num)");
+    if (empty && moves.length > 0 && empty.textContent === "No moves yet") {
+      empty.remove();
+    }
+  }
+
+  private updateControls(): void {
+    this.undoBtn.disabled = this.ctrl.game.moveHistory.length === 0;
+    this.resignBtn.disabled = this.ctrl.game.result.type !== "ongoing";
+  }
+
+  private updatePromotion(): void {
+    if (this.ctrl.pendingPromotion) {
+      if (!this.promotionEl) {
+        this.promotionEl = this.buildPromotionPanel();
+        document.body.appendChild(this.promotionEl);
+      }
+    } else if (this.promotionEl) {
+      this.promotionEl.remove();
+      this.promotionEl = null;
+    }
+  }
+
+  private updateGameOver(): void {
     if (
-      ctrl.game.result.type !== "ongoing" &&
-      !ctrl.pendingPromotion &&
-      !gameOverShown
+      this.ctrl.game.result.type !== "ongoing" &&
+      !this.ctrl.pendingPromotion &&
+      !this.gameOverShown
     ) {
-      gameOverShown = true;
-      showGameOverOverlay(ctrl, () => {
-        gameOverShown = false;
-        scheduleRender();
-      });
+      this.gameOverShown = true;
+      this.gameOverEl = this.buildGameOverOverlay();
+      document.body.appendChild(this.gameOverEl);
     }
-  };
+  }
 
-  paint();
+  private buildPromotionPanel(): HTMLElement {
+    const overlay = el("div", "overlay");
+    const panel = el("div", "overlay-panel");
+    panel.appendChild(el("h3", "", "Promote pawn"));
+    const opts = el("div", "promotion-options");
+    const color = this.ctrl.game.activeColor === "white" ? "w" : "b";
+    for (const kind of ["Q", "R", "B", "N"] as const) {
+      const btn = el("button", "");
+      const img = document.createElement("img");
+      img.src = `${PIECE_BASE}${color}${kind}.svg`;
+      img.alt = kind;
+      btn.appendChild(img);
+      btn.onclick = () => this.ctrl.promote(kind);
+      opts.appendChild(btn);
+    }
+    const cancel = el("button", "", "Cancel");
+    cancel.onclick = () => this.ctrl.cancelPromotion();
+    panel.appendChild(opts);
+    panel.appendChild(cancel);
+    overlay.appendChild(panel);
+    return overlay;
+  }
 
-  return () => {
-    /* cleanup if needed */
-  };
-}
-
-function buildPromotionPanel(ctrl: GameController, rerender: () => void): HTMLElement {
-  const overlay = el("div", "overlay");
-  const panel = el("div", "overlay-panel");
-  panel.appendChild(el("h3", "", "Promote pawn"));
-  const opts = el("div", "promotion-options");
-  const color = ctrl.game.activeColor === "white" ? "w" : "b";
-  for (const kind of ["Q", "R", "B", "N"] as const) {
-    const btn = el("button", "");
-    const img = document.createElement("img");
-    img.src = `${PIECE_BASE}${color}${kind}.svg`;
-    img.alt = kind;
-    btn.appendChild(img);
+  private buildGameOverOverlay(): HTMLElement {
+    const overlay = el("div", "overlay");
+    const panel = el("div", "overlay-panel");
+    panel.appendChild(el("h3", "", "Game over"));
+    panel.appendChild(el("p", "", this.ctrl.statusText()));
+    const btn = el("button", "primary", "New Game");
     btn.onclick = () => {
-      ctrl.promote(kind);
-      rerender();
+      overlay.remove();
+      this.gameOverEl = null;
+      this.gameOverShown = false;
+      this.ctrl.newGame();
     };
-    opts.appendChild(btn);
+    const back = el("button", "", "Dismiss");
+    back.onclick = () => {
+      overlay.remove();
+      this.gameOverEl = null;
+      this.gameOverShown = false;
+      this.update();
+    };
+    panel.appendChild(btn);
+    panel.appendChild(back);
+    overlay.appendChild(panel);
+    return overlay;
   }
-  const cancel = el("button", "", "Cancel");
-  cancel.onclick = () => {
-    ctrl.cancelPromotion();
-    rerender();
-  };
-  panel.appendChild(opts);
-  panel.appendChild(cancel);
-  overlay.appendChild(panel);
-  return overlay;
-}
-
-function showGameOverOverlay(ctrl: GameController, onDismiss: () => void): void {
-  const overlay = el("div", "overlay");
-  const panel = el("div", "overlay-panel");
-  panel.appendChild(el("h3", "", "Game over"));
-  panel.appendChild(el("p", "", ctrl.statusText()));
-  const btn = el("button", "primary", "New Game");
-  btn.onclick = () => {
-    overlay.remove();
-    ctrl.newGame();
-    onDismiss();
-  };
-  const back = el("button", "", "Dismiss");
-  back.onclick = () => {
-    overlay.remove();
-    onDismiss();
-  };
-  panel.appendChild(btn);
-  panel.appendChild(back);
-  overlay.appendChild(panel);
-  document.body.appendChild(overlay);
-}
-
-function renderCaptured(pieces: Piece[], label: string): HTMLElement {
-  const wrap = el("div", "");
-  const span = el("span", "", `${label}: `);
-  wrap.appendChild(span);
-  const row = el("div", "captured-pieces");
-  for (const p of pieces) {
-    const img = document.createElement("img");
-    img.src = `${PIECE_BASE}${pieceAssetName(p)}.svg`;
-    row.appendChild(img);
-  }
-  wrap.appendChild(row);
-  return wrap;
 }
 
 function el(tag: string, className: string, text?: string): HTMLElement {

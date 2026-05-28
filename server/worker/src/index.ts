@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { landingHTML } from "./landing";
 import { DMG_URL } from "./release";
 
@@ -9,6 +10,15 @@ export type Env = {
 };
 
 const app = new Hono<{ Bindings: Env }>();
+
+const apiCors = cors({
+  origin: "*",
+  allowMethods: ["GET", "POST", "OPTIONS"],
+  allowHeaders: ["Content-Type", "X-API-Key"],
+});
+
+app.use("/health", apiCors);
+app.use("/v1/*", apiCors);
 
 app.get("/", (c) => c.html(landingHTML));
 
@@ -33,19 +43,15 @@ app.get("/health", async (c) => {
   }
 });
 
+app.options("/v1/move", (c) => c.body(null, 204));
+
 app.post("/v1/move", async (c) => {
   const origin = c.env.ENGINE_ORIGIN?.replace(/\/$/, "");
   if (!origin) {
     return c.json({ error: "ENGINE_ORIGIN not configured on worker" }, 503);
   }
 
-  if (c.env.API_KEY) {
-    const key = c.req.header("X-API-Key");
-    if (key !== c.env.API_KEY) {
-      return c.json({ error: "Invalid API key" }, 401);
-    }
-  }
-
+  // API key is added server-side when proxying; browsers must not need a secret.
   const body = await c.req.text();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (c.env.API_KEY) headers["X-API-Key"] = c.env.API_KEY;

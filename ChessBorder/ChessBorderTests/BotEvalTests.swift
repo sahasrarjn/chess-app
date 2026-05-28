@@ -1,5 +1,5 @@
 import XCTest
-@testable import Chess_Border
+@testable import Border_Chess
 
 final class BotEvalTests: XCTestCase {
     private func applyUCI(_ game: ChessGame, _ uci: String) -> Bool {
@@ -41,6 +41,37 @@ final class BotEvalTests: XCTestCase {
                 String(Square(row: row, col: 0).engineNotation.dropFirst())
             )
         }
+    }
+
+    func testStartingPositionFENUsesDotsForFullEmptyRanks() {
+        let fen = ChessGame().toFEN()
+        XCTAssertFalse(fen.contains("10"), "Full empty ranks must not encode as \"10\" (invalid for remote engine)")
+        XCTAssertTrue(fen.hasPrefix("........../"), "Top border rank should use ten dots")
+        let ranks = fen.split(separator: " ").first?.split(separator: "/") ?? []
+        XCTAssertEqual(ranks.count, BoardConstants.size)
+        for rank in ranks {
+            XCTAssertFalse(rank.contains("0"), "FEN ranks must not contain digit 0")
+        }
+    }
+
+    func testAfterE4FENUsesEngineEnPassantSquare() throws {
+        let game = ChessGame()
+        guard let move = game.move(from: "e2e4"), game.applyMove(move) else {
+            XCTFail("e2e4 should be legal")
+            return
+        }
+
+        let fen = game.toFEN()
+        XCTAssertFalse(fen.contains("10"))
+        XCTAssertTrue(fen.contains(" f4 "), "En passant target must use 10×10 engine coordinates")
+        try validateEngineAPIFEN(String(fen.split(separator: " ").first ?? Substring()))
+    }
+
+    private func validateEngineAPIFEN(_ placement: String) throws {
+        let pattern = #"^[.1-9/prnbqkRNBQKPN]+(?:/[.1-9/prnbqkRNBQKPN]+){9}$"#
+        let regex = try NSRegularExpression(pattern: pattern)
+        let range = NSRange(placement.startIndex..<placement.endIndex, in: placement)
+        XCTAssertNotNil(regex.firstMatch(in: placement, range: range), "FEN placement must match engine API rules")
     }
 
     func testStartingPositionBlackHasLegalMoves() {

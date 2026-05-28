@@ -8,35 +8,56 @@ struct RemoteEngineBot: BotPlayer {
             return nil
         }
 
+        let fen = game.toFEN()
+        let payload = RemoteMoveRequest(
+            fen: fen,
+            elo: difficulty.targetElo,
+            movetimeMs: difficulty.searchMovetimeMs
+        )
         let endpoint = baseURL.appendingPathComponent("v1/move")
+        let apiKey = BotServerConfig.apiKey
+
+        let uci = await Task.detached(priority: .userInitiated) {
+            await Self.fetchUCIMove(endpoint: endpoint, payload: payload, apiKey: apiKey)
+        }.value
+
+        guard let uci else { return nil }
+        guard let move = game.move(fromEngineUCI: uci) else {
+            BotLogging.debug("RemoteEngine: illegal UCI \(uci) for FEN \(fen)")
+            return nil
+        }
+        BotLogging.debug("RemoteEngine: \(uci)")
+        return move
+    }
+
+    private static func fetchUCIMove(
+        endpoint: URL,
+        payload: RemoteMoveRequest,
+        apiKey: String?
+    ) async -> String? {
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let apiKey = BotServerConfig.apiKey {
+        if let apiKey {
             request.setValue(apiKey, forHTTPHeaderField: "X-API-Key")
         }
         request.timeoutInterval = 15
 
-        let payload = RemoteMoveRequest(
-            fen: game.toFEN(),
-            elo: difficulty.targetElo,
-            movetimeMs: difficulty.searchMovetimeMs
-        )
-
         do {
             request.httpBody = try JSONEncoder().encode(payload)
+            BotLogging.debug("RemoteEngine: POST \(endpoint.absoluteString)")
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-                BotLogging.debug("RemoteEngine: HTTP \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+            guard let http = response as? HTTPURLResponse else {
+                BotLogging.debug("RemoteEngine: non-HTTP response")
+                return nil
+            }
+            guard (200...299).contains(http.statusCode) else {
+                let body = String(data: data, encoding: .utf8) ?? ""
+                BotLogging.debug("RemoteEngine: HTTP \(http.statusCode) \(body)")
                 return nil
             }
             let decoded = try JSONDecoder().decode(RemoteMoveResponse.self, from: data)
-            guard let move = game.move(fromEngineUCI: decoded.uci) else {
-                BotLogging.debug("RemoteEngine: illegal UCI \(decoded.uci)")
-                return nil
-            }
-            BotLogging.debug("RemoteEngine: \(decoded.uci)")
-            return move
+            return decoded.uci
         } catch {
             BotLogging.debug("RemoteEngine: \(error.localizedDescription)")
             return nil

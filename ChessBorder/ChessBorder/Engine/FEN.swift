@@ -20,7 +20,7 @@ extension ChessGame {
         for col in 0..<BoardConstants.size {
             if let piece = board[row][col] {
                 if empty > 0 {
-                    result += String(empty)
+                    result += fenEmptyRun(empty)
                     empty = 0
                 }
                 result += fenCharacter(for: piece)
@@ -29,9 +29,16 @@ extension ChessGame {
             }
         }
         if empty > 0 {
-            result += String(empty)
+            result += fenEmptyRun(empty)
         }
         return result
+    }
+
+    /// Run-length `10` is invalid for API/engine FEN (digit 0); use dots like variants.ini.
+    private func fenEmptyRun(_ count: Int) -> String {
+        count >= BoardConstants.size
+            ? String(repeating: ".", count: count)
+            : String(count)
     }
 
     private func fenCharacter(for piece: Piece) -> String {

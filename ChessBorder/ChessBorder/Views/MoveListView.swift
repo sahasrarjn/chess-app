@@ -192,7 +192,7 @@ private struct CapturedPiecesFlow: Layout {
                 y += rowHeight + rowSpacing
                 rowHeight = 0
             }
-            subview.place(at: CGPoint(x: x, y: y), proposal: ProposedSize(width: size.width, height: size.height))
+            subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(width: size.width, height: size.height))
             rowHeight = max(rowHeight, size.height)
             x += size.width + spacing
         }

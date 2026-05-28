@@ -341,7 +341,8 @@ class GameScreen {
   }
 
   private updateControls(): void {
-    this.undoBtn.disabled = this.ctrl.game.moveHistory.length === 0;
+    this.undoBtn.disabled =
+      this.ctrl.game.moveHistory.length === 0 || this.ctrl.isThinking;
     this.resignBtn.disabled = this.ctrl.game.result.type !== "ongoing";
     this.retryBtn.hidden = !this.ctrl.canRetryBot;
     this.retryBtn.disabled = !this.ctrl.canRetryBot;

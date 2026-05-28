@@ -33,6 +33,8 @@ export class GameController {
   previewPly: number | null = null;
   botEngineError: string | null = null;
   revision = 0;
+  private botMoveToken = 0;
+  private botAbort: AbortController | null = null;
 
   constructor(
     readonly mode: GameMode,
@@ -203,6 +205,7 @@ export class GameController {
   }
 
   undo(): void {
+    this.cancelBotRequest();
     const count = this.mode === "vsBot" ? 2 : 1;
     let undone = false;
     for (let i = 0; i < count; i++) {
@@ -223,6 +226,7 @@ export class GameController {
   }
 
   newGame(): void {
+    this.cancelBotRequest();
     this.game = new ChessGame();
     this.clearSelection();
     this.pendingPromotion = null;
@@ -308,6 +312,13 @@ export class GameController {
       .map((r) => r.captured!);
   }
 
+  private cancelBotRequest(): void {
+    this.botMoveToken++;
+    this.botAbort?.abort();
+    this.botAbort = null;
+    this.isThinking = false;
+  }
+
   private async maybePlayBotMove(): Promise<void> {
     if (
       this.mode !== "vsBot" ||
@@ -317,6 +328,11 @@ export class GameController {
     ) {
       return;
     }
+
+    const token = ++this.botMoveToken;
+    this.botAbort?.abort();
+    const abort = new AbortController();
+    this.botAbort = abort;
 
     this.isThinking = true;
     this.botEngineError = null;
@@ -330,13 +346,15 @@ export class GameController {
       let lastUci = "";
 
       for (let attempt = 0; attempt < 2 && !applied; attempt++) {
+        if (token !== this.botMoveToken) return;
         if (this.game.recordedMoves.length !== plyAtRequest) return;
 
         const snapshot = this.game.copy();
-        const move = await fetchBotMove(snapshot, this.botDifficulty);
+        const move = await fetchBotMove(snapshot, this.botDifficulty, abort.signal);
         lastUci = move ? moveUci(move) : "";
 
         if (
+          token !== this.botMoveToken ||
           this.mode !== "vsBot" ||
           this.game.activeColor !== "black" ||
           this.game.result.type !== "ongoing" ||
@@ -347,6 +365,7 @@ export class GameController {
 
         if (move && this.game.applyMove(move)) {
           applied = true;
+          this.notify();
           break;
         }
       }
@@ -357,8 +376,9 @@ export class GameController {
         await sleep(minMs - elapsed);
       }
 
+      if (token !== this.botMoveToken) return;
+
       if (applied) {
-        this.notify();
         return;
       }
 
@@ -368,11 +388,18 @@ export class GameController {
         ? `Engine move (${lastUci}) was not legal here — try Undo or New Game.`
         : "Engine did not return a move. Try again.";
     } catch (err) {
+      if (token !== this.botMoveToken || abort.signal.aborted) return;
       const msg = err instanceof Error ? err.message : String(err);
-      this.botEngineError = msg || "Cannot reach the chess engine.";
+      this.botEngineError =
+        err instanceof DOMException && err.name === "TimeoutError"
+          ? "Engine request timed out. Try again."
+          : msg || "Cannot reach the chess engine.";
     } finally {
-      this.isThinking = false;
-      this.notify();
+      if (token === this.botMoveToken) {
+        this.botAbort = null;
+        this.isThinking = false;
+        this.notify();
+      }
     }
   }
 }

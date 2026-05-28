@@ -21,7 +21,6 @@
 		3FB0F20BCD71E588D3F3189A /* GameMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83AFD65A0999E58B59EF7AD4 /* GameMode.swift */; };
 		4122CEBFC4B50C3FB43190A6 /* BoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D510979D96F6D7F382FAFDD5 /* BoardView.swift */; };
 		47096B720787B5B4F67D4CF4 /* BotDifficulty+Engine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6256C2B541B88DF31B937CE /* BotDifficulty+Engine.swift */; };
-		4771C4BC61C4A3E8D757F6AB /* fairy-stockfish-ios.bak in Resources */ = {isa = PBXBuildFile; fileRef = 9E966A35AB75F50B050BBDF1 /* fairy-stockfish-ios.bak */; };
 		47C7142E2290CD876002289C /* BotPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44658DA8FEEAEE875CEC56C1 /* BotPlayer.swift */; };
 		4C8D2C2C8BC5062DB9CCF566 /* BotLogging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8205CA20A5DC79CBF61239CA /* BotLogging.swift */; };
 		4DD2CBEC68C9365087349719 /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47D9330D945C0EDDC3BBA1D4 /* GameView.swift */; };
@@ -39,7 +38,6 @@
 		803BB6C25BA3F9751BDC65B0 /* EngineBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82F0440ACD9F88E3B4DAB6C3 /* EngineBundle.swift */; };
 		815CD2A04663D34890969C6D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C7D400D7C64F9C599A1ED64E /* Assets.xcassets */; };
 		8852876ACAC79BB59793764C /* BotEvalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88423B33C2EBE9FEF281B471 /* BotEvalTests.swift */; };
-		89F1C4120617165BEE53A858 /* fairy-stockfish-ios.bak in Resources */ = {isa = PBXBuildFile; fileRef = 9E966A35AB75F50B050BBDF1 /* fairy-stockfish-ios.bak */; };
 		916FCFCC54D989001EC82393 /* BoardTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB05B3595E69DCB456B559B7 /* BoardTheme.swift */; };
 		97B0FCF07104D3E4C264EE9A /* ChessBorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DFE99402032904F40BF126D /* ChessBorderApp.swift */; };
 		A108F0AE7BDF4DF9C95E6185 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C7D400D7C64F9C599A1ED64E /* Assets.xcassets */; };
@@ -109,6 +107,7 @@
 		05004D65C19BDD9787D070B6 /* RemoteEngineBot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteEngineBot.swift; sourceTree = "<group>"; };
 		077CC73AF9FF87AAD4027FED /* BotServerConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotServerConfig.swift; sourceTree = "<group>"; };
 		17F81A527E32095EAB109CA7 /* Piece.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Piece.swift; sourceTree = "<group>"; };
+		18447ED22F132F3581AA37D4 /* fairy-stockfish-ios */ = {isa = PBXFileReference; path = "fairy-stockfish-ios"; sourceTree = "<group>"; };
 		218437219F0F7123CABBE08B /* ChessBorder.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ChessBorder.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2898D2FF9EE958488B06A438 /* GameViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewModel.swift; sourceTree = "<group>"; };
 		2FF8E07D7F0DABF876CB2527 /* ChessBorderMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChessBorderMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -133,7 +132,6 @@
 		84D1F5F5E3F0F306D945D5D7 /* Move.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Move.swift; sourceTree = "<group>"; };
 		88423B33C2EBE9FEF281B471 /* BotEvalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotEvalTests.swift; sourceTree = "<group>"; };
 		907A49B2C8531C4C828DD6AB /* MoveNotation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoveNotation.swift; sourceTree = "<group>"; };
-		9E966A35AB75F50B050BBDF1 /* fairy-stockfish-ios.bak */ = {isa = PBXFileReference; path = "fairy-stockfish-ios.bak"; sourceTree = "<group>"; };
 		ACFF1ABE9D507EF35EBAD2A7 /* UCIProcessClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UCIProcessClient.swift; sourceTree = "<group>"; };
 		B6256C2B541B88DF31B937CE /* BotDifficulty+Engine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BotDifficulty+Engine.swift"; sourceTree = "<group>"; };
 		C6445AB9B4709C280E598091 /* FairyStockfishBot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FairyStockfishBot.swift; sourceTree = "<group>"; };
@@ -165,10 +163,11 @@
 			isa = PBXGroup;
 			children = (
 				3D7693656EEDC87C59AD8C09 /* fairy-stockfish */,
-				9E966A35AB75F50B050BBDF1 /* fairy-stockfish-ios.bak */,
+				18447ED22F132F3581AA37D4 /* fairy-stockfish-ios */,
 				6F8D99E4EB6E52E62423A54D /* variants.ini */,
 			);
-			path = Engine;
+			name = Engine;
+			path = ChessBorder/Resources/Engine;
 			sourceTree = "<group>";
 		};
 		3BA6DDD9ECEADE75BD2FE2E5 /* Resources */ = {
@@ -222,6 +221,7 @@
 			children = (
 				E943CE8A04A5180EF5F4FFEC /* ChessBorder */,
 				53CB7226629952ABA652B6ED /* ChessBorderTests */,
+				2CED68CE41E43A3D48F343EB /* Engine */,
 				BB360E3887904334FF8A459C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -385,7 +385,6 @@
 			files = (
 				A108F0AE7BDF4DF9C95E6185 /* Assets.xcassets in Resources */,
 				D0BD684C64E53C68A8636985 /* Info-mac.plist in Resources */,
-				89F1C4120617165BEE53A858 /* fairy-stockfish-ios.bak in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -395,7 +394,6 @@
 			files = (
 				815CD2A04663D34890969C6D /* Assets.xcassets in Resources */,
 				6C05706EA52C95619E368039 /* Info.plist in Resources */,
-				4771C4BC61C4A3E8D757F6AB /* fairy-stockfish-ios.bak in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

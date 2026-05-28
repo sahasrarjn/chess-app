@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { landingHTML } from "./landing";
+import { privacyHTML } from "./privacy";
 import { checkRateLimit } from "./rateLimit";
 import { clampPublicMovetime, parseMovePayload } from "./validation";
 
@@ -25,6 +26,8 @@ app.use("/health", apiCors);
 app.use("/v1/*", apiCors);
 
 app.get("/", (c) => c.html(landingHTML));
+
+app.get("/privacy", (c) => c.html(privacyHTML));
 
 app.get("/logo.png", (c) => c.env.ASSETS.fetch(c.req.raw));
 

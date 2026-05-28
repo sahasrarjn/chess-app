@@ -118,7 +118,7 @@ export const landingHTML = `<!doctype html>
   </section>
 
   <footer>
-    Border Chess · <a href="/play/">Play in browser</a> · <a href="${OTA_INSTALL_URL}">iPhone install</a>
+    Border Chess · <a href="/play/">Play in browser</a> · <a href="/privacy">Privacy</a> · <a href="${OTA_INSTALL_URL}">iPhone install</a>
   </footer>
 </div>
 </body>

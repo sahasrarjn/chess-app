@@ -23,14 +23,13 @@ cd web
 npm run build
 ```
 
-Output is in `web/dist/`. To bundle with the Cloudflare worker:
+Output is in `web/dist/`. Piece SVGs are served from CloudFront in production (`npm run publish-pieces` uploads them). To bundle with the Cloudflare worker:
 
 ```bash
 cd web && npm run build
 rm -rf ../server/worker/public/play
 mkdir -p ../server/worker/public/play
 cp -r dist/* ../server/worker/public/play/
-cp -r public/pieces ../server/worker/public/play/pieces
 cp public/logo.png ../server/worker/public/play/logo.png
 ```
 

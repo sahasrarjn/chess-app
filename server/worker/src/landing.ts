@@ -1,4 +1,5 @@
-import { OTA_INSTALL_URL } from "./release";
+const LOGO_CDN_URL =
+  "https://dkxinbm7riorm.cloudfront.net/ChessBorder/logo.png";
 
 export const landingHTML = `<!doctype html>
 <html lang="en">
@@ -6,9 +7,9 @@ export const landingHTML = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Border Chess — 10×10 chess with a border twist</title>
-<meta name="description" content="Border Chess: classic chess on an 8×8 board surrounded by a one-square border. Play in your browser or install on iPhone.">
-<link rel="icon" href="/logo.png" type="image/png">
-<link rel="apple-touch-icon" href="/logo.png">
+<meta name="description" content="Border Chess: classic chess on an 8×8 board surrounded by a one-square border. Play in your browser — phone app coming soon.">
+<link rel="icon" href="${LOGO_CDN_URL}" type="image/png">
+<link rel="apple-touch-icon" href="${LOGO_CDN_URL}">
 <style>
   :root {
     color-scheme: dark;
@@ -44,6 +45,7 @@ export const landingHTML = `<!doctype html>
   }
   .btn-primary { background: var(--accent); color: #04120d; }
   .btn-ghost { border-color: var(--border); color: var(--text); background: var(--surface); }
+  .btn-soon { opacity: .55; cursor: default; pointer-events: none; }
   .board {
     aspect-ratio: 1; border-radius: 18px; overflow: hidden;
     border: 1px solid var(--border);
@@ -70,16 +72,16 @@ export const landingHTML = `<!doctype html>
 <body>
 <div class="wrap">
   <nav>
-    <div class="brand"><img src="/logo.png" width="32" height="32" alt=""> Border Chess</div>
+    <div class="brand"><img src="${LOGO_CDN_URL}" width="32" height="32" alt=""> Border Chess</div>
   </nav>
 
   <section class="hero">
     <div>
       <h1>Chess on a 10×10 board.<br>The border matters.</h1>
-      <p class="sub">Classic FIDE rules on an inner 8×8, plus a one-square border you can step onto. Play in your browser or install on iPhone — pass-and-play or vs Fairy-Stockfish.</p>
+      <p class="sub">Classic FIDE rules on an inner 8×8, plus a one-square border you can step onto. Play in your browser — pass-and-play or vs Fairy-Stockfish. Phone app coming soon.</p>
       <div class="cta">
         <a class="btn btn-primary" href="/play/">Play in browser</a>
-        <a class="btn btn-ghost" href="${OTA_INSTALL_URL}">Install on iPhone</a>
+        <span class="btn btn-ghost btn-soon">Coming soon on phone</span>
       </div>
     </div>
     <div class="board" aria-hidden="true">
@@ -107,18 +109,13 @@ export const landingHTML = `<!doctype html>
       </ol>
     </div>
     <div class="card">
-      <h2>Install on iPhone</h2>
-      <p>Personal ad-hoc build — your device must be registered in the developer profile.</p>
-      <ol>
-        <li>Open this page in <strong>Safari</strong> on your iPhone</li>
-        <li>Tap <a href="${OTA_INSTALL_URL}">Install on iPhone</a></li>
-        <li>Settings → General → VPN &amp; Device Management → trust the developer</li>
-      </ol>
+      <h2>Coming soon on phone</h2>
+      <p>The iPhone app is in development. For now, play in your browser on any device.</p>
     </div>
   </section>
 
   <footer>
-    Border Chess · <a href="/play/">Play in browser</a> · <a href="/privacy">Privacy</a> · <a href="${OTA_INSTALL_URL}">iPhone install</a>
+    Border Chess · <a href="/play/">Play in browser</a> · <a href="/privacy">Privacy</a>
   </footer>
 </div>
 </body>

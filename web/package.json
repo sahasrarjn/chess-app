@@ -7,10 +7,14 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "sync-worker": "bash scripts/sync-worker-public.sh"
+    "sync-worker": "bash scripts/sync-worker-public.sh",
+    "publish-pieces": "bash scripts/publish-pieces.sh"
   },
   "devDependencies": {
     "typescript": "^5.8.3",
     "vite": "^6.3.5"
+  },
+  "dependencies": {
+    "posthog-js": "^1.376.4"
   }
 }

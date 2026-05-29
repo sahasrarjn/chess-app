@@ -54,6 +54,12 @@ if [[ -z "$ORIGIN" ]]; then
 fi
 
 echo "==> Engine origin: $ORIGIN"
+
+if [[ "${SYNC_WEB:-}" == "1" || "${SYNC_WEB:-}" == "true" ]]; then
+  echo "==> Syncing web build to worker public assets"
+  (cd "${ROOT}/web" && npm run sync-worker)
+fi
+
 cd "$WORKER_DIR"
 npm install
 ensure_rate_limit_kv
@@ -84,4 +90,4 @@ fi
 
 npm run deploy
 echo ""
-echo "Public clients should use your workers.dev URL only (no embedded API key)."
+echo "Public site: https://borderchess.org (workers.dev alias still enabled)"

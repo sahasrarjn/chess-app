@@ -96,6 +96,7 @@ select {
   width: 72px;
   height: 72px;
   border-radius: 16px;
+  display: block;
 }
 
 .home h1 {
@@ -196,6 +197,17 @@ select {
 
 .game-header .back {
   padding: 8px 12px;
+}
+
+.game-header .auto-flip {
+  font-size: 0.75rem;
+  padding: 6px 10px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.game-header .auto-flip.active {
+  color: var(--accent);
 }
 
 .status-bar {
@@ -331,10 +343,19 @@ select {
 .coord {
   position: absolute;
   font-size: 0.55rem;
-  font-weight: 600;
-  opacity: 0.55;
+  font-weight: 700;
   pointer-events: none;
   line-height: 1;
+}
+
+.square.light .coord {
+  color: var(--dark-square);
+  opacity: 0.9;
+}
+
+.square.dark .coord {
+  color: var(--light-square);
+  opacity: 0.85;
 }
 
 .coord.file {

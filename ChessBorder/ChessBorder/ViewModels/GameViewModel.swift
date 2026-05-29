@@ -21,6 +21,8 @@ final class GameViewModel: ObservableObject {
     @Published var pendingPromotion: (from: Square, to: Square)?
     @Published var isThinking = false
     @Published var boardFlipped = false
+    /// Pass-and-play: rotate board for the side to move (default on).
+    @Published var autoFlipBoard = true
     @Published var previewPly: Int?
     @Published var activeMoveAnimation: ActiveMoveAnimation?
     @Published private(set) var botEngineError: String?
@@ -30,10 +32,29 @@ final class GameViewModel: ObservableObject {
 
     private static let moveAnimationDuration: TimeInterval = 0.32
     private static let animationWaitTimeout: Duration = .seconds(2)
+    /// Must exceed remote URLSession timeout (15s) plus local engine/minimax fallback.
+    private static let botMoveTimeout: Duration = .seconds(35)
+
+    private var botMoveToken = 0
 
     init(mode: GameMode, botDifficulty: BotDifficulty = .medium) {
         self.mode = mode
         self.botDifficulty = botDifficulty
+    }
+
+    init(saved: SavedGameSnapshot) {
+        self.mode = saved.gameMode ?? .vsBot
+        self.botDifficulty = saved.difficulty ?? .medium
+        if let restored = SavedGameStore.restoreGame(from: saved) {
+            self.game = restored
+        }
+        self.boardFlipped = saved.boardFlipped
+        self.autoFlipBoard = saved.autoFlipBoard
+    }
+
+    func finishRestoringSavedGameIfNeeded() {
+        guard mode == .vsBot, isBotTurn else { return }
+        maybePlayBotMove()
     }
 
     var isBrowsingHistory: Bool {
@@ -62,12 +83,16 @@ final class GameViewModel: ObservableObject {
     }
 
     var canRetryBot: Bool {
-        mode == .vsBot
-            && botEngineError != nil
-            && game.activeColor == .black
-            && game.result == .ongoing
-            && !isThinking
-            && !isBrowsingHistory
+        guard mode == .vsBot,
+              botEngineError != nil,
+              game.result == .ongoing,
+              !isThinking,
+              !isBrowsingHistory else {
+            return false
+        }
+        if game.activeColor == .black { return true }
+        let last = game.recordedMoves.last
+        return game.activeColor == .white && last?.color == .black
     }
 
     var canInteract: Bool {
@@ -264,6 +289,7 @@ final class GameViewModel: ObservableObject {
     }
 
     func undo() {
+        cancelBotRequest()
         let movesToUndo = mode == .vsBot ? 2 : 1
         var undone = false
         for _ in 0..<movesToUndo {
@@ -284,11 +310,14 @@ final class GameViewModel: ObservableObject {
     }
 
     func newGame() {
+        cancelBotRequest()
+        SavedGameStore.clear()
         game = ChessGame()
         clearSelection()
         pendingPromotion = nil
         isThinking = false
         boardFlipped = false
+        autoFlipBoard = true
         previewPly = nil
         activeMoveAnimation = nil
         botEngineError = nil
@@ -297,11 +326,25 @@ final class GameViewModel: ObservableObject {
 
     func toggleBoardFlip() {
         boardFlipped.toggle()
+        persistIfNeeded()
+    }
+
+    func toggleAutoFlipBoard() {
+        autoFlipBoard.toggle()
+        if autoFlipBoard, mode == .localTwoPlayer, !isBrowsingHistory {
+            boardFlipped = game.activeColor == .black
+        }
+        notifyChange()
     }
 
     func retryBotMove() {
         guard canRetryBot else { return }
         botEngineError = nil
+        if game.activeColor == .white {
+            _ = game.undoLastMove()
+            activeMoveAnimation = nil
+            notifyChange()
+        }
         maybePlayBotMove()
     }
 
@@ -317,25 +360,36 @@ final class GameViewModel: ObservableObject {
         }
     }
 
+    private func cancelBotRequest() {
+        botMoveToken += 1
+        isThinking = false
+    }
+
     private func maybePlayBotMove() {
         guard mode == .vsBot, game.activeColor == .black, game.result == .ongoing else { return }
         guard !isThinking else {
             BotLogging.debug("maybePlayBotMove: skipped, already thinking")
             return
         }
+
+        let token = botMoveToken + 1
+        botMoveToken = token
         isThinking = true
         botEngineError = nil
-        BotLogging.debug("maybePlayBotMove: started ply=\(game.recordedMoves.count)")
+        BotLogging.debug("maybePlayBotMove: started ply=\(game.recordedMoves.count) token=\(token)")
 
         Task { @MainActor in
             defer {
-                self.isThinking = false
-                BotLogging.debug("maybePlayBotMove: finished thinking flag cleared")
+                if self.botMoveToken == token {
+                    self.isThinking = false
+                    BotLogging.debug("maybePlayBotMove: finished thinking flag cleared")
+                }
             }
 
             await self.waitForMoveAnimationToFinish()
 
-            guard self.mode == .vsBot,
+            guard token == self.botMoveToken,
+                  self.mode == .vsBot,
                   self.game.activeColor == .black,
                   self.game.result == .ongoing else {
                 BotLogging.debug("maybePlayBotMove: aborted after animation (game state changed)")
@@ -343,38 +397,111 @@ final class GameViewModel: ObservableObject {
             }
 
             let difficulty = self.botDifficulty
-            let currentGame = self.game.copy()
+            let plyAtRequest = self.game.recordedMoves.count
             let minimumDelay = difficulty.minimumThinkingDuration
+            let enginePlayer = HybridBotPlayer()
 
             let clock = ContinuousClock()
             let start = clock.now
-            let move = await BotProvider.player().chooseMove(in: currentGame, difficulty: difficulty)
+            var applied = false
+            var lastUci = ""
+            var lastError: String?
+
+            for _ in 0..<2 where !applied {
+                guard token == self.botMoveToken,
+                      self.mode == .vsBot,
+                      self.game.activeColor == .black,
+                      self.game.result == .ongoing,
+                      self.game.recordedMoves.count == plyAtRequest else {
+                    BotLogging.debug("maybePlayBotMove: aborted during engine attempt")
+                    return
+                }
+
+                let attempt = await Self.chooseEngineMoveWithTimeout(
+                    in: self.game,
+                    difficulty: difficulty,
+                    player: enginePlayer,
+                    timeout: Self.botMoveTimeout
+                )
+                if let uci = attempt.lastUci {
+                    lastUci = uci
+                }
+                if let error = attempt.lastError {
+                    lastError = error
+                }
+
+                if let move = attempt.move,
+                   let piece = self.game.piece(at: move.from),
+                   self.game.applyMove(move) {
+                    BotLogging.debug("maybePlayBotMove: applied \(move.uci)")
+                    self.beginMoveAnimation(move: move, piece: piece)
+                    applied = true
+                }
+            }
+
             let elapsed = start.duration(to: clock.now)
             if elapsed < minimumDelay {
                 try? await Task.sleep(for: minimumDelay - elapsed)
             }
 
-            guard self.mode == .vsBot,
+            guard token == self.botMoveToken,
+                  self.mode == .vsBot,
                   self.game.activeColor == .black,
-                  self.game.result == .ongoing else {
+                  self.game.result == .ongoing,
+                  self.game.recordedMoves.count == plyAtRequest else {
                 BotLogging.debug("maybePlayBotMove: aborted before apply (game state changed)")
                 return
             }
 
-            if let move, let piece = self.game.piece(at: move.from), self.game.applyMove(move) {
-                BotLogging.debug("maybePlayBotMove: applied \(move.uci)")
-                self.beginMoveAnimation(move: move, piece: piece)
+            if applied {
+                self.notifyChange()
+                return
+            }
+
+            if let fallback = pickFallbackMove(in: self.game),
+               let piece = self.game.piece(at: fallback.from),
+               self.game.applyMove(fallback) {
+                BotLogging.debug("maybePlayBotMove: applied fallback \(fallback.uci)")
+                self.beginMoveAnimation(move: fallback, piece: piece)
+                if let lastError {
+                    self.botEngineError = "\(lastError) — played a fallback move. Tap Retry Bot to try the server again."
+                } else {
+                    self.botEngineError = "Engine unavailable — played a fallback move. Tap Retry Bot for a stronger reply."
+                }
                 self.notifyChange()
                 return
             }
 
             BotLogging.debug("maybePlayBotMove: no move applied")
-            #if os(iOS)
-            self.botEngineError = "Bot engine unavailable. Try again in a moment."
-            #else
-            self.botEngineError = "Bot engine unavailable."
-            #endif
+            if !lastUci.isEmpty {
+                self.botEngineError = "Engine move (\(lastUci)) was not legal here — try Undo or New Game."
+            } else if let lastError {
+                self.botEngineError = lastError
+            } else {
+                self.botEngineError = "Engine did not return a move. Try again."
+            }
             self.notifyChange()
+        }
+    }
+
+    private static func chooseEngineMoveWithTimeout(
+        in game: ChessGame,
+        difficulty: BotDifficulty,
+        player: HybridBotPlayer,
+        timeout: Duration
+    ) async -> BotEngineAttempt {
+        await withTaskGroup(of: BotEngineAttempt.self) { group in
+            group.addTask {
+                await player.chooseEngineMove(in: game, difficulty: difficulty)
+            }
+            group.addTask {
+                try? await Task.sleep(for: timeout)
+                BotLogging.debug("chooseEngineMoveWithTimeout: timed out after \(timeout)")
+                return BotEngineAttempt(move: nil, lastUci: nil, lastError: "Engine request timed out")
+            }
+            let attempt = await group.next() ?? BotEngineAttempt(move: nil, lastUci: nil, lastError: nil)
+            group.cancelAll()
+            return attempt
         }
     }
 
@@ -418,10 +545,15 @@ final class GameViewModel: ObservableObject {
 
     private func notifyChange() {
         boardRevision += 1
-        if mode == .localTwoPlayer, !isBrowsingHistory {
+        if mode == .localTwoPlayer, autoFlipBoard, !isBrowsingHistory {
             boardFlipped = game.activeColor == .black
         }
+        persistIfNeeded()
         objectWillChange.send()
+    }
+
+    private func persistIfNeeded() {
+        SavedGameStore.save(from: self)
     }
 
     private func playSelectionHaptic() {

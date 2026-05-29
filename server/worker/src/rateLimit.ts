@@ -3,7 +3,8 @@ export type RateLimitEnv = {
   RATE_LIMIT_PER_MINUTE?: string;
 };
 
-const DEFAULT_LIMIT = 30;
+/** ~1 req per bot move; web retries once on bad UCI; fast games can exceed 30/min. */
+const DEFAULT_LIMIT = 120;
 const WINDOW_SECONDS = 60;
 
 export async function checkRateLimit(

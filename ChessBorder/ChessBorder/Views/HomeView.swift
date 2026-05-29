@@ -2,8 +2,25 @@ import SwiftUI
 
 struct HomeView: View {
     @State private var selectedDifficulty: BotDifficulty = .medium
+    @State private var restoredGame: SavedGameSnapshot?
+    @State private var showHomeDespiteSave = false
 
     var body: some View {
+        Group {
+            if let saved = restoredGame, !showHomeDespiteSave {
+                GameView(saved: saved, onReturnHome: { showHomeDespiteSave = true })
+            } else {
+                homeContent
+            }
+        }
+        .onAppear {
+            if restoredGame == nil, !showHomeDespiteSave {
+                restoredGame = SavedGameStore.load()
+            }
+        }
+    }
+
+    private var homeContent: some View {
         NavigationStack {
             ZStack {
                 BoardTheme.background.ignoresSafeArea()

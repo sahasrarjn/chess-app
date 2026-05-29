@@ -203,11 +203,11 @@ export type BotDifficulty = "easy" | "medium" | "hard";
 export function difficultyElo(d: BotDifficulty): number {
   switch (d) {
     case "easy":
-      return 1200;
+      return 1000;
     case "medium":
-      return 1600;
+      return 1400;
     case "hard":
-      return 2200;
+      return 2000;
   }
 }
 

@@ -6,6 +6,13 @@ import {
 } from "../bot/engineConfig";
 import type { BotDifficulty } from "../engine/types";
 
+const LOGO_CDN =
+  (import.meta.env.VITE_LOGO_CDN_URL as string | undefined) ??
+  "https://dkxinbm7riorm.cloudfront.net/ChessBorder/logo.png";
+const LOGO_SRC = import.meta.env.DEV
+  ? `${import.meta.env.BASE_URL}logo.png`
+  : LOGO_CDN;
+
 export type HomeStart = {
   mode: "vsBot" | "localTwoPlayer";
   difficulty: BotDifficulty;
@@ -24,8 +31,10 @@ export function renderHome(
 
     const logo = document.createElement("img");
     logo.className = "home-logo";
-    logo.src = `${import.meta.env.BASE_URL}logo.png`;
+    logo.src = LOGO_SRC;
     logo.alt = "Border Chess";
+    logo.width = 1536;
+    logo.height = 1536;
     home.appendChild(logo);
 
     home.appendChild(el("h1", "", "Border Chess"));

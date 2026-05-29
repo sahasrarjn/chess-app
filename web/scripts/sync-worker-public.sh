@@ -7,6 +7,5 @@ npm run build
 rm -rf "$ROOT/server/worker/public/play"
 mkdir -p "$ROOT/server/worker/public/play"
 cp -r dist/* "$ROOT/server/worker/public/play/"
-cp -r public/pieces "$ROOT/server/worker/public/play/pieces"
 cp public/logo.png "$ROOT/server/worker/public/play/logo.png"
 echo "Synced to server/worker/public/play/"

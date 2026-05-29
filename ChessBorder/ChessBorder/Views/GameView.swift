@@ -43,9 +43,17 @@ struct GameView: View {
     @StateObject private var viewModel: GameViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showResignConfirm = false
+    @State private var gameOverDismissed = false
+    private let onReturnHome: (() -> Void)?
 
     init(mode: GameMode, difficulty: BotDifficulty = .medium) {
         _viewModel = StateObject(wrappedValue: GameViewModel(mode: mode, botDifficulty: difficulty))
+        onReturnHome = nil
+    }
+
+    init(saved: SavedGameSnapshot, onReturnHome: @escaping () -> Void) {
+        _viewModel = StateObject(wrappedValue: GameViewModel(saved: saved))
+        self.onReturnHome = onReturnHome
     }
 
     private var displayedPly: Int {
@@ -101,22 +109,36 @@ struct GameView: View {
                 )
             }
 
-            if viewModel.result != .ongoing {
+            if viewModel.result != .ongoing, !gameOverDismissed {
                 gameOverOverlay
             }
         }
         .chessAppNavigationChromeHidden()
+        .onChange(of: viewModel.result) { _, newResult in
+            if newResult != .ongoing {
+                gameOverDismissed = false
+            }
+        }
         .confirmationDialog("Resign this game?", isPresented: $showResignConfirm, titleVisibility: .visible) {
             Button("Resign", role: .destructive) {
                 viewModel.resignGame()
             }
             Button("Cancel", role: .cancel) {}
         }
+        .onAppear {
+            viewModel.finishRestoringSavedGameIfNeeded()
+        }
     }
 
     private var header: some View {
         HStack {
-            Button { dismiss() } label: {
+            Button {
+                if let onReturnHome {
+                    onReturnHome()
+                } else {
+                    dismiss()
+                }
+            } label: {
                 Image(systemName: "chevron.left")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.white)
@@ -128,13 +150,24 @@ struct GameView: View {
                 .font(.headline)
                 .foregroundStyle(.white)
 
-            Spacer()
+            if viewModel.mode == .localTwoPlayer {
+                Button { viewModel.toggleAutoFlipBoard() } label: {
+                    Text("Auto-flip")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(viewModel.autoFlipBoard ? BoardTheme.accent : .white.opacity(0.6))
+                }
+            }
 
             Button { viewModel.toggleBoardFlip() } label: {
                 Image(systemName: "arrow.up.arrow.down")
                     .font(.title3)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(
+                        viewModel.mode == .localTwoPlayer && viewModel.autoFlipBoard
+                            ? Color.white.opacity(0.35)
+                            : Color.white
+                    )
             }
+            .disabled(viewModel.mode == .localTwoPlayer && viewModel.autoFlipBoard)
         }
         .padding(.horizontal)
         .padding(.top, 4)
@@ -180,7 +213,10 @@ struct GameView: View {
                         .disabled(viewModel.isBrowsingHistory || viewModel.isThinking)
                 }
 
-                Button("New Game") { viewModel.newGame() }
+                Button("New Game") {
+                    gameOverDismissed = false
+                    viewModel.newGame()
+                }
                     .buttonStyle(SecondaryGameButtonStyle())
 
                 Button("Resign") { showResignConfirm = true }
@@ -201,9 +237,22 @@ struct GameView: View {
                 .multilineTextAlignment(.center)
 
             HStack(spacing: 12) {
-                Button("New Game") { viewModel.newGame() }
+                Button("New Game") {
+                    gameOverDismissed = false
+                    viewModel.newGame()
+                }
                     .buttonStyle(PrimaryGameButtonStyle())
-                Button("Home") { dismiss() }
+                Button("Dismiss") {
+                    gameOverDismissed = true
+                }
+                    .buttonStyle(SecondaryGameButtonStyle())
+                Button("Home") {
+                    if let onReturnHome {
+                        onReturnHome()
+                    } else {
+                        dismiss()
+                    }
+                }
                     .buttonStyle(SecondaryGameButtonStyle())
             }
         }

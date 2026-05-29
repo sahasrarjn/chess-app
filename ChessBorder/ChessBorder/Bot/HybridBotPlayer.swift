@@ -1,9 +1,64 @@
 import Foundation
 
+struct BotEngineAttempt {
+    let move: Move?
+    let lastUci: String?
+    let lastError: String?
+}
+
 /// Remote server (iPhone / offline fallback) → local Fairy-Stockfish (Mac / iOS Simulator) → minimax fallback.
 struct HybridBotPlayer: BotPlayer {
     private let remote = RemoteEngineBot()
     private let minimax = MinimaxBotPlayer()
+
+    /// Remote and Fairy-Stockfish only — no built-in minimax fallback.
+    func chooseEngineMove(in game: ChessGame, difficulty: BotDifficulty) async -> BotEngineAttempt {
+        let legal = game.legalMoves()
+        guard !legal.isEmpty else {
+            BotLogging.debug("chooseEngineMove: no legal moves")
+            return BotEngineAttempt(move: nil, lastUci: nil, lastError: nil)
+        }
+
+        var lastUci: String?
+        var lastError: String?
+
+        #if os(iOS)
+        if BotServerConfig.isConfigured {
+            let result = await remote.chooseMoveResult(in: game, difficulty: difficulty)
+            lastUci = result.uci ?? lastUci
+            lastError = result.error ?? lastError
+            if let move = result.move {
+                BotLogging.debug("chooseEngineMove: remote engine \(move.uci)")
+                return BotEngineAttempt(move: move, lastUci: move.uci, lastError: nil)
+            }
+        }
+
+        if EngineBundle.isFairyStockfishAvailable,
+           let move = await FairyStockfishBot.shared.chooseMove(in: game, difficulty: difficulty) {
+            BotLogging.debug("chooseEngineMove: local engine \(move.uci)")
+            return BotEngineAttempt(move: move, lastUci: move.uci, lastError: nil)
+        }
+        #else
+        if EngineBundle.isFairyStockfishAvailable,
+           let move = await FairyStockfishBot.shared.chooseMove(in: game, difficulty: difficulty) {
+            BotLogging.debug("chooseEngineMove: local engine \(move.uci)")
+            return BotEngineAttempt(move: move, lastUci: move.uci, lastError: nil)
+        }
+
+        if BotServerConfig.isConfigured {
+            let result = await remote.chooseMoveResult(in: game, difficulty: difficulty)
+            lastUci = result.uci ?? lastUci
+            lastError = result.error ?? lastError
+            if let move = result.move {
+                BotLogging.debug("chooseEngineMove: remote engine \(move.uci)")
+                return BotEngineAttempt(move: move, lastUci: move.uci, lastError: nil)
+            }
+        }
+        #endif
+
+        BotLogging.debug("chooseEngineMove: no engine available")
+        return BotEngineAttempt(move: nil, lastUci: lastUci, lastError: lastError)
+    }
 
     func chooseMove(in game: ChessGame, difficulty: BotDifficulty) async -> Move? {
         let legal = game.legalMoves()

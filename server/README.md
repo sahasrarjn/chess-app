@@ -4,7 +4,7 @@ Self-hosted **Fairy-Stockfish** HTTP API for the iPhone app and web bot. Physica
 
 ## Production (recommended)
 
-**Public HTTPS:** [chess-engine.sahasraranjan.workers.dev](https://chess-engine.sahasraranjan.workers.dev)  
+**Public HTTPS:** [borderchess.org](https://borderchess.org)  
 **Private backend:** AWS App Runner (~$6–9/mo)
 
 ```

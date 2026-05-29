@@ -182,7 +182,14 @@ final class ChessGame {
     }
 
     private func promotionRow(for color: PieceColor) -> Int {
-        color == .white ? 1 : 8
+        color == .white ? 0 : BoardConstants.size - 1
+    }
+
+    private func isPawnDestination(_ square: Square, color: PieceColor) -> Bool {
+        guard square.isValid else { return false }
+        if square.isPlayable { return true }
+        return square.row == promotionRow(for: color)
+            && BoardConstants.playableRange.contains(square.col)
     }
 
     private func pawnMoves(from square: Square, color: PieceColor) -> [Move] {
@@ -190,7 +197,7 @@ final class ChessGame {
         let dir = forwardDelta(for: color)
         let oneForward = Square(row: square.row + dir, col: square.col)
 
-        if oneForward.isValid, oneForward.isPlayable, board[oneForward.row][oneForward.col] == nil {
+        if isPawnDestination(oneForward, color: color), board[oneForward.row][oneForward.col] == nil {
             if oneForward.row == promotionRow(for: color) {
                 for kind in [PieceKind.queen, .rook, .bishop, .knight] {
                     moves.append(Move(from: square, to: oneForward, promotion: kind))
@@ -209,7 +216,7 @@ final class ChessGame {
 
         for dc in [-1, 1] {
             let capture = Square(row: square.row + dir, col: square.col + dc)
-            guard capture.isValid, capture.isPlayable else { continue }
+            guard isPawnDestination(capture, color: color) else { continue }
 
             if let target = board[capture.row][capture.col], target.color != color {
                 if capture.row == promotionRow(for: color) {

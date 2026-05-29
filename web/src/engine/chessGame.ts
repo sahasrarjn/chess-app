@@ -2,6 +2,7 @@ import { sanFor } from "./moveNotation";
 import {
   ALL_CASTLING,
   BOARD_SIZE,
+  PLAYABLE_RANGE,
   type CastlingRights,
   type GameResult,
   isBorder,
@@ -370,7 +371,18 @@ export class ChessGame {
   }
 
   private promotionRow(color: PieceColor): number {
-    return color === "white" ? 1 : 8;
+    return color === "white" ? 0 : BOARD_SIZE - 1;
+  }
+
+  /** Playable square or inner-file border rank reached only when promoting. */
+  private isPawnDestination(s: Square, color: PieceColor): boolean {
+    if (!squareIsValid(s)) return false;
+    if (isPlayable(s.row, s.col)) return true;
+    return (
+      s.row === this.promotionRow(color) &&
+      s.col >= PLAYABLE_RANGE.min &&
+      s.col <= PLAYABLE_RANGE.max
+    );
   }
 
   private pawnMoves(from: Square, color: PieceColor): Move[] {
@@ -379,8 +391,7 @@ export class ChessGame {
     const oneForward = sq(from.row + dir, from.col);
 
     if (
-      squareIsValid(oneForward) &&
-      isPlayable(oneForward.row, oneForward.col) &&
+      this.isPawnDestination(oneForward, color) &&
       !this.board[oneForward.row][oneForward.col]
     ) {
       if (oneForward.row === this.promotionRow(color)) {
@@ -405,7 +416,7 @@ export class ChessGame {
 
     for (const dc of [-1, 1]) {
       const capture = sq(from.row + dir, from.col + dc);
-      if (!squareIsValid(capture) || !isPlayable(capture.row, capture.col)) continue;
+      if (!this.isPawnDestination(capture, color)) continue;
 
       const target = this.board[capture.row][capture.col];
       if (target && target.color !== color) {

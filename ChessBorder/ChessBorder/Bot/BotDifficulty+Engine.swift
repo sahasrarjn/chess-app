@@ -4,8 +4,8 @@ extension BotDifficulty {
     var targetElo: Int {
         switch self {
         case .easy: 1000
-        case .medium: 1300
-        case .hard: 1800
+        case .medium: 1400
+        case .hard: 2000
         }
     }
 

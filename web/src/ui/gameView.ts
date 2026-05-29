@@ -1,4 +1,10 @@
 import { GameController } from "../game/gameController";
+import {
+  clearSavedGame,
+  restoreGameFromSnapshot,
+  saveGameFromController,
+  type SavedGameSnapshot,
+} from "../game/savedGame";
 import { squaresEqual } from "../engine/chessGame";
 import {
   BOARD_SIZE,
@@ -11,7 +17,12 @@ import {
   type Square,
 } from "../engine/types";
 
-const PIECE_BASE = `${import.meta.env.BASE_URL}pieces/`;
+const PIECE_CDN =
+  (import.meta.env.VITE_PIECE_CDN_URL as string | undefined)?.replace(/\/?$/, "/") ??
+  "https://dkxinbm7riorm.cloudfront.net/ChessBorder/pieces/";
+const PIECE_BASE = import.meta.env.DEV
+  ? `${import.meta.env.BASE_URL}pieces/`
+  : PIECE_CDN;
 
 type SquareCell = {
   btn: HTMLButtonElement;
@@ -24,9 +35,10 @@ export function renderGame(
   root: HTMLElement,
   mode: GameMode,
   difficulty: BotDifficulty,
-  onBack: () => void
+  onBack: () => void,
+  saved?: SavedGameSnapshot
 ): () => void {
-  const screen = new GameScreen(root, mode, difficulty, onBack);
+  const screen = new GameScreen(root, mode, difficulty, onBack, saved);
   screen.mount();
   return () => screen.destroy();
 }
@@ -40,10 +52,13 @@ class GameScreen {
   private moveListEl!: HTMLDivElement;
   private undoBtn!: HTMLButtonElement;
   private retryBtn!: HTMLButtonElement;
+  private backBtn!: HTMLButtonElement;
+  private forwardBtn!: HTMLButtonElement;
+  private liveBtn!: HTMLButtonElement;
   private resignBtn!: HTMLButtonElement;
   private promotionEl: HTMLElement | null = null;
   private gameOverEl: HTMLElement | null = null;
-  private gameOverShown = false;
+  private gameOverDismissed = false;
 
   private squareCells = new Map<string, SquareCell>();
   private displayedRows: number[] = [];
@@ -51,14 +66,27 @@ class GameScreen {
   private lastMoveListLen = 0;
   private lastCapturedPly = -1;
   private lastFlip = false;
+  private lastPersistKey = "";
+  private autoFlipBtn: HTMLButtonElement | null = null;
+  private flipBtn!: HTMLButtonElement;
 
   constructor(
     private readonly root: HTMLElement,
     private readonly mode: GameMode,
     private readonly difficulty: BotDifficulty,
-    private readonly onBack: () => void
+    private readonly onBack: () => void,
+    saved?: SavedGameSnapshot
   ) {
-    this.ctrl = new GameController(mode, difficulty, () => this.update());
+    this.ctrl = new GameController(mode, difficulty, () => {
+      this.update();
+      this.maybePersist();
+    });
+    if (saved) {
+      const game = restoreGameFromSnapshot(saved);
+      if (game) {
+        this.ctrl.restoreGame(game, saved.boardFlipped, saved.autoFlipBoard);
+      }
+    }
   }
 
   mount(): void {
@@ -72,9 +100,14 @@ class GameScreen {
     header.appendChild(
       el("h2", "", this.mode === "vsBot" ? `Play vs Bot (${this.difficulty})` : "Play with Friend")
     );
-    const flip = el("button", "", "Flip");
-    flip.onclick = () => this.ctrl.toggleBoardFlip();
-    header.appendChild(flip);
+    if (this.mode === "localTwoPlayer") {
+      this.autoFlipBtn = el("button", "auto-flip active", "Auto-flip") as HTMLButtonElement;
+      this.autoFlipBtn.onclick = () => this.ctrl.toggleAutoFlipBoard();
+      header.appendChild(this.autoFlipBtn);
+    }
+    this.flipBtn = el("button", "", "Flip") as HTMLButtonElement;
+    this.flipBtn.onclick = () => this.ctrl.toggleBoardFlip();
+    header.appendChild(this.flipBtn);
     screen.appendChild(header);
 
     const capBar = el("div", "captured-bar");
@@ -108,16 +141,17 @@ class GameScreen {
     this.retryBtn.hidden = true;
     controls.appendChild(this.retryBtn);
 
-    for (const label of ["◀", "▶", "Live"] as const) {
-      const b = el("button", "", label);
-      if (label === "◀") b.onclick = () => this.ctrl.stepBack();
-      if (label === "▶") b.onclick = () => this.ctrl.stepForward();
-      if (label === "Live") b.onclick = () => {
-        this.ctrl.previewPly = null;
-        this.update();
-      };
-      controls.appendChild(b);
-    }
+    this.backBtn = el("button", "", "◀") as HTMLButtonElement;
+    this.backBtn.onclick = () => this.ctrl.stepBack();
+    controls.appendChild(this.backBtn);
+
+    this.forwardBtn = el("button", "", "▶") as HTMLButtonElement;
+    this.forwardBtn.onclick = () => this.ctrl.stepForward();
+    controls.appendChild(this.forwardBtn);
+
+    this.liveBtn = el("button", "", "Live") as HTMLButtonElement;
+    this.liveBtn.onclick = () => this.ctrl.returnToLive();
+    controls.appendChild(this.liveBtn);
 
     this.resignBtn = el("button", "danger", "Resign") as HTMLButtonElement;
     this.resignBtn.onclick = () => {
@@ -126,12 +160,7 @@ class GameScreen {
     controls.appendChild(this.resignBtn);
 
     const newGame = el("button", "primary", "New Game");
-    newGame.onclick = () => {
-      this.gameOverShown = false;
-      this.gameOverEl?.remove();
-      this.gameOverEl = null;
-      this.ctrl.newGame();
-    };
+    newGame.onclick = () => this.startNewGame();
     controls.appendChild(newGame);
 
     screen.appendChild(controls);
@@ -142,6 +171,7 @@ class GameScreen {
   }
 
   destroy(): void {
+    this.ctrl.dispose();
     this.promotionEl?.remove();
     this.gameOverEl?.remove();
     this.root.innerHTML = "";
@@ -191,6 +221,12 @@ class GameScreen {
     if (this.ctrl.boardFlipped !== this.lastFlip) {
       this.rebuildBoardGrid();
     }
+
+    if (this.autoFlipBtn) {
+      this.autoFlipBtn.classList.toggle("active", this.ctrl.autoFlipBoard);
+    }
+    this.flipBtn.disabled =
+      this.mode === "localTwoPlayer" && this.ctrl.autoFlipBoard;
 
     this.updateStatus();
     this.updateCaptured();
@@ -341,11 +377,18 @@ class GameScreen {
   }
 
   private updateControls(): void {
+    const gameOver = this.ctrl.game.result.type !== "ongoing";
     this.undoBtn.disabled =
-      this.ctrl.game.moveHistory.length === 0 || this.ctrl.isThinking;
-    this.resignBtn.disabled = this.ctrl.game.result.type !== "ongoing";
+      gameOver || this.ctrl.game.moveHistory.length === 0 || this.ctrl.isThinking;
+    this.resignBtn.disabled = gameOver;
     this.retryBtn.hidden = !this.ctrl.canRetryBot;
     this.retryBtn.disabled = !this.ctrl.canRetryBot;
+
+    const canBrowse = this.ctrl.canBrowseHistory;
+    const viewPly = this.ctrl.previewPly ?? this.ctrl.livePly;
+    this.backBtn.disabled = !canBrowse || viewPly <= 0;
+    this.forwardBtn.disabled = !canBrowse || viewPly >= this.ctrl.livePly;
+    this.liveBtn.disabled = this.ctrl.previewPly == null;
   }
 
   private updatePromotion(): void {
@@ -361,15 +404,51 @@ class GameScreen {
   }
 
   private updateGameOver(): void {
-    if (
+    const shouldShow =
       this.ctrl.game.result.type !== "ongoing" &&
       !this.ctrl.pendingPromotion &&
-      !this.gameOverShown
-    ) {
-      this.gameOverShown = true;
-      this.gameOverEl = this.buildGameOverOverlay();
-      document.body.appendChild(this.gameOverEl);
+      !this.gameOverDismissed;
+
+    if (shouldShow) {
+      if (!this.gameOverEl) {
+        this.gameOverEl = this.buildGameOverOverlay();
+        document.body.appendChild(this.gameOverEl);
+      }
+    } else {
+      this.removeGameOverOverlay();
     }
+  }
+
+  private dismissGameOver(): void {
+    this.gameOverDismissed = true;
+    this.removeGameOverOverlay();
+    this.update();
+  }
+
+  private startNewGame(): void {
+    this.gameOverDismissed = false;
+    this.removeGameOverOverlay();
+    clearSavedGame();
+    this.lastPersistKey = "";
+    this.ctrl.newGame();
+  }
+
+  private maybePersist(): void {
+    const key = [
+      this.ctrl.livePly,
+      this.ctrl.game.result.type,
+      this.ctrl.game.resignedBy,
+      this.ctrl.boardFlipped,
+      this.ctrl.autoFlipBoard,
+    ].join("|");
+    if (key === this.lastPersistKey) return;
+    this.lastPersistKey = key;
+    saveGameFromController(this.ctrl);
+  }
+
+  private removeGameOverOverlay(): void {
+    this.gameOverEl?.remove();
+    this.gameOverEl = null;
   }
 
   private buildPromotionPanel(): HTMLElement {
@@ -397,23 +476,17 @@ class GameScreen {
 
   private buildGameOverOverlay(): HTMLElement {
     const overlay = el("div", "overlay");
+    overlay.onclick = (ev) => {
+      if (ev.target === overlay) this.dismissGameOver();
+    };
     const panel = el("div", "overlay-panel");
+    panel.onclick = (ev) => ev.stopPropagation();
     panel.appendChild(el("h3", "", "Game over"));
     panel.appendChild(el("p", "", this.ctrl.statusText()));
     const btn = el("button", "primary", "New Game");
-    btn.onclick = () => {
-      overlay.remove();
-      this.gameOverEl = null;
-      this.gameOverShown = false;
-      this.ctrl.newGame();
-    };
+    btn.onclick = () => this.startNewGame();
     const back = el("button", "", "Dismiss");
-    back.onclick = () => {
-      overlay.remove();
-      this.gameOverEl = null;
-      this.gameOverShown = false;
-      this.update();
-    };
+    back.onclick = () => this.dismissGameOver();
     panel.appendChild(btn);
     panel.appendChild(back);
     overlay.appendChild(panel);
@@ -425,5 +498,6 @@ function el(tag: string, className: string, text?: string): HTMLElement {
   const node = document.createElement(tag);
   if (className) node.className = className;
   if (text) node.textContent = text;
+  if (tag === "button") (node as HTMLButtonElement).type = "button";
   return node;
 }

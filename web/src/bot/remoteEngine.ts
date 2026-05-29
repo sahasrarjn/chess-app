@@ -58,13 +58,31 @@ export async function fetchBotMove(
   const text = await res.text();
   if (!res.ok) {
     let detail = text;
+    let retryAfterSeconds: number | undefined;
     try {
-      const err = JSON.parse(text) as { error?: string; detail?: string };
+      const err = JSON.parse(text) as {
+        error?: string;
+        detail?: string;
+        retry_after_seconds?: number;
+      };
       detail = err.error ?? err.detail ?? text;
+      retryAfterSeconds = err.retry_after_seconds;
     } catch {
       /* use raw text */
     }
-    throw new Error(detail || `Engine HTTP ${res.status}`);
+    if (retryAfterSeconds == null) {
+      const header = res.headers.get("Retry-After");
+      if (header) {
+        const parsed = parseInt(header, 10);
+        if (Number.isFinite(parsed) && parsed > 0) retryAfterSeconds = parsed;
+      }
+    }
+    const base = detail || `Engine HTTP ${res.status}`;
+    const retryHint =
+      res.status === 429 && retryAfterSeconds != null
+        ? ` Retry in ~${retryAfterSeconds}s.`
+        : "";
+    throw new Error(base + retryHint);
   }
 
   const data = JSON.parse(text) as { uci?: string };

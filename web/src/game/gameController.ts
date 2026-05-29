@@ -1,3 +1,4 @@
+import { pickFallbackMove } from "../bot/fallbackMove";
 import { fetchBotMove } from "../bot/remoteEngine";
 import {
   ChessGame,
@@ -30,6 +31,8 @@ export class GameController {
   pendingPromotion: { from: Square; to: Square } | null = null;
   isThinking = false;
   boardFlipped = false;
+  /** Pass-and-play: rotate board for the side to move (default on). */
+  autoFlipBoard = true;
   previewPly: number | null = null;
   botEngineError: string | null = null;
   revision = 0;
@@ -79,15 +82,24 @@ export class GameController {
     );
   }
 
+  get canBrowseHistory(): boolean {
+    return this.livePly > 0;
+  }
+
   get canRetryBot(): boolean {
-    return (
-      this.mode === "vsBot" &&
-      this.botEngineError != null &&
-      this.game.activeColor === "black" &&
-      this.game.result.type === "ongoing" &&
-      !this.isThinking &&
-      !this.isBrowsingHistory
-    );
+    if (
+      this.mode !== "vsBot" ||
+      this.botEngineError == null ||
+      this.game.result.type !== "ongoing" ||
+      this.isThinking ||
+      this.isBrowsingHistory
+    ) {
+      return false;
+    }
+    if (this.game.activeColor === "black") return true;
+    // Fallback move was already applied; allow undo-and-retry on white's turn.
+    const last = this.game.recordedMoves.at(-1);
+    return this.game.activeColor === "white" && last?.color === "black";
   }
 
   squareKey(s: Square): string {
@@ -104,7 +116,11 @@ export class GameController {
 
   notify(): void {
     this.revision++;
-    if (this.mode === "localTwoPlayer" && !this.isBrowsingHistory) {
+    if (
+      this.mode === "localTwoPlayer" &&
+      this.autoFlipBoard &&
+      !this.isBrowsingHistory
+    ) {
       this.boardFlipped = this.game.activeColor === "black";
     }
     this.onUpdate?.();
@@ -225,6 +241,10 @@ export class GameController {
     this.notify();
   }
 
+  dispose(): void {
+    this.cancelBotRequest();
+  }
+
   newGame(): void {
     this.cancelBotRequest();
     this.game = new ChessGame();
@@ -232,9 +252,28 @@ export class GameController {
     this.pendingPromotion = null;
     this.isThinking = false;
     this.boardFlipped = false;
+    this.autoFlipBoard = true;
     this.previewPly = null;
     this.botEngineError = null;
     this.notify();
+  }
+
+  restoreGame(
+    game: ChessGame,
+    boardFlipped: boolean,
+    autoFlipBoard: boolean
+  ): void {
+    this.cancelBotRequest();
+    this.game = game;
+    this.clearSelection();
+    this.pendingPromotion = null;
+    this.isThinking = false;
+    this.boardFlipped = boardFlipped;
+    this.autoFlipBoard = autoFlipBoard;
+    this.previewPly = null;
+    this.botEngineError = null;
+    this.notify();
+    if (this.isBotTurn) void this.maybePlayBotMove();
   }
 
   toggleBoardFlip(): void {
@@ -242,18 +281,44 @@ export class GameController {
     this.notify();
   }
 
+  toggleAutoFlipBoard(): void {
+    this.autoFlipBoard = !this.autoFlipBoard;
+    if (
+      this.autoFlipBoard &&
+      this.mode === "localTwoPlayer" &&
+      !this.isBrowsingHistory
+    ) {
+      this.boardFlipped = this.game.activeColor === "black";
+    }
+    this.notify();
+  }
+
   retryBotMove(): void {
     if (!this.canRetryBot) return;
     this.botEngineError = null;
+    if (this.game.activeColor === "white") {
+      this.game.undoLastMove();
+    }
     void this.maybePlayBotMove();
   }
 
   goToMove(ply: number): void {
+    const before = this.previewPly;
     if (ply >= this.livePly) {
       this.previewPly = null;
     } else {
       this.previewPly = ply;
     }
+    if (this.previewPly !== before) {
+      this.clearSelection();
+    } else {
+      this.notify();
+    }
+  }
+
+  returnToLive(): void {
+    if (this.previewPly == null) return;
+    this.previewPly = null;
     this.clearSelection();
   }
 
@@ -277,13 +342,14 @@ export class GameController {
   }
 
   statusText(): string {
+    if (this.isBrowsingHistory) {
+      return `Reviewing move ${this.previewPly} of ${this.livePly}`;
+    }
+
     const result = this.game.result;
     switch (result.type) {
       case "ongoing":
         if (this.botEngineError && this.mode === "vsBot") return this.botEngineError;
-        if (this.isBrowsingHistory) {
-          return `Reviewing move ${this.previewPly} of ${this.livePly}`;
-        }
         if (this.isThinking) return "Bot is thinking…";
         if (this.game.isInCheck(this.game.activeColor)) {
           return this.game.activeColor === "white"
@@ -384,11 +450,39 @@ export class GameController {
 
       if (this.game.recordedMoves.length !== plyAtRequest) return;
 
+      const fallback = pickFallbackMove(this.game);
+      if (
+        fallback &&
+        this.game.applyMove(fallback) &&
+        token === this.botMoveToken
+      ) {
+        this.botEngineError =
+          "Engine unavailable — played a fallback move. Tap Retry Bot for a stronger reply.";
+        this.notify();
+        return;
+      }
+
       this.botEngineError = lastUci
         ? `Engine move (${lastUci}) was not legal here — try Undo or New Game.`
         : "Engine did not return a move. Try again.";
     } catch (err) {
       if (token !== this.botMoveToken || abort.signal.aborted) return;
+
+      if (this.game.recordedMoves.length === plyAtRequest) {
+        const fallback = pickFallbackMove(this.game);
+        if (fallback && this.game.applyMove(fallback)) {
+          const detail =
+            err instanceof DOMException && err.name === "TimeoutError"
+              ? "Engine timed out"
+              : err instanceof Error
+                ? err.message
+                : "Engine unreachable";
+          this.botEngineError = `${detail} — played a fallback move. Tap Retry Bot to try the server again.`;
+          this.notify();
+          return;
+        }
+      }
+
       const msg = err instanceof Error ? err.message : String(err);
       this.botEngineError =
         err instanceof DOMException && err.name === "TimeoutError"

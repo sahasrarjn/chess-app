@@ -16,6 +16,30 @@ export type Env = {
 
 const app = new Hono<{ Bindings: Env }>();
 
+/** Slightly below client fetch timeout so the worker fails fast instead of hanging. */
+const ENGINE_FETCH_TIMEOUT_MS = 25_000;
+
+async function fetchEngine(
+  url: string,
+  init: RequestInit
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), ENGINE_FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (err) {
+    if (controller.signal.aborted) {
+      return new Response(
+        JSON.stringify({ detail: "Engine request timed out" }),
+        { status: 504, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 const apiCors = cors({
   origin: "*",
   allowMethods: ["GET", "POST", "OPTIONS"],
@@ -37,7 +61,7 @@ app.get("/health", async (c) => {
     return c.json({ status: "ok", configured: false, engine: "chessborder" });
   }
   try {
-    const res = await fetch(`${origin}/health`, { cf: { cacheTtl: 0 } });
+    const res = await fetchEngine(`${origin}/health`, { cf: { cacheTtl: 0 } });
     const body = await res.text();
     return new Response(body, {
       status: res.status,
@@ -73,7 +97,11 @@ app.post("/v1/move", async (c) => {
   if (c.env.API_KEY) headers["X-API-Key"] = c.env.API_KEY;
 
   try {
-    const res = await fetch(`${origin}/v1/move`, { method: "POST", headers, body: payload });
+    const res = await fetchEngine(`${origin}/v1/move`, {
+      method: "POST",
+      headers,
+      body: payload,
+    });
     const text = await res.text();
     return new Response(text, {
       status: res.status,

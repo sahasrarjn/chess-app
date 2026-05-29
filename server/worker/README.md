@@ -1,6 +1,6 @@
 # Chess Engine — Cloudflare Worker
 
-Public landing page, browser game (`/play/`), iPhone OTA install link, and **rate-limited** engine API proxy.
+Public landing page, browser game (`/play/`), and **rate-limited** engine API proxy. iPhone app is coming soon (no public OTA install on the landing page yet).
 
 ```
 Browser / iPhone  →  chess-engine.<you>.workers.dev  →  AWS App Runner
@@ -26,7 +26,7 @@ Creates a KV namespace for rate limiting on first deploy and syncs secrets:
 - `ENGINE_ORIGIN` — App Runner URL
 - `API_KEY` — backend key (never shipped to clients)
 
-**Public site:** `https://chess-engine.sahasraranjan.workers.dev`
+**Public site:** `https://borderchess.org` (also `https://chess-engine.sahasraranjan.workers.dev`)
 
 ### 3. iPhone app
 
@@ -46,7 +46,7 @@ In `wrangler.toml`:
 | Setting | Default | Purpose |
 |---------|---------|---------|
 | `PUBLIC_MAX_MOVETIME_MS` | `5000` | Cap bot think time for anonymous users |
-| `RATE_LIMIT_PER_MINUTE` | `30` | Max `/v1/move` requests per IP per minute |
+| `RATE_LIMIT_PER_MINUTE` | `120` | Max `/v1/move` requests per IP per minute (~60 bot moves with retries) |
 
 ## Local dev
 

@@ -24,6 +24,10 @@ class FenValidationTests(unittest.TestCase):
         doubled = START_FEN.replace(" ", "   ")
         self.assertEqual(validate_fen(doubled), START_FEN)
 
+    def test_accepts_rank_ten_en_passant(self) -> None:
+        fen = START_FEN.replace(" - ", " j10 ")
+        self.assertEqual(validate_fen(fen), fen)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -141,7 +141,7 @@ struct SquareView: View {
 
     private var coordinateLabelColor: Color {
         let isLight = (square.row + square.col) % 2 == 0
-        return isLight ? Color.black.opacity(0.55) : Color.white.opacity(0.72)
+        return isLight ? BoardTheme.darkSquare.opacity(0.9) : BoardTheme.lightSquare.opacity(0.85)
     }
 }
 

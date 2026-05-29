@@ -19,7 +19,7 @@ When you use **Play vs Bot**, the app sends:
 - The current board position (FEN notation)
 - Bot difficulty / think-time settings needed for a move
 
-These requests go to `https://chess-engine.sahasraranjan.workers.dev`, which proxies them to our backend engine. Requests are used only to compute bot moves.
+These requests go to `https://borderchess.org`, which proxies them to our backend engine. Requests are used only to compute bot moves.
 
 Our edge service may also see standard network metadata (for example IP address) for **rate limiting and abuse prevention**. We do not use this to identify you personally or for advertising.
 
@@ -43,6 +43,7 @@ Bot move requests are processed to return a move. We do not build user profiles 
 
 - **Cloudflare** — public HTTPS front door and rate limiting
 - **AWS App Runner** — private chess engine backend
+- **PostHog** (web only) — anonymous usage analytics (page views, basic interaction events). The iPhone app does not use PostHog.
 
 These providers process network traffic according to their own policies.
 

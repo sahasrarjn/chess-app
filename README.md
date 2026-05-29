@@ -65,8 +65,8 @@ Many GPL apps charge money — users pay for convenience, support, and builds, n
 
 ## Public distribution
 
-- **Web:** [chess-engine.sahasraranjan.workers.dev/play/](https://chess-engine.sahasraranjan.workers.dev/play/)
-- **iPhone:** OTA install from [chess-engine.sahasraranjan.workers.dev](https://chess-engine.sahasraranjan.workers.dev)
+- **Web (live):** [borderchess.org/play/](https://borderchess.org/play/) — play in the browser on desktop or mobile
+- **iPhone:** coming soon (native app in development; use the web game for now)
 - **Mac (App Store):** `./ChessBorder/scripts/release-appstore-mac.sh` — full workflow in [ChessBorder/scripts/README.md](ChessBorder/scripts/README.md)
 - **Mac (direct download):** `./ChessBorder/scripts/release-mac.sh` — Developer ID DMG + notarization
 

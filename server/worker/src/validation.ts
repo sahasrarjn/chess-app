@@ -1,5 +1,5 @@
 const FEN_BOARD = /^[.1-9/prnbqkRNBQKPN]+(?:\/[.1-9/prnbqkRNBQKPN]+){9}/;
-const FEN_TAIL = / [wb] (?:[KQkq-]+|-) (?:[a-j][1-9]|-) \d+ \d+$/;
+const FEN_TAIL = / [wb] (?:[KQkq-]+|-) (?:[a-j](?:10|[1-9])|-) \d+ \d+$/;
 const MAX_FEN_LENGTH = 200;
 
 export type MovePayload = {

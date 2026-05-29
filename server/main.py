@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -72,7 +73,7 @@ async def limit_body_size(request: Request, call_next):
 
 class MoveRequest(BaseModel):
     fen: str = Field(..., min_length=10, max_length=200)
-    elo: int = Field(1600, ge=800, le=3200)
+    elo: int = Field(1400, ge=800, le=3200)
     movetime_ms: int = Field(500, ge=50, le=30_000)
 
     @field_validator("fen")
@@ -116,11 +117,17 @@ def move(
 
     if engine is None:
         raise HTTPException(status_code=503, detail="Engine not ready")
-    if not engine.is_ready():
-        raise HTTPException(status_code=503, detail="Engine not ready")
 
+    started = time.monotonic()
     try:
         uci = engine.best_move(req.fen, req.elo, req.movetime_ms)
+        elapsed_ms = int((time.monotonic() - started) * 1000)
+        logger.info(
+            "move ok uci=%s movetime_ms=%d elapsed_ms=%d",
+            uci,
+            req.movetime_ms,
+            elapsed_ms,
+        )
         return MoveResponse(uci=uci)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

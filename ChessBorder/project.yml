@@ -45,7 +45,7 @@ targets:
         UILaunchScreen:
           UIImageName: LaunchLogo
           UIColorName: LaunchBackground
-        EngineServerURL: https://chess-engine.sahasraranjan.workers.dev
+        EngineServerURL: https://borderchess.org
         ITSAppUsesNonExemptEncryption: false
 
   ChessBorderMac:

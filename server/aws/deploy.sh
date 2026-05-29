@@ -64,6 +64,31 @@ echo "Deployed."
 echo "  Engine URL: ${SERVICE_URL}"
 echo "  Health:     curl ${SERVICE_URL}/health"
 echo ""
+
+SERVICE_ARN="$(aws cloudformation describe-stacks \
+  --stack-name "$STACK_NAME" \
+  --region "$REGION" \
+  --query "Stacks[0].Outputs[?OutputKey=='ServiceArn'].OutputValue" \
+  --output text)"
+
+if [[ -n "$SERVICE_ARN" && "$SERVICE_ARN" != "None" ]]; then
+  echo "==> Starting App Runner deployment (${IMAGE_TAG})"
+  aws apprunner start-deployment --service-arn "$SERVICE_ARN" --region "$REGION" >/dev/null
+  for _ in $(seq 1 36); do
+    STATUS="$(aws apprunner describe-service \
+      --service-arn "$SERVICE_ARN" \
+      --region "$REGION" \
+      --query 'Service.Status' \
+      --output text)"
+    if [[ "$STATUS" == "RUNNING" ]]; then
+      echo "==> App Runner is RUNNING"
+      break
+    fi
+    sleep 10
+  done
+fi
+
+echo ""
 echo "Next:"
 echo "  1. Sync Cloudflare worker secrets: API_KEY=<key> ./server/worker/deploy.sh"
 echo "  2. Or rotate end-to-end: ./scripts/rotate-api-key.sh"

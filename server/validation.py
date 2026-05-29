@@ -7,7 +7,7 @@ import re
 # Fairy-Stockfish chessborder FEN: ten slash-separated ranks, then standard tail.
 # Ranks may use run-length digits or literal dots (see variants.ini startFen).
 _FEN_BOARD = r"^[\.1-9/prnbqkRNBQKPN]+(?:/[\.1-9/prnbqkRNBQKPN]+){9}"
-_FEN_TAIL = r" [wb] (?:[KQkq-]+|-) (?:[a-j][1-9]|-) \d+ \d+$"
+_FEN_TAIL = r" [wb] (?:[KQkq-]+|-) (?:[a-j](?:10|[1-9])|-) \d+ \d+$"
 FEN_PATTERN = re.compile(rf"{_FEN_BOARD}{_FEN_TAIL}")
 
 MAX_FEN_LENGTH = 200

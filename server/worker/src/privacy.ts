@@ -50,7 +50,7 @@ export const privacyHTML = `<!doctype html>
   </ul>
 
   <h2>Information the app sends</h2>
-  <p>When you use <strong>Play vs Bot</strong>, the app sends the current board position (FEN) and move settings to <code>chess-engine.sahasraranjan.workers.dev</code> so the engine can reply. Our edge service may also see your IP address for rate limiting and abuse prevention—not for advertising or personal profiling.</p>
+  <p>When you use <strong>Play vs Bot</strong>, the app sends the current board position (FEN) and move settings to <code>borderchess.org</code> so the engine can reply. Our edge service may also see your IP address for rate limiting and abuse prevention—not for advertising or personal profiling.</p>
 
   <h2>Information we do not collect</h2>
   <ul>
@@ -64,7 +64,12 @@ export const privacyHTML = `<!doctype html>
   <p>Bot requests are processed to return a move. We do not build user profiles from gameplay.</p>
 
   <h2>Third-party services</h2>
-  <p>Traffic is handled by Cloudflare (edge) and AWS App Runner (engine backend) under their respective policies.</p>
+  <ul>
+    <li><strong>Cloudflare</strong> — public HTTPS front door and rate limiting</li>
+    <li><strong>AWS App Runner</strong> — private chess engine backend</li>
+    <li><strong>PostHog</strong> (web only) — anonymous usage analytics (page views, basic interaction events). The iPhone app does not use PostHog.</li>
+  </ul>
+  <p>These providers process network traffic according to their own policies.</p>
 
   <h2>Open source</h2>
   <p>Source code: <a href="https://github.com/sahasrarjn/chess-app">github.com/sahasrarjn/chess-app</a> (GPL v3).</p>

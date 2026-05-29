@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Email the maintainer privately (do not open a public issue for exploitable bugs). Include steps to reproduce, impact, and any suggested fix.
+Email **[sahasraranjan@gmail.com](mailto:sahasraranjan@gmail.com)** privately (do not open a public issue for exploitable bugs). Include steps to reproduce, impact, and any suggested fix.
 
 ## Architecture and secrets
 
@@ -34,7 +34,7 @@ If a key was ever committed to git or shipped in a binary, treat it as compromis
 - **FEN validation** on worker and App Runner (blocks malformed input and UCI injection)
 - **Engine restart** after process failures
 - **Health checks** verify the engine responds to `isready`, not just that the HTTP process is up
-- **Rate limiting** via Cloudflare KV (30 requests/min/IP by default; tune in `wrangler.toml`)
+- **Rate limiting** via Cloudflare KV (120 requests/min/IP by default; tune in `wrangler.toml`)
 - **Public movetime cap** on the worker (default 5s) to limit compute abuse
 - **CORS disabled** on App Runner unless `ALLOWED_ORIGINS` is explicitly set
 - **Non-root** container user for the engine service
@@ -44,7 +44,7 @@ If a key was ever committed to git or shipped in a binary, treat it as compromis
 ## Operational checklist before public launch
 
 1. Run `./scripts/rotate-api-key.sh` to invalidate any previously leaked key.
-2. Deploy AWS stack with `ALERT_EMAIL=you@example.com ./server/aws/deploy.sh`.
+2. Deploy AWS stack with `ALERT_EMAIL=your@email.com ./server/aws/deploy.sh` (or update `AlertEmail` on the existing stack).
 3. Deploy worker: `./server/worker/deploy.sh`.
 4. Deploy billing alarm (us-east-1): see `server/aws/README.md`.
 5. Confirm `/health` returns `engine_ready: true` on the worker URL.

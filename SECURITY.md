@@ -17,7 +17,7 @@ Browser / iPhone  →  CloudFront (borderchess.org)  →  S3 (static)
 | Layer | Who calls it | Authentication |
 |-------|----------------|----------------|
 | **CloudFront + S3** | Web app (static) | Public HTTPS |
-| **Cloudflare Worker** | Web app, iPhone app (bot API) | Public HTTPS; rate limited per IP |
+| **Cloudflare Worker** | Web app, iPhone app (bot API) | Public HTTPS; validates and proxies to engine |
 | **App Runner engine** | Cloudflare Worker only | `X-API-Key` header (server-side secret) |
 
 **Clients must not embed the backend API key.** The worker stores `API_KEY` as a Wrangler secret and adds it when proxying to App Runner.
@@ -37,7 +37,7 @@ If a key was ever committed to git or shipped in a binary, treat it as compromis
 - **FEN validation** on worker and App Runner (blocks malformed input and UCI injection)
 - **Engine restart** after process failures
 - **Health checks** verify the engine responds to `isready`, not just that the HTTP process is up
-- **Rate limiting** via Cloudflare KV (120 requests/min/IP by default; tune in `wrangler.toml`)
+- **Rate limiting** via CloudFront WAF on `/v1/move` (~120 requests/min/IP by default; tune `WAF_RATE_LIMIT` in `deploy-static.sh`)
 - **Public movetime cap** on the worker (default 5s) to limit compute abuse
 - **CORS disabled** on App Runner unless `ALLOWED_ORIGINS` is explicitly set
 - **Non-root** container user for the engine service
@@ -59,4 +59,4 @@ If a key was ever committed to git or shipped in a binary, treat it as compromis
 - WAF bot management beyond basic rate limits
 - DDoS protection beyond Cloudflare defaults
 
-For higher traffic, add Cloudflare WAF rate limiting rules and increase App Runner capacity.
+For higher traffic, increase `WAF_RATE_LIMIT` and App Runner capacity.

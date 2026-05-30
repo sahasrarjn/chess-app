@@ -17,7 +17,7 @@ Browser / iPhone
 ```
 
 - **Static site:** S3 + CloudFront (`server/aws/static-site.yaml`)
-- **Bot API:** Cloudflare Worker - rate limiting + API key proxy
+- **Bot API:** Cloudflare Worker — validates input, adds API key, proxies to App Runner. Rate limiting on CloudFront WAF.
 - **Engine:** AWS App Runner (private)
 
 ## One-time AWS setup

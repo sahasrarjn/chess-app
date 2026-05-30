@@ -75,6 +75,17 @@ async function postMoveOnce(
   }
 }
 
+/** Server returned a UCI move the local rules engine could not apply. */
+export class EngineMoveRejectedError extends Error {
+  readonly serverUci: string;
+
+  constructor(serverUci: string) {
+    super(`Engine move (${serverUci}) was not legal here`);
+    this.name = "EngineMoveRejectedError";
+    this.serverUci = serverUci;
+  }
+}
+
 function parseMoveError(
   res: Response,
   text: string
@@ -110,11 +121,16 @@ function parseMoveError(
   };
 }
 
+export type FetchBotMoveResult = {
+  move: Move;
+  serverUci: string;
+};
+
 export async function fetchBotMove(
   game: ChessGame,
   difficulty: BotDifficulty,
   signal?: AbortSignal
-): Promise<Move | null> {
+): Promise<FetchBotMoveResult | null> {
   const base = engineApiBase();
   const url = `${base || ""}/v1/move`;
   const payload = JSON.stringify({
@@ -145,7 +161,11 @@ export async function fetchBotMove(
 
       const data = JSON.parse(text) as { uci?: string };
       if (!data.uci) return null;
-      return matchEngineMove(game, data.uci);
+      const matched = matchEngineMove(game, data.uci);
+      if (!matched) {
+        throw new EngineMoveRejectedError(data.uci);
+      }
+      return { move: matched, serverUci: data.uci };
     } catch (err) {
       if (isAbortError(err)) throw err;
       if (isRetryableNetworkError(err) && attempt < MAX_NETWORK_ATTEMPTS - 1) {

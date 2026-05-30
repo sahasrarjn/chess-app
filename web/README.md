@@ -5,13 +5,14 @@ Browser version of Border Chess: **Play vs Bot** and **Play with Friend** (pass-
 ## Run locally
 
 ```bash
-# Terminal 1 - engine API (required for bot)
+# Terminal 1 (optional) - local engine instead of production
 docker compose -f server/docker-compose.yml up --build
 
-# Terminal 2 - web dev server (proxies /v1/move to localhost:8080)
+# Terminal 2 - web dev server (proxies /v1/move to production by default)
 cd web
 npm install
 npm run dev
+# Local engine: VITE_ENGINE_PROXY=http://127.0.0.1:8081 npm run dev
 ```
 
 Open http://localhost:5173/play/
@@ -38,7 +39,7 @@ The web client calls the same HTTP API as the iPhone app:
 - `POST /v1/move` - body: `{ fen, elo, movetime_ms }`
 - `GET /health`
 
-By default (empty engine URL in settings), requests go to the **same origin** as the page. In dev, Vite proxies those paths to `http://127.0.0.1:8081`. On the worker, `/v1/move` is validated, rate-limited, and proxied to `ENGINE_ORIGIN`.
+By default (empty engine URL in settings), requests go to the **same origin** as the page. In dev, Vite proxies those paths to `http://127.0.0.1:8081`. On the worker, `/v1/move` is validated and proxied to `ENGINE_ORIGIN`. Production rate limits are enforced by CloudFront WAF.
 
 Optional **Engine settings** (local dev): custom server URL. Production does not need an API key in the browser - the worker adds it server-side.
 

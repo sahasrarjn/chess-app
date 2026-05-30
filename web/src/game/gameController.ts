@@ -1,4 +1,5 @@
 import { chooseMinimaxMove } from "../bot/chessBot";
+import { trackBotMove, trackBotMoveError, trackBotRetry } from "../analytics/botAnalytics";
 import { chooseBotMove } from "../bot/chooseBotMove";
 import {
   ChessGame,
@@ -20,6 +21,7 @@ import {
   isPlayable,
   moveUci,
 } from "../engine/types";
+import { toFEN } from "../engine/fen";
 
 export type GameUpdateListener = () => void;
 
@@ -295,6 +297,11 @@ export class GameController {
 
   retryBotMove(): void {
     if (!this.canRetryBot) return;
+    trackBotRetry({
+      difficulty: this.botDifficulty,
+      ply: this.game.recordedMoves.length,
+      previousError: this.botEngineError,
+    });
     this.botEngineError = null;
     if (this.game.activeColor === "white") {
       this.game.undoLastMove();
@@ -406,6 +413,7 @@ export class GameController {
 
     const start = performance.now();
     const plyAtRequest = this.game.recordedMoves.length;
+    const fenAtRequest = toFEN(this.game);
 
     try {
       if (token !== this.botMoveToken) return;
@@ -431,10 +439,12 @@ export class GameController {
       let move = outcome.move;
       let usedBuiltin = outcome.source === "builtin";
       let serverError = outcome.serverError;
+      let serverUci = outcome.serverUci;
 
       if (move && !this.game.applyMove(move)) {
         if (outcome.source === "server") {
           const badUci = moveUci(move);
+          serverUci = serverUci ?? badUci;
           const local = chooseMinimaxMove(this.game, this.botDifficulty);
           if (local && this.game.applyMove(local)) {
             move = local;
@@ -459,17 +469,37 @@ export class GameController {
 
       if (move) {
         if (usedBuiltin && serverError) {
-          this.botEngineError =
-            "Server unavailable. Built-in bot played this move. Tap Retry Bot for Fairy-Stockfish.";
+          console.debug("Bot used built-in fallback:", serverError);
         }
+        trackBotMove({
+          source: usedBuiltin ? "builtin" : "server",
+          difficulty: this.botDifficulty,
+          elapsedMs: performance.now() - start,
+          ply: plyAtRequest,
+          serverError: usedBuiltin ? serverError : undefined,
+          serverUci: usedBuiltin ? serverUci : serverUci ?? moveUci(move),
+          appliedUci: moveUci(move),
+          fen: outcome.fen,
+        });
         this.notify();
         return;
       }
 
       if (this.game.recordedMoves.length !== plyAtRequest) return;
 
-      this.botEngineError =
+      const errorMsg =
         serverError ?? "Could not find a bot move. Try Retry Bot or Undo.";
+      trackBotMoveError({
+        source: "builtin",
+        difficulty: this.botDifficulty,
+        elapsedMs: performance.now() - start,
+        ply: plyAtRequest,
+        serverError,
+        serverUci,
+        fen: outcome.fen,
+        error: errorMsg,
+      });
+      this.botEngineError = errorMsg;
     } catch (err) {
       if (token !== this.botMoveToken || abort.signal.aborted) return;
       if (err instanceof DOMException && err.name === "AbortError") return;
@@ -483,17 +513,35 @@ export class GameController {
               : err instanceof Error
                 ? err.message
                 : "Engine unreachable";
-          this.botEngineError = `${detail}. Built-in bot played this move. Tap Retry Bot for the server.`;
+          console.debug("Bot used built-in fallback:", detail);
+          trackBotMove({
+            source: "builtin",
+            difficulty: this.botDifficulty,
+            elapsedMs: performance.now() - start,
+            ply: plyAtRequest,
+            serverError: detail,
+            appliedUci: moveUci(local),
+            fen: fenAtRequest,
+          });
           this.notify();
           return;
         }
       }
 
       const msg = err instanceof Error ? err.message : String(err);
-      this.botEngineError =
+      const errorMsg =
         err instanceof DOMException && err.name === "TimeoutError"
           ? "Engine request timed out. Try again."
           : msg || "Cannot reach the chess engine.";
+      trackBotMoveError({
+        source: "builtin",
+        difficulty: this.botDifficulty,
+        elapsedMs: performance.now() - start,
+        ply: plyAtRequest,
+        error: errorMsg,
+        fen: fenAtRequest,
+      });
+      this.botEngineError = errorMsg;
     } finally {
       if (token === this.botMoveToken) {
         this.botAbort = null;

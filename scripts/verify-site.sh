@@ -76,7 +76,7 @@ else
   FAIL=1
 fi
 
-echo -n "     junk FEN skips rate limit … "
+echo -n "     junk FEN rejected … "
 JUNK_RESP="$("$CURL" -s -X POST "$BASE/v1/move" \
   -H "Content-Type: application/json" \
   -d '{"fen":"invalid"}')"

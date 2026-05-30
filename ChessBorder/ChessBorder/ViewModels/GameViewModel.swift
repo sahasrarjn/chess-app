@@ -462,12 +462,12 @@ final class GameViewModel: ObservableObject {
                let piece = self.game.piece(at: fallback.from),
                self.game.applyMove(fallback) {
                 BotLogging.debug("maybePlayBotMove: applied fallback \(fallback.uci)")
-                self.beginMoveAnimation(move: fallback, piece: piece)
                 if let lastError {
-                    self.botEngineError = "\(lastError). Built-in bot played this move. Tap Retry Bot for Fairy-Stockfish."
+                    BotLogging.debug("maybePlayBotMove: engine unavailable (\(lastError))")
                 } else {
-                    self.botEngineError = "Engine unavailable. Built-in bot played this move. Tap Retry Bot for Fairy-Stockfish."
+                    BotLogging.debug("maybePlayBotMove: engine unavailable (no move from server/local engine)")
                 }
+                self.beginMoveAnimation(move: fallback, piece: piece)
                 self.notifyChange()
                 return
             }

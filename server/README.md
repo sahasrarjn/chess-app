@@ -8,9 +8,9 @@ Self-hosted **Fairy-Stockfish** HTTP API for the iPhone app and web bot. Physica
 **Private backend:** AWS App Runner (0.5 vCPU, autoscale 1–3, ~$15–35/mo)
 
 ```
-iPhone / browser  →  Cloudflare Worker  →  App Runner (this server)
-                         ↑ rate limit            ↑ X-API-Key (secret)
-                         ↑ no client key
+iPhone / browser  →  CloudFront (WAF)  →  Cloudflare Worker  →  App Runner (this server)
+                                                    ↑ X-API-Key (secret)
+                                                    ↑ no client key
 ```
 
 ### Deploy / update
@@ -19,7 +19,7 @@ iPhone / browser  →  Cloudflare Worker  →  App Runner (this server)
 # 1. Backend (generates API_KEY if unset; stores it in AWS only)
 ALERT_EMAIL=you@example.com ./server/aws/deploy.sh
 
-# 2. Worker (syncs ENGINE_ORIGIN + API_KEY secrets, enables rate limiting)
+# 2. Worker (syncs ENGINE_ORIGIN + API_KEY secrets)
 ./server/worker/deploy.sh
 
 # 3. Rotate a leaked key (no app rebuild needed)
@@ -63,6 +63,6 @@ FEN must match the 10×10 `chessborder` variant. Invalid FEN returns `400`.
 
 ## Why not engine inside Cloudflare Workers?
 
-Workers have no subprocess and no WASM threads for full Fairy-Stockfish. The worker validates input, rate-limits, and proxies; the real engine runs on App Runner.
+Workers have no subprocess and no WASM threads for full Fairy-Stockfish. The worker validates input and proxies; rate limiting is on CloudFront WAF. The real engine runs on App Runner.
 
 Mac app and iOS Simulator continue to use local Fairy-Stockfish when available.

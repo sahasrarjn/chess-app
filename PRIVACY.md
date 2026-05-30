@@ -42,7 +42,7 @@ Bot move requests are processed to return a move. We do not build user profiles 
 ## Third-party services
 
 - **Amazon CloudFront**: static site CDN and HTTPS
-- **Cloudflare Workers**: rate-limited bot move API proxy
+- **Cloudflare Workers**: bot move API proxy (validation + engine routing)
 - **AWS App Runner**: private chess engine backend
 - **PostHog** (web only): anonymous usage analytics (page views, basic interaction events). The iPhone app does not use PostHog.
 

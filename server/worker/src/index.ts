@@ -1,13 +1,10 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { checkRateLimit } from "./rateLimit";
 import { clampPublicMovetime, parseMovePayload } from "./validation";
 
 export type Env = {
   ENGINE_ORIGIN: string;
   API_KEY?: string;
-  RATE_LIMIT?: KVNamespace;
-  RATE_LIMIT_PER_MINUTE?: string;
   PUBLIC_MAX_MOVETIME_MS?: string;
 };
 
@@ -92,9 +89,6 @@ app.post("/v1/move", async (c) => {
   if ("error" in parsed) {
     return c.json({ error: parsed.error }, 400);
   }
-
-  const limited = await checkRateLimit(c.req.raw, c.env);
-  if (limited) return limited;
 
   const maxMovetime = parseInt(c.env.PUBLIC_MAX_MOVETIME_MS ?? "5000", 10);
   const movetimeMs = clampPublicMovetime(parsed.movetime_ms, maxMovetime);

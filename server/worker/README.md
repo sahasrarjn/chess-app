@@ -1,6 +1,6 @@
 # Chess Engine - Cloudflare Worker (API only)
 
-Rate-limited proxy for `/v1/move` and `/health`. Static site is on **CloudFront + S3** - see [docs/DOMAIN.md](../../docs/DOMAIN.md).
+Proxy for `/v1/move` and `/health`. Static site is on **CloudFront + S3** - see [docs/DOMAIN.md](../../docs/DOMAIN.md). Rate limiting is on **CloudFront WAF** (see `server/aws/static-site.yaml`).
 
 ```
 Browser / iPhone  →  borderchess.org (CloudFront)
@@ -40,9 +40,8 @@ In `wrangler.toml`:
 | Setting | Default | Purpose |
 |---------|---------|---------|
 | `PUBLIC_MAX_MOVETIME_MS` | `5000` | Cap bot think time for anonymous users |
-| `RATE_LIMIT_PER_MINUTE` | `120` | Max `/v1/move` requests per IP per minute |
 
-WAF on CloudFront also rate-limits `/v1/move` (see `server/aws/static-site.yaml`).
+`/v1/move` rate limits (default ~120 req/min per IP) are set via `WAF_RATE_LIMIT` on the static CloudFront stack — see `server/aws/static-site.yaml`.
 
 ## Local dev
 

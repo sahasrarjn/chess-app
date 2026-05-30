@@ -33,7 +33,7 @@ const BUNDLED_PIECES: Record<string, string> = {
   bK: svgDataUrl(bK),
 };
 
-/** Piece image src — inlined in prod (no extra requests); /play/pieces/ in dev. */
+/** Piece image src - inlined in prod (no extra requests); /play/pieces/ in dev. */
 export function pieceImgSrc(piece: Piece): string {
   const name = pieceAssetName(piece);
   if (import.meta.env.DEV) {

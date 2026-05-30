@@ -13,10 +13,13 @@ export type Env = {
 
 const app = new Hono<{ Bindings: Env }>();
 
-/** Slightly below client fetch timeout so the worker fails fast instead of hanging. */
-const ENGINE_FETCH_TIMEOUT_MS = 25_000;
+/** Below browser timeout; allow cold App Runner + queued moves on a single engine. */
+const ENGINE_FETCH_TIMEOUT_MS = 40_000;
+const ENGINE_RETRY_STATUSES = new Set([502, 503, 504]);
+const ENGINE_RETRY_ATTEMPTS = 2;
+const ENGINE_RETRY_DELAY_MS = 400;
 
-async function fetchEngine(
+async function fetchEngineOnce(
   url: string,
   init: RequestInit
 ): Promise<Response> {
@@ -35,6 +38,19 @@ async function fetchEngine(
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+async function fetchEngine(url: string, init: RequestInit): Promise<Response> {
+  let last: Response | null = null;
+  for (let attempt = 0; attempt < ENGINE_RETRY_ATTEMPTS; attempt++) {
+    const res = await fetchEngineOnce(url, init);
+    if (!ENGINE_RETRY_STATUSES.has(res.status) || attempt === ENGINE_RETRY_ATTEMPTS - 1) {
+      return res;
+    }
+    last = res;
+    await new Promise((r) => setTimeout(r, ENGINE_RETRY_DELAY_MS * (attempt + 1)));
+  }
+  return last!;
 }
 
 const apiCors = cors({

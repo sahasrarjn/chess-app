@@ -15,9 +15,9 @@ Build the engine for local development:
 
 ## Chess piece graphics (Maestro)
 
-- **Source:** [Lichess lila — maestro](https://github.com/lichess-org/lila/tree/master/public/piece/maestro)
+- **Source:** [Lichess lila - maestro](https://github.com/lichess-org/lila/tree/master/public/piece/maestro)
 - **License:** See Lichess piece set licensing (community/open piece set)
 
 ## ChessboardKit (UI inspiration)
 
-- **Project:** [ChessboardKit](https://github.com/rohanrhu/ChessboardKit) (MIT) — patterns only; board is custom
+- **Project:** [ChessboardKit](https://github.com/rohanrhu/ChessboardKit) (MIT) - patterns only; board is custom

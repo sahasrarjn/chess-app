@@ -19,7 +19,7 @@ MANIFEST_URL="${CF_BASE}/ChessBorder-manifest.plist"
 
 chess_require_aws_publish
 
-[[ -f "$IPA" ]] || { echo "FATAL: $IPA not found — run ./scripts/release-ios.sh first" >&2; exit 1; }
+[[ -f "$IPA" ]] || { echo "FATAL: $IPA not found - run ./scripts/release-ios.sh first" >&2; exit 1; }
 
 PATHS=()
 

@@ -370,7 +370,7 @@ final class ChessGame {
             }
         }
 
-        // Sliding pieces — border squares are valid stepping stones, not walls
+        // Sliding pieces - border squares are valid stepping stones, not walls
         for (dr, dc) in bishopDirs {
             if rayAttacks(from: square, dr: dr, dc: dc, color: color, rook: false) { return true }
         }

@@ -21,7 +21,7 @@ Distribution uses **Apple’s install and auto-update** (Mac App Store / TestFli
 
 **Bundle ID:** `com.sahasraranjan.chessborder.mac`  
 **Product name:** Border Chess  
-**Team ID:** `LG3L588JT3` (personal — Sahasra Ranjan)
+**Team ID:** `LG3L588JT3` (personal - Sahasra Ranjan)
 
 ### 1. One-time App Store Connect setup
 
@@ -102,7 +102,7 @@ For Xcode archive, set **Signing & Capabilities → Code Signing Entitlements** 
 
 ### 6. Upload to App Store Connect
 
-**Option A — script (API key, good for automation):**
+**Option A - script (API key, good for automation):**
 
 Add to repo `.env`:
 
@@ -119,13 +119,13 @@ cd ChessBorder
 ./scripts/release-appstore-mac.sh --upload
 ```
 
-**Option B — Transporter (manual):**
+**Option B - Transporter (manual):**
 
 1. Open **Transporter.app** (Mac App Store)
 2. Drag `ChessBorder/build/appstore-mac/*.pkg`
 3. Deliver
 
-**Option C — Xcode Organizer:** Distribute App → Upload from the archive created in step 5b.
+**Option C - Xcode Organizer:** Distribute App → Upload from the archive created in step 5b.
 
 ### 7. TestFlight (optional)
 
@@ -146,8 +146,8 @@ cd ChessBorder
 
 ### 9. What stays unchanged
 
-- `release-mac.sh` — still builds Developer ID DMG for direct download + notarization
-- `release-ios.sh` / `publish-release.sh` — still handle iPhone OTA distribution
+- `release-mac.sh` - still builds Developer ID DMG for direct download + notarization
+- `release-ios.sh` / `publish-release.sh` - still handle iPhone OTA distribution
 - No Sparkle or custom OTA updater for Mac App Store builds
 
 ---

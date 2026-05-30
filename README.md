@@ -4,9 +4,9 @@ An iPhone chess app with a **chess.com-inspired UI** and a **10×10 board**: sta
 
 ## Features (v1)
 
-- **Play vs Bot** — Fairy-Stockfish locally on Mac/Simulator; **remote engine server** on physical iPhone (see `server/`)
-- **Play with Friend** — pass-and-play on one iPhone, board auto-flips each turn
-- **Web** — same modes in the browser (`web/`), no online multiplayer
+- **Play vs Bot** - Fairy-Stockfish locally on Mac/Simulator; **remote engine server** on physical iPhone (see `server/`)
+- **Play with Friend** - pass-and-play on one iPhone, board auto-flips each turn
+- **Web** - same modes in the browser (`web/`), no online multiplayer
 - Standard FIDE rules: castling, en passant, promotion, check/checkmate/stalemate, 50-move rule
 - Legal move dots, last-move highlight, check highlight, pawn promotion picker
 - No online multiplayer (by design for v1)
@@ -59,16 +59,16 @@ You **may sell the app commercially** (website, Gumroad, etc.) under GPL v3. You
 - Provide **full source code** to users who get the binary (e.g. public GitHub repo + link in the app)
 - Include GPL license text and engine attribution ([THIRD_PARTY.md](THIRD_PARTY.md))
 
-Many GPL apps charge money — users pay for convenience, support, and builds, not for proprietary code.
+Many GPL apps charge money - users pay for convenience, support, and builds, not for proprietary code.
 
 **Mac App Store:** possible but legally debated (Apple DRM vs GPL). Provide a public source link in the listing and app; see [ChessBorder/scripts/README.md](ChessBorder/scripts/README.md). Direct download (`release-mac.sh`) remains simpler for GPL compliance.
 
 ## Public distribution
 
-- **Web (live):** [borderchess.org/play/](https://borderchess.org/play/) — play in the browser on desktop or mobile
+- **Web (live):** [borderchess.org/play/](https://borderchess.org/play/) - play in the browser on desktop or mobile
 - **iPhone:** coming soon (native app in development; use the web game for now)
-- **Mac (App Store):** `./ChessBorder/scripts/release-appstore-mac.sh` — full workflow in [ChessBorder/scripts/README.md](ChessBorder/scripts/README.md)
-- **Mac (direct download):** `./ChessBorder/scripts/release-mac.sh` — Developer ID DMG + notarization
+- **Mac (App Store):** `./ChessBorder/scripts/release-appstore-mac.sh` - full workflow in [ChessBorder/scripts/README.md](ChessBorder/scripts/README.md)
+- **Mac (direct download):** `./ChessBorder/scripts/release-mac.sh` - Developer ID DMG + notarization
 
 ## Requirements
 
@@ -106,7 +106,7 @@ cd ChessBorder && ./run.sh ios
 |----------|--------|
 | **Mac app** | Fairy-Stockfish (local) |
 | **iOS Simulator** | Fairy-Stockfish (local) |
-| **Physical iPhone** | **Your server** (`server/`) — no minimax |
+| **Physical iPhone** | **Your server** (`server/`) - no minimax |
 
 Local Stockfish on a real iPhone is not viable via subprocess (iOS sandbox). The app calls your deployed Fairy-Stockfish HTTP API instead.
 
@@ -116,7 +116,7 @@ Local Stockfish on a real iPhone is not viable via subprocess (iOS sandbox). The
 docker compose -f server/docker-compose.yml up --build
 ```
 
-Engine URL is set in `ChessBorder/Info.plist` (`EngineServerURL` → Cloudflare worker). The backend API key lives in worker/AWS secrets only — see [SECURITY.md](SECURITY.md) and [server/README.md](server/README.md).
+Engine URL is set in `ChessBorder/Info.plist` (`EngineServerURL` → Cloudflare worker). The backend API key lives in worker/AWS secrets only - see [SECURITY.md](SECURITY.md) and [server/README.md](server/README.md).
 
 If the iOS simulator runtime is missing, install it via **Xcode → Settings → Components**.
 
@@ -127,7 +127,7 @@ docker compose -f server/docker-compose.yml up --build   # engine for bot
 cd web && npm install && npm run dev
 ```
 
-Open http://localhost:5173/play/ — see [web/README.md](web/README.md).
+Open http://localhost:5173/play/ - see [web/README.md](web/README.md).
 
 ## Project structure
 
@@ -146,4 +146,4 @@ chess-app/
 
 ## License
 
-GNU General Public License v3.0 — see [LICENSE](LICENSE). Source: [github.com/sahasrarjn/chess-app](https://github.com/sahasrarjn/chess-app). Chess piece SVGs: [Lichess Maestro](https://github.com/lichess-org/lila/tree/master/public/piece/maestro).
+GNU General Public License v3.0 - see [LICENSE](LICENSE). Source: [github.com/sahasrarjn/chess-app](https://github.com/sahasrarjn/chess-app). Chess piece SVGs: [Lichess Maestro](https://github.com/lichess-org/lila/tree/master/public/piece/maestro).

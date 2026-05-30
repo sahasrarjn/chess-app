@@ -26,7 +26,7 @@ and providing corresponding source code.
 
 You **may sell** this app (Mac App Store, your website, etc.) under GPL v3.
 Buyers receive the same rights: run, modify, and redistribute the software.
-You must provide source code to users who receive the binary — typically via
+You must provide source code to users who receive the binary - typically via
 a public Git repository and/or a "Source code" link in the app.
 
 See also: [Stockfish license FAQ](https://stockfishchess.org/about/)

@@ -232,3 +232,27 @@ export function difficultyMinThinkMs(d: BotDifficulty): number {
       return 300;
   }
 }
+
+/** Minimax depth for the built-in offline bot (mirrors iOS). */
+export function difficultySearchDepth(d: BotDifficulty): number {
+  switch (d) {
+    case "easy":
+      return 2;
+    case "medium":
+      return 3;
+    case "hard":
+      return 4;
+  }
+}
+
+/** Chance to play a random legal move instead of the best line (easy/medium only). */
+export function difficultyRandomness(d: BotDifficulty): number {
+  switch (d) {
+    case "easy":
+      return 0.35;
+    case "medium":
+      return 0.12;
+    case "hard":
+      return 0;
+  }
+}

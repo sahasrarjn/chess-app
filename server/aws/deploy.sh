@@ -12,13 +12,47 @@ ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 ECR_URI="${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/${REPO_NAME}"
 IMAGE_URI="${ECR_URI}:${IMAGE_TAG}"
 
-API_KEY="${API_KEY:-$(openssl rand -hex 32)}"
+SERVICE_ARN_PRE="$(aws cloudformation describe-stacks \
+  --stack-name "$STACK_NAME" \
+  --region "$REGION" \
+  --query "Stacks[0].Outputs[?OutputKey=='ServiceArn'].OutputValue" \
+  --output text 2>/dev/null || true)"
+
+# App Runner describe-service redacts secrets as the literal string "None" — never reuse that.
+if [[ -z "${API_KEY:-}" && -n "$SERVICE_ARN_PRE" && "$SERVICE_ARN_PRE" != "None" ]]; then
+  API_KEY="$(aws apprunner describe-service \
+    --service-arn "$SERVICE_ARN_PRE" \
+    --region "$REGION" \
+    --output json 2>/dev/null | python3 -c "
+import json, sys
+raw = json.load(sys.stdin)['Service']['SourceConfiguration']['ImageRepository']['ImageConfiguration'].get('RuntimeEnvironmentVariables') or {}
+if isinstance(raw, list):
+    raw = {e['Name']: e['Value'] for e in raw if 'Name' in e}
+v = (raw.get('API_KEY') or '').strip()
+if v and v not in ('None', 'null') and len(v) >= 32:
+    print(v)
+" 2>/dev/null || true)"
+fi
+if [[ "${API_KEY:-}" == "None" || "${API_KEY:-}" == "null" || ${#API_KEY} -lt 32 ]]; then
+  unset API_KEY
+fi
+
+KEY_SOURCE="new stack"
+if [[ -n "${API_KEY:-}" ]]; then
+  KEY_SOURCE="explicit env"
+elif [[ -n "$SERVICE_ARN_PRE" && "$SERVICE_ARN_PRE" != "None" ]]; then
+  KEY_SOURCE="unchanged (CFN previous value)"
+else
+  API_KEY="$(openssl rand -hex 32)"
+fi
 
 echo "==> Account ${ACCOUNT} region ${REGION}"
 echo "==> Image ${IMAGE_URI}"
-echo "==> Backend API key generated for this deploy (stored in AWS; not printed)."
-echo "    Sync to Cloudflare with: API_KEY=<key> ./server/worker/deploy.sh"
-echo "    Or run: ./scripts/rotate-api-key.sh"
+echo "==> API key ${KEY_SOURCE} (stored in AWS; not printed)"
+if [[ -z "${ALERT_EMAIL:-}" ]]; then
+  echo "WARN No ALERT_EMAIL — CloudWatch alarms will not email you. Example:"
+  echo "     ALERT_EMAIL=you@example.com ./server/aws/deploy.sh"
+fi
 
 echo "==> Ensuring ECR repository exists"
 aws ecr describe-repositories --repository-names "$REPO_NAME" --region "$REGION" >/dev/null 2>&1 \
@@ -39,7 +73,10 @@ docker tag "${REPO_NAME}:${IMAGE_TAG}" "${IMAGE_URI}"
 echo "==> Pushing to ECR"
 docker push "${IMAGE_URI}"
 
-PARAMS=(ImageUri="${IMAGE_URI}" ApiKey="${API_KEY}")
+PARAMS=(ImageUri="${IMAGE_URI}")
+if [[ -n "${API_KEY:-}" ]]; then
+  PARAMS+=(ApiKey="${API_KEY}")
+fi
 if [[ -n "${ALERT_EMAIL:-}" ]]; then
   PARAMS+=(AlertEmail="${ALERT_EMAIL}")
 fi
@@ -88,9 +125,39 @@ if [[ -n "$SERVICE_ARN" && "$SERVICE_ARN" != "None" ]]; then
   done
 fi
 
+LOG_RETENTION_DAYS="${LOG_RETENTION_DAYS:-30}"
+echo "==> CloudWatch log retention (${LOG_RETENTION_DAYS} days)"
+while IFS= read -r lg; do
+  [[ -z "$lg" || "$lg" == "None" ]] && continue
+  aws logs put-retention-policy \
+    --log-group-name "$lg" \
+    --retention-in-days "$LOG_RETENTION_DAYS" \
+    --region "$REGION" >/dev/null
+  echo "     ${lg}"
+done < <(aws logs describe-log-groups \
+  --log-group-name-prefix "/aws/apprunner/chess-border-engine" \
+  --region "$REGION" \
+  --query 'logGroups[].logGroupName' \
+  --output json 2>/dev/null | python3 -c "import json,sys; print('\n'.join(json.load(sys.stdin)))" 2>/dev/null || true)
+
+DASHBOARD="$(aws cloudformation describe-stacks \
+  --stack-name "$STACK_NAME" \
+  --region "$REGION" \
+  --query "Stacks[0].Outputs[?OutputKey=='DashboardName'].OutputValue" \
+  --output text 2>/dev/null || true)"
+
+echo ""
+echo "Monitoring:"
+echo "  Dashboard: https://${REGION}.console.aws.amazon.com/cloudwatch/home?region=${REGION}#dashboards:name=${DASHBOARD:-chess-border-engine-engine}"
+echo "  Logs:      ./scripts/engine-observability.sh"
+echo "  Tail:      FOLLOW=1 ./scripts/engine-observability.sh"
+if [[ -n "${ALERT_EMAIL:-}" ]]; then
+  echo "  Alarms:    email → ${ALERT_EMAIL} (confirm SNS subscription in inbox)"
+fi
+
 echo ""
 echo "Next:"
-echo "  1. Sync Cloudflare worker secrets: API_KEY=<key> ./server/worker/deploy.sh"
-echo "  2. Or rotate end-to-end: ./scripts/rotate-api-key.sh"
+echo "  ./server/worker/deploy.sh   # sync ENGINE_ORIGIN + API_KEY to Cloudflare"
+echo "  ./scripts/verify-site.sh"
 echo ""
-echo "Clients (iPhone/web) should use the worker URL only — not App Runner directly."
+echo "Clients use borderchess.org only — not App Runner directly."

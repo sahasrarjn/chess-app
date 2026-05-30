@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  Border Chess public site — S3 + CloudFront (static) with Worker origin for
+  Border Chess public site - S3 + CloudFront (static) with Worker origin for
   /v1/move and /health. Deploy in us-east-1 (CloudFront + ACM requirement).
 
 Parameters:
@@ -159,9 +159,13 @@ Resources:
               OriginAccessIdentity: ""
           - Id: WorkerApi
             DomainName: !Ref WorkerOriginDomain
+            ConnectionAttempts: 3
+            ConnectionTimeout: 10
             CustomOriginConfig:
               HTTPSPort: 443
               OriginProtocolPolicy: https-only
+              OriginReadTimeout: 60
+              OriginKeepaliveTimeout: 10
               OriginSSLProtocols:
                 - TLSv1.2
         DefaultCacheBehavior:
@@ -218,7 +222,7 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}-DistributionId"
   DistributionDomainName:
-    Description: CloudFront domain — point borderchess.org DNS here (grey cloud)
+    Description: CloudFront domain - point borderchess.org DNS here (grey cloud)
     Value: !GetAtt Distribution.DomainName
   SiteUrl:
     Description: Public site URL after DNS is configured

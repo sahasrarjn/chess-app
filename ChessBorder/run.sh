@@ -84,9 +84,9 @@ raise SystemExit(1)
     ;;
   *)
     echo "Usage: ./run.sh [mac|sim|ios]" >&2
-    echo "  mac  — native Mac app (default)" >&2
-    echo "  sim  — iOS Simulator on Mac" >&2
-    echo "  ios  — build for physical iPhone" >&2
+    echo "  mac  - native Mac app (default)" >&2
+    echo "  sim  - iOS Simulator on Mac" >&2
+    echo "  ios  - build for physical iPhone" >&2
     exit 1
     ;;
 esac

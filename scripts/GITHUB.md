@@ -1,8 +1,8 @@
-# GitHub — dual accounts (this repo only)
+# GitHub - dual accounts (this repo only)
 
 | Account | Use |
 |---------|-----|
-| **sahasra098** | Primary — all other projects |
+| **sahasra098** | Primary - all other projects |
 | **sahasrarjn** (`sahasraranjan@gmail.com`) | Border Chess source repo only |
 
 Local git author for this repo (not global):

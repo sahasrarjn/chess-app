@@ -50,30 +50,51 @@ struct RemoteEngineBot: BotPlayer {
         if let apiKey {
             request.setValue(apiKey, forHTTPHeaderField: "X-API-Key")
         }
-        request.timeoutInterval = 20
+        request.timeoutInterval = 40
 
-        do {
-            request.httpBody = try JSONEncoder().encode(payload)
-            BotLogging.debug("RemoteEngine: POST \(endpoint.absoluteString)")
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse else {
-                BotLogging.debug("RemoteEngine: non-HTTP response")
-                return .failure(.invalidResponse)
+        let maxAttempts = 3
+        var lastFailure: RemoteEngineFailure = .network("Cannot reach the chess engine")
+
+        for attempt in 0..<maxAttempts {
+            do {
+                request.httpBody = try JSONEncoder().encode(payload)
+                BotLogging.debug("RemoteEngine: POST \(endpoint.absoluteString) attempt=\(attempt + 1)")
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard let http = response as? HTTPURLResponse else {
+                    BotLogging.debug("RemoteEngine: non-HTTP response")
+                    lastFailure = .invalidResponse
+                } else if (200...299).contains(http.statusCode) {
+                    let decoded = try JSONDecoder().decode(RemoteMoveResponse.self, from: data)
+                    return .success(decoded.uci)
+                } else {
+                    let body = String(data: data, encoding: .utf8) ?? ""
+                    BotLogging.debug("RemoteEngine: HTTP \(http.statusCode) \(body)")
+                    let message = parseHTTPError(
+                        status: http.statusCode,
+                        body: body,
+                        retryAfterHeader: http.value(forHTTPHeaderField: "Retry-After")
+                    )
+                    lastFailure = .httpError(message)
+                    if [429, 502, 503, 504].contains(http.statusCode), attempt < maxAttempts - 1 {
+                        try await Task.sleep(for: .milliseconds(400 * (attempt + 1)))
+                        continue
+                    }
+                    return .failure(lastFailure)
+                }
+            } catch let error as URLError where error.code == .timedOut {
+                BotLogging.debug("RemoteEngine: timed out")
+                lastFailure = .timedOut
+            } catch {
+                BotLogging.debug("RemoteEngine: \(error.localizedDescription)")
+                lastFailure = .network(error.localizedDescription)
             }
-            guard (200...299).contains(http.statusCode) else {
-                let body = String(data: data, encoding: .utf8) ?? ""
-                BotLogging.debug("RemoteEngine: HTTP \(http.statusCode) \(body)")
-                return .failure(.httpError(parseHTTPError(status: http.statusCode, body: body, retryAfterHeader: http.value(forHTTPHeaderField: "Retry-After"))))
+
+            if attempt < maxAttempts - 1 {
+                try? await Task.sleep(for: .milliseconds(500 * (attempt + 1)))
             }
-            let decoded = try JSONDecoder().decode(RemoteMoveResponse.self, from: data)
-            return .success(decoded.uci)
-        } catch let error as URLError where error.code == .timedOut {
-            BotLogging.debug("RemoteEngine: timed out")
-            return .failure(.timedOut)
-        } catch {
-            BotLogging.debug("RemoteEngine: \(error.localizedDescription)")
-            return .failure(.network(error.localizedDescription))
         }
+
+        return .failure(lastFailure)
     }
 
     private static func parseHTTPError(status: Int, body: String, retryAfterHeader: String?) -> String {

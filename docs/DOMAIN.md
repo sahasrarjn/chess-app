@@ -1,4 +1,4 @@
-# borderchess.org — DNS & hosting
+# borderchess.org - DNS & hosting
 
 ## Architecture
 
@@ -17,7 +17,7 @@ Browser / iPhone
 ```
 
 - **Static site:** S3 + CloudFront (`server/aws/static-site.yaml`)
-- **Bot API:** Cloudflare Worker — rate limiting + API key proxy
+- **Bot API:** Cloudflare Worker - rate limiting + API key proxy
 - **Engine:** AWS App Runner (private)
 
 ## One-time AWS setup
@@ -31,13 +31,29 @@ This creates the S3 bucket, CloudFront distribution, ACM certificate, and option
 
 ### DNS in Cloudflare
 
-1. **ACM validation** — add the CNAME records printed by `deploy-static.sh` (wait until certificate status is `ISSUED`).
-2. **Site CNAME** — point both hostnames to the CloudFront domain (**DNS only / grey cloud**, not proxied):
+1. **ACM validation** - add the CNAME records printed by `deploy-static.sh` (wait until certificate status is `ISSUED`).
+2. **Site CNAME** - point both hostnames to the CloudFront domain (**DNS only / grey cloud**, not proxied):
    - `borderchess.org` → `dxxxx.cloudfront.net`
    - `www.borderchess.org` → `dxxxx.cloudfront.net`
 3. **Remove** old Cloudflare Worker custom-domain routes for `borderchess.org` (already removed from `wrangler.toml`; redeploy worker to apply).
 
 Optional www → apex redirect: CloudFront Function or Cloudflare redirect rule (see previous setup).
+
+### SSL error `ERR_SSL_VERSION_OR_CIPHER_MISMATCH`
+
+Usually **Cloudflare proxy (orange cloud)** on `borderchess.org` while the site is served from **CloudFront**. The browser talks to Cloudflare’s edge with the wrong TLS path to the origin.
+
+**Fix in Cloudflare DNS:**
+
+1. `borderchess.org` → **CNAME** `d3ujm85r5zro4r.cloudfront.net` (**DNS only**, grey cloud, proxy **off**)
+2. `www.borderchess.org` → same CNAME, grey cloud
+3. Delete stray **A/AAAA** records for the apex that point at Cloudflare (`104.x`, `172.67.x`) or duplicate CloudFront targets
+4. **SSL/TLS** mode only matters if you keep proxy on; with grey cloud, TLS is terminated at CloudFront (ACM cert)
+5. Remove Worker **custom domains** for `borderchess.org`: `./scripts/detach-worker-domains.sh` (after `npx wrangler login`)
+
+Then flush local DNS (macOS): `sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder`, hard-refresh Chrome, or try a private window.
+
+`./scripts/verify-site.sh` warns if apex A records still look like Cloudflare proxy IPs.
 
 ## Deploy updates
 

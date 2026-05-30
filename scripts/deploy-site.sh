@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Full production deploy — engine, static (worker + S3), API worker, verify.
+# Full production deploy - engine, static (worker + S3), API worker, verify.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

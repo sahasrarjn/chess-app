@@ -66,12 +66,23 @@ if [[ -z "${API_KEY:-}" ]]; then
     API_KEY="$(aws apprunner describe-service \
       --service-arn "$SERVICE_ARN" \
       --region "$REGION" \
-      --query 'Service.SourceConfiguration.ImageRepository.ImageConfiguration.RuntimeEnvironmentVariables.API_KEY' \
-      --output text 2>/dev/null || true)"
+      --output json 2>/dev/null | python3 -c "
+import json, sys
+raw = json.load(sys.stdin)['Service']['SourceConfiguration']['ImageRepository']['ImageConfiguration'].get('RuntimeEnvironmentVariables') or {}
+if isinstance(raw, list):
+    raw = {e['Name']: e['Value'] for e in raw if 'Name' in e}
+v = (raw.get('API_KEY') or '').strip()
+if v and v not in ('None', 'null') and len(v) >= 32:
+    print(v)
+" 2>/dev/null || true)"
   fi
 fi
 
-if [[ -n "${API_KEY:-}" && "$API_KEY" != "None" ]]; then
+if [[ "${API_KEY:-}" == "None" || "${API_KEY:-}" == "null" || ${#API_KEY} -lt 32 ]]; then
+  unset API_KEY
+fi
+
+if [[ -n "${API_KEY:-}" ]]; then
   echo "$API_KEY" | npx wrangler secret put API_KEY
   echo "==> Synced API_KEY secret from App Runner"
 else

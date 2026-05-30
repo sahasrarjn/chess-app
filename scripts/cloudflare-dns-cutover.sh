@@ -4,6 +4,12 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if [[ -f "${ROOT}/.env" ]]; then
+  set -a
+  # shellcheck source=/dev/null
+  source "${ROOT}/.env"
+  set +a
+fi
 STATIC_STACK="${STATIC_STACK_NAME:-chess-border-static}"
 REGION="${AWS_REGION:-us-east-1}"
 ZONE_NAME="${ZONE_NAME:-borderchess.org}"
@@ -20,10 +26,37 @@ zone_id() {
     | python3 -c "import json,sys; r=json.load(sys.stdin)['result']; print(r[0]['id'] if r else '')"
 }
 
+delete_conflicting_records() {
+  local zone="$1" fqdn="$2"
+  local to_delete
+  to_delete="$(curl -sf "https://api.cloudflare.com/client/v4/zones/${zone}/dns_records?name=${fqdn}" \
+    -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+    | FQDN="${fqdn}" python3 -c "
+import json, os, sys
+fqdn = os.environ['FQDN']
+for r in json.load(sys.stdin).get('result') or []:
+    if r['name'] != fqdn:
+        continue
+    if r['type'] in ('A', 'AAAA') or r.get('proxied'):
+        print(r['id'], r['type'], r.get('proxied', False))
+")"
+  while read -r id type proxied; do
+    [[ -z "$id" ]] && continue
+    curl -sf -X DELETE "https://api.cloudflare.com/client/v4/zones/${zone}/dns_records/${id}" \
+      -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" >/dev/null
+    echo "Deleted ${type} ${fqdn} (proxied=${proxied})"
+  done <<< "$to_delete"
+}
+
 upsert_cname() {
   local zone="$1" name="$2" target="$3"
+  local fqdn="${name}"
+  if [[ "$name" != *.* ]]; then
+    fqdn="${name}.${ZONE_NAME}"
+  fi
+  delete_conflicting_records "$zone" "$fqdn"
   local existing
-  existing="$(curl -sf "https://api.cloudflare.com/client/v4/zones/${zone}/dns_records?type=CNAME&name=${name}" \
+  existing="$(curl -sf "https://api.cloudflare.com/client/v4/zones/${zone}/dns_records?type=CNAME&name=${fqdn}" \
     -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
     | python3 -c "import json,sys; r=json.load(sys.stdin)['result']; print(r[0]['id'] if r else '')")"
   local payload
@@ -43,13 +76,13 @@ PY
       -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
       -H "Content-Type: application/json" \
       --data "$payload" >/dev/null
-    echo "Updated CNAME ${name} → ${target}"
+    echo "Updated CNAME ${fqdn} → ${target} (DNS only)"
   else
     curl -sf -X POST "https://api.cloudflare.com/client/v4/zones/${zone}/dns_records" \
       -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
       -H "Content-Type: application/json" \
       --data "$payload" >/dev/null
-    echo "Created CNAME ${name} → ${target}"
+    echo "Created CNAME ${fqdn} → ${target} (DNS only)"
   fi
 }
 
@@ -65,24 +98,36 @@ CERT_ARN="$(aws cloudformation describe-stack-resources \
   --query "StackResources[?ResourceType=='AWS::CertificateManager::Certificate'].PhysicalResourceId" \
   --output text)"
 
-echo "==> ACM validation records"
-aws acm describe-certificate \
+CERT_STATUS="$(aws acm describe-certificate \
   --certificate-arn "$CERT_ARN" \
   --region "$REGION" \
-  --query 'Certificate.DomainValidationOptions[].ResourceRecord' \
-  --output json \
-  | python3 - <<'PY' | while IFS='|' read -r name value; do
-import json, sys
-for rec in json.load(sys.stdin):
-    name = rec["Name"].rstrip(".")
-    if name.endswith("." + "borderchess.org"):
-        short = name[: -len(".borderchess.org")]
+  --query 'Certificate.Status' \
+  --output text 2>/dev/null || true)"
+
+if [[ "$CERT_STATUS" == "ISSUED" ]]; then
+  echo "==> ACM certificate already ISSUED (skipping validation CNAMEs)"
+else
+  echo "==> ACM validation records (status: ${CERT_STATUS:-unknown})"
+  ACM_JSON="$(aws acm describe-certificate \
+    --certificate-arn "$CERT_ARN" \
+    --region "$REGION" \
+    --query 'Certificate.DomainValidationOptions[].ResourceRecord' \
+    --output json)"
+  while IFS='|' read -r name value; do
+    [[ -n "$name" && -n "$value" ]] || continue
+    upsert_cname "$ZONE_ID" "$name" "$value"
+  done < <(ZONE_NAME="$ZONE_NAME" python3 -c "
+import json, os, sys
+zone = os.environ['ZONE_NAME']
+for rec in json.loads(sys.argv[1]):
+    name = rec['Name'].rstrip('.')
+    if name.endswith('.' + zone):
+        short = name[: -len('.' + zone)]
     else:
         short = name
-    print(f"{short}|{rec['Value']}")
-PY
-    upsert_cname "$ZONE_ID" "$name" "$value"
-  done
+    print(short + '|' + rec['Value'])
+" "$ACM_JSON")
+fi
 
 DIST_DOMAIN="$(aws cloudformation describe-stacks \
   --stack-name "$STATIC_STACK" \

@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Chess Border engine — App Runner (HTTPS included, dev-sized 0.25 vCPU / 1 GB, ~$5-8/mo).
+Description: Chess Border engine - App Runner (0.5 vCPU, autoscale 1-3 instances, ~$15-35/mo).
 
 Parameters:
   ImageUri:
@@ -13,8 +13,7 @@ Parameters:
   AlertEmail:
     Type: String
     Default: ""
-    Description: Optional email for CloudWatch alarm notifications (5xx spike).
-
+    Description: Email for SNS alarm notifications (5xx, traffic, scale-out). Leave empty to skip email alerts.
 Conditions:
   HasAlertEmail: !Not [!Equals [!Ref AlertEmail, ""]]
 
@@ -43,10 +42,19 @@ Resources:
               Service: tasks.apprunner.amazonaws.com
             Action: sts:AssumeRole
 
+  AppRunnerAutoScaling:
+    Type: AWS::AppRunner::AutoScalingConfiguration
+    Properties:
+      AutoScalingConfigurationName: chess-border-engine
+      MinSize: 1
+      MaxSize: 3
+      MaxConcurrency: 8
+
   AppRunnerService:
     Type: AWS::AppRunner::Service
     Properties:
       ServiceName: chess-border-engine
+      AutoScalingConfigurationArn: !GetAtt AppRunnerAutoScaling.AutoScalingConfigurationArn
       SourceConfiguration:
         AuthenticationConfiguration:
           AccessRoleArn: !GetAtt AppRunnerECRAccessRole.Arn
@@ -60,16 +68,26 @@ Resources:
               - Name: API_KEY
                 Value: !Ref ApiKey
       InstanceConfiguration:
-        Cpu: "0.25 vCPU"
+        Cpu: "0.5 vCPU"
         Memory: "1 GB"
         InstanceRoleArn: !GetAtt AppRunnerInstanceRole.Arn
       HealthCheckConfiguration:
         Protocol: HTTP
         Path: /health
-        Interval: 10
-        Timeout: 5
+        Interval: 20
+        Timeout: 10
         HealthyThreshold: 1
-        UnhealthyThreshold: 3
+        UnhealthyThreshold: 5
+      ObservabilityConfiguration:
+        ObservabilityEnabled: true
+        ObservabilityConfigurationArn: !GetAtt AppRunnerObservability.ObservabilityConfigurationArn
+
+  AppRunnerObservability:
+    Type: AWS::AppRunner::ObservabilityConfiguration
+    Properties:
+      ObservabilityConfigurationName: chess-border-engine
+      TraceConfiguration:
+        Vendor: AWSXRAY
 
   AlertTopic:
     Type: AWS::SNS::Topic
@@ -90,7 +108,7 @@ Resources:
     Condition: HasAlertEmail
     Properties:
       AlarmName: !Sub "${AWS::StackName}-5xx"
-      AlarmDescription: App Runner 5xx responses exceeded threshold
+      AlarmDescription: Engine API 5xx spike (check App Runner logs)
       Namespace: AWS/AppRunner
       MetricName: 5xxStatusResponses
       Dimensions:
@@ -99,11 +117,119 @@ Resources:
       Statistic: Sum
       Period: 300
       EvaluationPeriods: 1
-      Threshold: 20
+      Threshold: 10
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
       AlarmActions:
         - !Ref AlertTopic
+
+  High4xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlertEmail
+    Properties:
+      AlarmName: !Sub "${AWS::StackName}-4xx"
+      AlarmDescription: Engine API 4xx spike (auth, bad FEN, rate limit)
+      Namespace: AWS/AppRunner
+      MetricName: 4xxStatusResponses
+      Dimensions:
+        - Name: ServiceName
+          Value: chess-border-engine
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 40
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlertTopic
+
+  HighTrafficAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlertEmail
+    Properties:
+      AlarmName: !Sub "${AWS::StackName}-traffic"
+      AlarmDescription: High /v1/move traffic (~1 req/s sustained over 5 min)
+      Namespace: AWS/AppRunner
+      MetricName: RequestCount
+      Dimensions:
+        - Name: ServiceName
+          Value: chess-border-engine
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 300
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlertTopic
+
+  ScaledOutAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlertEmail
+    Properties:
+      AlarmName: !Sub "${AWS::StackName}-scaled-out"
+      AlarmDescription: App Runner scaled to 2+ instances (consider tuning engine or limits)
+      Namespace: AWS/AppRunner
+      MetricName: ActiveInstances
+      Dimensions:
+        - Name: ServiceName
+          Value: chess-border-engine
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 2
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlertTopic
+
+  EngineDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub "${AWS::StackName}-engine"
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "text",
+              "x": 0, "y": 0, "width": 24, "height": 1,
+              "properties": {
+                "markdown": "# Chess Border engine (App Runner)\nService: **chess-border-engine** · Region: **us-east-1** · Autoscale **1–3** @ 0.5 vCPU"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0, "y": 1, "width": 12, "height": 6,
+              "properties": {
+                "view": "timeSeries",
+                "title": "Requests (5 min)",
+                "region": "us-east-1",
+                "stat": "Sum",
+                "period": 300,
+                "metrics": [
+                  [ "AWS/AppRunner", "RequestCount", "ServiceName", "chess-border-engine", { "label": "Total requests" } ],
+                  [ ".", "2xxStatusResponses", ".", ".", { "label": "2xx" } ],
+                  [ ".", "4xxStatusResponses", ".", ".", { "label": "4xx" } ],
+                  [ ".", "5xxStatusResponses", ".", ".", { "label": "5xx" } ]
+                ]
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12, "y": 1, "width": 12, "height": 6,
+              "properties": {
+                "view": "timeSeries",
+                "title": "Active instances",
+                "region": "us-east-1",
+                "stat": "Maximum",
+                "period": 300,
+                "metrics": [
+                  [ "AWS/AppRunner", "ActiveInstances", "ServiceName", "chess-border-engine" ]
+                ]
+              }
+            }
+          ]
+        }
 
 Outputs:
   ServiceUrl:
@@ -111,3 +237,15 @@ Outputs:
     Value: !Sub "https://${AppRunnerService.ServiceUrl}"
   ServiceArn:
     Value: !GetAtt AppRunnerService.ServiceArn
+  AutoScalingConfigurationArn:
+    Description: Autoscale 1-3 instances, MaxConcurrency 8
+    Value: !GetAtt AppRunnerAutoScaling.AutoScalingConfigurationArn
+  DashboardName:
+    Description: CloudWatch dashboard for traffic and instance count
+    Value: !Ref EngineDashboard
+  LogGroupPrefix:
+    Description: Application logs (set retention via deploy.sh)
+    Value: /aws/apprunner/chess-border-engine
+  AlertsEnabled:
+    Description: SNS email alarms active when AlertEmail was set at deploy
+    Value: !If [HasAlertEmail, "true", "false"]

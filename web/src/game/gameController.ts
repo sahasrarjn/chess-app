@@ -1,5 +1,5 @@
-import { pickFallbackMove } from "../bot/fallbackMove";
-import { fetchBotMove } from "../bot/remoteEngine";
+import { chooseMinimaxMove } from "../bot/chessBot";
+import { chooseBotMove } from "../bot/chooseBotMove";
 import {
   ChessGame,
   snapshotFrom,
@@ -408,31 +408,44 @@ export class GameController {
     const plyAtRequest = this.game.recordedMoves.length;
 
     try {
-      let applied = false;
-      let lastUci = "";
+      if (token !== this.botMoveToken) return;
+      if (this.game.recordedMoves.length !== plyAtRequest) return;
 
-      for (let attempt = 0; attempt < 2 && !applied; attempt++) {
-        if (token !== this.botMoveToken) return;
-        if (this.game.recordedMoves.length !== plyAtRequest) return;
+      const snapshot = this.game.copy();
+      let outcome = await chooseBotMove(
+        snapshot,
+        this.botDifficulty,
+        abort.signal
+      );
 
-        const snapshot = this.game.copy();
-        const move = await fetchBotMove(snapshot, this.botDifficulty, abort.signal);
-        lastUci = move ? moveUci(move) : "";
+      if (
+        token !== this.botMoveToken ||
+        this.mode !== "vsBot" ||
+        this.game.activeColor !== "black" ||
+        this.game.result.type !== "ongoing" ||
+        this.game.recordedMoves.length !== plyAtRequest
+      ) {
+        return;
+      }
 
-        if (
-          token !== this.botMoveToken ||
-          this.mode !== "vsBot" ||
-          this.game.activeColor !== "black" ||
-          this.game.result.type !== "ongoing" ||
-          this.game.recordedMoves.length !== plyAtRequest
-        ) {
-          return;
-        }
+      let move = outcome.move;
+      let usedBuiltin = outcome.source === "builtin";
+      let serverError = outcome.serverError;
 
-        if (move && this.game.applyMove(move)) {
-          applied = true;
-          this.notify();
-          break;
+      if (move && !this.game.applyMove(move)) {
+        if (outcome.source === "server") {
+          const badUci = moveUci(move);
+          const local = chooseMinimaxMove(this.game, this.botDifficulty);
+          if (local && this.game.applyMove(local)) {
+            move = local;
+            usedBuiltin = true;
+            serverError =
+              serverError ?? `Server move (${badUci}) was not legal here`;
+          } else {
+            move = null;
+          }
+        } else {
+          move = null;
         }
       }
 
@@ -444,40 +457,33 @@ export class GameController {
 
       if (token !== this.botMoveToken) return;
 
-      if (applied) {
+      if (move) {
+        if (usedBuiltin && serverError) {
+          this.botEngineError =
+            "Server unavailable. Built-in bot played this move. Tap Retry Bot for Fairy-Stockfish.";
+        }
+        this.notify();
         return;
       }
 
       if (this.game.recordedMoves.length !== plyAtRequest) return;
 
-      const fallback = pickFallbackMove(this.game);
-      if (
-        fallback &&
-        this.game.applyMove(fallback) &&
-        token === this.botMoveToken
-      ) {
-        this.botEngineError =
-          "Engine unavailable. Played a fallback move. Tap Retry Bot for a stronger reply.";
-        this.notify();
-        return;
-      }
-
-      this.botEngineError = lastUci
-        ? `Engine move (${lastUci}) was not legal here. Try Undo or New Game.`
-        : "Engine did not return a move. Try again.";
+      this.botEngineError =
+        serverError ?? "Could not find a bot move. Try Retry Bot or Undo.";
     } catch (err) {
       if (token !== this.botMoveToken || abort.signal.aborted) return;
+      if (err instanceof DOMException && err.name === "AbortError") return;
 
       if (this.game.recordedMoves.length === plyAtRequest) {
-        const fallback = pickFallbackMove(this.game);
-        if (fallback && this.game.applyMove(fallback)) {
+        const local = chooseMinimaxMove(this.game, this.botDifficulty);
+        if (local && this.game.applyMove(local)) {
           const detail =
             err instanceof DOMException && err.name === "TimeoutError"
               ? "Engine timed out"
               : err instanceof Error
                 ? err.message
                 : "Engine unreachable";
-          this.botEngineError = `${detail}. Played a fallback move. Tap Retry Bot to try the server again.`;
+          this.botEngineError = `${detail}. Built-in bot played this move. Tap Retry Bot for the server.`;
           this.notify();
           return;
         }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""HTTP API for Border Chess — Fairy-Stockfish on the server."""
+"""HTTP API for Border Chess - Fairy-Stockfish on the server."""
 
 from __future__ import annotations
 
@@ -96,7 +96,8 @@ def require_api_key(x_api_key: str | None) -> None:
 
 @app.get("/health")
 def health():
-    ready = engine is not None and engine.is_ready()
+    # Avoid UCI ping on every probe (App Runner hits this often; ping holds the engine lock).
+    ready = engine is not None
     payload = {
         "status": "ok" if ready else "degraded",
         "engine_ready": ready,

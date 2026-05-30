@@ -458,15 +458,15 @@ final class GameViewModel: ObservableObject {
                 return
             }
 
-            if let fallback = pickFallbackMove(in: self.game),
+            if let fallback = pickFallbackMove(in: self.game, difficulty: difficulty),
                let piece = self.game.piece(at: fallback.from),
                self.game.applyMove(fallback) {
                 BotLogging.debug("maybePlayBotMove: applied fallback \(fallback.uci)")
                 self.beginMoveAnimation(move: fallback, piece: piece)
                 if let lastError {
-                    self.botEngineError = "\(lastError). Played a fallback move. Tap Retry Bot to try the server again."
+                    self.botEngineError = "\(lastError). Built-in bot played this move. Tap Retry Bot for Fairy-Stockfish."
                 } else {
-                    self.botEngineError = "Engine unavailable. Played a fallback move. Tap Retry Bot for a stronger reply."
+                    self.botEngineError = "Engine unavailable. Built-in bot played this move. Tap Retry Bot for Fairy-Stockfish."
                 }
                 self.notifyChange()
                 return

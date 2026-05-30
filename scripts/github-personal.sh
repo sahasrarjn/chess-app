@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Border Chess — personal GitHub account helpers (repo-local only).
+# Border Chess - personal GitHub account helpers (repo-local only).
 #
 # Primary account (everywhere else): sahasra098
 # Personal account (this repo only):  set CHESS_GITHUB_USER after `gh auth login`

@@ -50,7 +50,7 @@ cd "$WEB"
 if [[ "${SKIP_BUILD:-}" != "1" ]]; then
   npm run build
 else
-  echo "(skip build — using existing dist/)"
+  echo "(skip build - using existing dist/)"
 fi
 
 echo "==> Uploading /play/ (game bundle)"
@@ -103,7 +103,7 @@ if [[ -n "$DIST_ID" && "$DIST_ID" != "None" ]]; then
     --query 'Invalidation.Id' \
     --output text >/dev/null
 else
-  echo "Warning: no distribution ID — skip invalidation or set CHESS_STATIC_CF_DISTRIBUTION_ID." >&2
+  echo "Warning: no distribution ID - skip invalidation or set CHESS_STATIC_CF_DISTRIBUTION_ID." >&2
 fi
 
 echo ""

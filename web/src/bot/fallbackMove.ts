@@ -1,9 +1,11 @@
 import type { ChessGame } from "../engine/chessGame";
-import type { Move } from "../engine/types";
+import type { BotDifficulty, Move } from "../engine/types";
+import { chooseMinimaxMove } from "./chessBot";
 
-/** Pick a random legal move when the remote engine is unavailable. */
-export function pickFallbackMove(game: ChessGame): Move | null {
-  const moves = game.legalMoves();
-  if (moves.length === 0) return null;
-  return moves[Math.floor(Math.random() * moves.length)] ?? null;
+/** Offline bot move when the remote engine is unavailable. */
+export function pickFallbackMove(
+  game: ChessGame,
+  difficulty: BotDifficulty = "medium"
+): Move | null {
+  return chooseMinimaxMove(game, difficulty);
 }

@@ -3,7 +3,7 @@ import SwiftUI
 enum BoardTheme {
     static let lightSquare = Color(red: 0.93, green: 0.93, blue: 0.82)
     static let darkSquare = Color(red: 0.46, green: 0.59, blue: 0.33)
-    /// Border uses the same checker as the inner board — empty frame, not a separate zone.
+    /// Border uses the same checker as the inner board - empty frame, not a separate zone.
     static let borderLightSquare = lightSquare
     static let borderDarkSquare = darkSquare
     static let selected = Color(red: 0.85, green: 0.72, blue: 0.18).opacity(0.55)

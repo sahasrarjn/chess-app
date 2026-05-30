@@ -1,11 +1,11 @@
-# Border Chess — Engine Server
+# Border Chess - Engine Server
 
 Self-hosted **Fairy-Stockfish** HTTP API for the iPhone app and web bot. Physical iOS devices cannot run the engine locally, so clients call the **Cloudflare worker**, which proxies to this backend.
 
 ## Production (recommended)
 
 **Public HTTPS:** [borderchess.org](https://borderchess.org)  
-**Private backend:** AWS App Runner (~$6–9/mo)
+**Private backend:** AWS App Runner (0.5 vCPU, autoscale 1–3, ~$15–35/mo)
 
 ```
 iPhone / browser  →  Cloudflare Worker  →  App Runner (this server)
@@ -56,7 +56,7 @@ Do **not** put the backend `API_KEY` in mobile apps or browser storage.
 
 | Method | Path | Headers | Body | Response |
 |--------|------|---------|------|----------|
-| GET | `/health` | — | — | `{"status":"ok","engine_ready":true,...}` |
+| GET | `/health` | - | - | `{"status":"ok","engine_ready":true,...}` |
 | POST | `/v1/move` | `X-API-Key` (if `API_KEY` set) | `{ "fen", "elo", "movetime_ms" }` | `{ "uci" }` |
 
 FEN must match the 10×10 `chessborder` variant. Invalid FEN returns `400`.

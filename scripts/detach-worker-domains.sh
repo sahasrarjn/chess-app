@@ -40,4 +40,4 @@ for d in data.get("result") or []:
     print(f"Detached {host}")
 PY
 
-echo "Done. Refresh Cloudflare DNS — locked Worker rows should be gone."
+echo "Done. Refresh Cloudflare DNS - locked Worker rows should be gone."

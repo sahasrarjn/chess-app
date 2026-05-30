@@ -6,7 +6,7 @@ Deploys the Fairy-Stockfish engine to **App Runner** and the public static site 
 
 | Component | ~Cost |
 |-----------|-------|
-| App Runner 0.25 vCPU + 1 GB | **$5–8** |
+| App Runner 0.5 vCPU, autoscale 1–3 | **~$15–25** |
 | CloudFront + S3 (static) | **$1–3** |
 | WAF (optional, on by default) | **~$6** |
 | ECR storage (few images) | **< $1** |
@@ -19,12 +19,16 @@ Cloudflare Worker (API proxy) remains free tier or **$5/mo** paid plan.
 ### Engine (App Runner)
 
 ```bash
-export ALERT_EMAIL="you@example.com"   # optional 5xx alarm
-chmod +x server/aws/deploy.sh
+export ALERT_EMAIL="you@example.com"   # SNS alarms (5xx, traffic, scale-out)
+chmod +x server/aws/deploy.sh scripts/engine-observability.sh
 ./server/aws/deploy.sh
+
+# Logs + dashboard
+./scripts/engine-observability.sh
+# https://us-east-1.console.aws.amazon.com/cloudwatch/home#dashboards:name=chess-border-engine-engine
 ```
 
-### Static site (S3 + CloudFront) — once
+### Static site (S3 + CloudFront) - once
 
 ```bash
 chmod +x server/aws/deploy-static.sh

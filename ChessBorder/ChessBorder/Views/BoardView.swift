@@ -3,7 +3,7 @@ import SwiftUI
 struct PieceView: View {
     let piece: Piece
     var elevated = false
-    /// When set (board squares), piece fills this fraction of the cell — matches web ~88% but slightly larger for touch.
+    /// When set (board squares), piece fills this fraction of the cell - matches web ~88% but slightly larger for touch.
     var cellSize: CGFloat?
 
     private var pieceExtent: CGFloat? {

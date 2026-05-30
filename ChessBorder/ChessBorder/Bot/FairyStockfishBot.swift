@@ -1,6 +1,6 @@
 import Foundation
 
-/// GPL v3 — [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish) (Stockfish derivative).
+/// GPL v3 - [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish) (Stockfish derivative).
 actor FairyStockfishBot: BotPlayer {
     static let shared = FairyStockfishBot()
 

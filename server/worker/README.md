@@ -1,6 +1,6 @@
-# Chess Engine — Cloudflare Worker (API only)
+# Chess Engine - Cloudflare Worker (API only)
 
-Rate-limited proxy for `/v1/move` and `/health`. Static site is on **CloudFront + S3** — see [docs/DOMAIN.md](../../docs/DOMAIN.md).
+Rate-limited proxy for `/v1/move` and `/health`. Static site is on **CloudFront + S3** - see [docs/DOMAIN.md](../../docs/DOMAIN.md).
 
 ```
 Browser / iPhone  →  borderchess.org (CloudFront)
@@ -16,7 +16,7 @@ Browser / iPhone  →  borderchess.org (CloudFront)
 ALERT_EMAIL=you@example.com ./server/aws/deploy.sh
 ```
 
-### 2. Static site (S3 + CloudFront) — one-time + on web changes
+### 2. Static site (S3 + CloudFront) - one-time + on web changes
 
 ```bash
 ./server/aws/deploy-static.sh          # once

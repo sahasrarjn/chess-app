@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Rotate the backend API key on App Runner and sync it to the Cloudflare worker.
-# Mobile/web clients do NOT need updates — only the worker talks to App Runner directly.
+# Mobile/web clients do NOT need updates - only the worker talks to App Runner directly.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

@@ -11,7 +11,7 @@ struct HybridBotPlayer: BotPlayer {
     private let remote = RemoteEngineBot()
     private let minimax = MinimaxBotPlayer()
 
-    /// Remote and Fairy-Stockfish only — no built-in minimax fallback.
+    /// Remote and Fairy-Stockfish only - no built-in minimax fallback.
     func chooseEngineMove(in game: ChessGame, difficulty: BotDifficulty) async -> BotEngineAttempt {
         let legal = game.legalMoves()
         guard !legal.isEmpty else {
@@ -55,6 +55,11 @@ struct HybridBotPlayer: BotPlayer {
             }
         }
         #endif
+
+        if let move = minimax.chooseMove(in: game, difficulty: difficulty) {
+            BotLogging.debug("chooseEngineMove: built-in minimax \(move.uci)")
+            return BotEngineAttempt(move: move, lastUci: move.uci, lastError: lastError)
+        }
 
         BotLogging.debug("chooseEngineMove: no engine available")
         return BotEngineAttempt(move: nil, lastUci: lastUci, lastError: lastError)

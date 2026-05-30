@@ -8,7 +8,7 @@ struct PromotionPickerView: View {
     private let options: [PieceKind] = [.queen, .rook, .bishop, .knight]
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             Text("Promote pawn")
                 .font(.headline)
                 .foregroundStyle(.white)
@@ -20,22 +20,29 @@ struct PromotionPickerView: View {
                     } label: {
                         PieceView(piece: Piece(kind: kind, color: color))
                             .frame(width: 56, height: 56)
-                            .background(Color.white.opacity(0.12))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .background(BoardTheme.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .stroke(BoardTheme.border, lineWidth: 1)
+                            )
                     }
                 }
             }
 
             Button("Cancel", action: onCancel)
-                .foregroundStyle(BoardTheme.accent)
+                .buttonStyle(GameChromeButtonStyle(variant: .ghost))
+                .frame(maxWidth: .infinity)
         }
-        .padding(24)
-        .background(BoardTheme.background.opacity(0.95))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding(28)
+        .background(BoardTheme.background.opacity(0.97))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(BoardTheme.border, lineWidth: 1)
         )
+        .shadow(color: .black.opacity(0.5), radius: 24, y: 12)
+        .padding(28)
     }
 }
 
@@ -71,47 +78,37 @@ struct GameView: View {
             ZStack {
                 BoardTheme.background.ignoresSafeArea()
 
-                VStack(spacing: 6) {
+                VStack(spacing: 0) {
                     header
+                        .padding(.horizontal, 12)
+                        .padding(.top, 4)
 
                     if hasCaptures {
                         CapturedPiecesBar(
                             capturedByWhite: viewModel.capturedByWhite,
                             capturedByBlack: viewModel.capturedByBlack
                         )
+                        .padding(.horizontal, 12)
+                        .padding(.top, 6)
                     }
 
-                    Text(viewModel.statusText)
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.65))
-                        .multilineTextAlignment(.center)
-                        .frame(minHeight: 18)
+                    GameStatusPill(text: viewModel.statusText)
+                        .padding(.horizontal, 12)
+                        .padding(.top, 4)
 
-                    BoardView(viewModel: viewModel, boardSide: boardSide)
-
-                    Spacer(minLength: 0)
-
-                    if !viewModel.recordedMoves.isEmpty {
-                        MoveListView(
-                            moves: viewModel.recordedMoves,
-                            selectedPly: displayedPly,
-                            livePly: viewModel.livePly,
-                            onSelect: { viewModel.goToMove(ply: $0) }
-                        )
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 6)
-                        .background(Color.white.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    ZStack {
+                        BoardView(viewModel: viewModel, boardSide: boardSide)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                    gameControls
+                    bottomPanel
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, 8)
                 }
-                .padding(.horizontal, GameBoardLayout.horizontalInset)
-                .padding(.bottom, 6)
-                .safeAreaPadding(.top, 2)
+                .safeAreaPadding(.bottom, 4)
 
                 if viewModel.pendingPromotion != nil {
-                    Color.black.opacity(0.5).ignoresSafeArea()
+                    Color.black.opacity(0.55).ignoresSafeArea()
                     PromotionPickerView(
                         color: viewModel.game.activeColor,
                         onSelect: { viewModel.promote(to: $0) },
@@ -141,199 +138,159 @@ struct GameView: View {
         }
     }
 
+    // MARK: - Header
+
     private var header: some View {
-        HStack(spacing: 10) {
-            Button {
-                if let onReturnHome {
-                    onReturnHome()
-                } else {
-                    dismiss()
-                }
-            } label: {
-                Text("← Back")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color.white.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-            }
-
-            Spacer(minLength: 8)
-
-            Text(headerTitle)
-                .font(.headline)
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-
-            Spacer(minLength: 8)
-
-            if viewModel.mode == .localTwoPlayer {
-                Button { viewModel.toggleAutoFlipBoard() } label: {
-                    Text("Auto-flip")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(viewModel.autoFlipBoard ? BoardTheme.accent : .white.opacity(0.6))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 6)
-                }
-            }
-
-            Button { viewModel.toggleBoardFlip() } label: {
-                Text("Flip")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(
-                        viewModel.mode == .localTwoPlayer && viewModel.autoFlipBoard
-                            ? Color.white.opacity(0.35)
-                            : Color.white
+        GameNavBar(backTitle: "Back", onBack: navigateBack) {
+            GameNavTitle(
+                title: headerTitle,
+                subtitle: viewModel.mode == .vsBot ? "Fairy-Stockfish" : nil
+            )
+        } trailing: {
+            HStack(spacing: 12) {
+                if viewModel.mode == .localTwoPlayer {
+                    GameNavTextAction(
+                        title: "Auto-flip",
+                        active: viewModel.autoFlipBoard,
+                        action: { viewModel.toggleAutoFlipBoard() }
                     )
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color.white.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                GameNavTextAction(
+                    title: "Flip",
+                    disabled: viewModel.mode == .localTwoPlayer && viewModel.autoFlipBoard,
+                    action: { viewModel.toggleBoardFlip() }
+                )
             }
-            .disabled(viewModel.mode == .localTwoPlayer && viewModel.autoFlipBoard)
         }
-        .padding(.top, 2)
+    }
+
+    private func navigateBack() {
+        if let onReturnHome {
+            onReturnHome()
+        } else {
+            dismiss()
+        }
     }
 
     private var headerTitle: String {
         switch viewModel.mode {
         case .vsBot:
-            return "Play vs Bot (\(viewModel.botDifficulty.rawValue.lowercased()))"
+            return "Play vs Bot (\(viewModel.botDifficulty.rawValue))"
         case .localTwoPlayer:
             return "Play with Friend"
         }
     }
 
-    private var gameControls: some View {
+    // MARK: - Bottom panel
+
+    private var bottomPanel: some View {
         VStack(spacing: 10) {
             if viewModel.canRetryBot {
-                Button("Retry Bot Move") { viewModel.retryBotMove() }
-                    .buttonStyle(PrimaryGameButtonStyle())
-                    .frame(maxWidth: .infinity)
+                Button("Retry bot move") { viewModel.retryBotMove() }
+                    .buttonStyle(GameChromeButtonStyle(variant: .primary))
             }
 
-            HStack(spacing: 8) {
+            if !viewModel.recordedMoves.isEmpty {
+                GameSurfaceCard {
+                    MoveListView(
+                        moves: viewModel.recordedMoves,
+                        selectedPly: displayedPly,
+                        livePly: viewModel.livePly,
+                        onSelect: { viewModel.goToMove(ply: $0) }
+                    )
+                    .padding(.vertical, 6)
+                }
+            }
+
+            controlRow
+        }
+    }
+
+    private var controlRow: some View {
+        HStack(spacing: 10) {
+            GameToolStrip {
                 if viewModel.livePly > 0 {
-                    controlButton("Undo") { viewModel.undo() }
-                        .disabled(viewModel.isBrowsingHistory || viewModel.isThinking)
+                    GameToolStripButton(
+                        content: .icon("arrow.uturn.backward"),
+                        disabled: viewModel.isBrowsingHistory || viewModel.isThinking,
+                        action: { viewModel.undo() }
+                    )
+                    GameToolStripDivider()
                 }
 
-                controlButton("◀") { viewModel.stepBack() }
-                    .disabled(displayedPly == 0)
+                GameToolStripButton(
+                    content: .icon("chevron.left"),
+                    disabled: displayedPly == 0,
+                    action: { viewModel.stepBack() }
+                )
+                GameToolStripDivider()
+                GameToolStripButton(
+                    content: .icon("chevron.right"),
+                    disabled: displayedPly >= viewModel.livePly,
+                    action: { viewModel.stepForward() }
+                )
+                GameToolStripDivider()
+                GameToolStripButton(
+                    content: .text("Live"),
+                    disabled: !viewModel.isBrowsingHistory,
+                    action: { viewModel.returnToLivePosition() }
+                )
+            }
+            .frame(maxWidth: .infinity)
 
-                controlButton("▶") { viewModel.stepForward() }
-                    .disabled(displayedPly >= viewModel.livePly)
+            GameSecondaryAction(
+                title: "Resign",
+                disabled: viewModel.result != .ongoing,
+                action: { showResignConfirm = true }
+            )
 
-                controlButton("Live") {
-                    if viewModel.isBrowsingHistory {
-                        viewModel.returnToLivePosition()
-                    }
-                }
-                .disabled(!viewModel.isBrowsingHistory)
-
-                controlButton("Resign", role: .destructive) { showResignConfirm = true }
-                    .disabled(viewModel.result != .ongoing)
-
-                Button {
-                    gameOverDismissed = false
-                    viewModel.newGame()
-                } label: {
-                    Text("New Game")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(BoardTheme.accent)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
+            GamePrimaryAction(title: "New Game") {
+                gameOverDismissed = false
+                viewModel.newGame()
             }
         }
     }
 
-    private enum ControlButtonRole {
-        case normal
-        case destructive
-    }
+    // MARK: - Game over
 
-    private func controlButton(
-        _ title: String,
-        role: ControlButtonRole = .normal,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(role == .destructive ? Color(red: 1, green: 0.7, blue: 0.7) : .white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(role == .destructive ? Color(red: 0.36, green: 0.16, blue: 0.16) : Color.white.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-    }
-
-    @ViewBuilder
     private var gameOverOverlay: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             Text(viewModel.statusText)
                 .font(.title2.bold())
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
-            HStack(spacing: 12) {
+            VStack(spacing: 10) {
                 Button("New Game") {
                     gameOverDismissed = false
                     viewModel.newGame()
                 }
-                    .buttonStyle(PrimaryGameButtonStyle())
-                Button("Dismiss") {
-                    gameOverDismissed = true
-                }
-                    .buttonStyle(SecondaryGameButtonStyle())
-                Button("Home") {
-                    if let onReturnHome {
-                        onReturnHome()
-                    } else {
-                        dismiss()
+                .buttonStyle(GameChromeButtonStyle(variant: .primary))
+
+                HStack(spacing: 10) {
+                    Button("Dismiss") { gameOverDismissed = true }
+                        .buttonStyle(GameChromeButtonStyle(variant: .secondary))
+                        .frame(maxWidth: .infinity)
+                    Button("Home") {
+                        if let onReturnHome {
+                            onReturnHome()
+                        } else {
+                            dismiss()
+                        }
                     }
+                    .buttonStyle(GameChromeButtonStyle(variant: .secondary))
+                    .frame(maxWidth: .infinity)
                 }
-                    .buttonStyle(SecondaryGameButtonStyle())
             }
         }
         .padding(28)
-        .background(BoardTheme.background.opacity(0.96))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .background(BoardTheme.background.opacity(0.97))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(BoardTheme.accent.opacity(0.4), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(BoardTheme.accent.opacity(0.35), lineWidth: 1)
         )
+        .shadow(color: .black.opacity(0.45), radius: 20, y: 10)
         .padding(32)
-    }
-}
-
-struct PrimaryGameButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.body.weight(.semibold))
-            .foregroundStyle(.black)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(BoardTheme.accent.opacity(configuration.isPressed ? 0.75 : 1))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-}
-
-struct SecondaryGameButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.body.weight(.medium))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color.white.opacity(configuration.isPressed ? 0.12 : 0.18))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }

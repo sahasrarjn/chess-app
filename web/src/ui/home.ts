@@ -41,7 +41,7 @@ export function renderHome(
       el(
         "p",
         "tagline",
-        "10×10 border chess — play vs bot or pass-and-play with a friend. Same rules as the iOS app."
+        "10×10 border chess. Play vs bot or pass-and-play with a friend. Same rules as the iOS app."
       )
     );
 
@@ -83,7 +83,7 @@ export function renderHome(
       panel.appendChild(el("label", "", "Engine server URL (local dev only)"));
       const urlInput = document.createElement("input");
       urlInput.type = "url";
-      urlInput.placeholder = "Leave empty — production uses this site automatically";
+      urlInput.placeholder = "Leave empty. Production uses this site automatically";
       urlInput.value = getEngineUrl();
       panel.appendChild(urlInput);
 
@@ -131,11 +131,11 @@ async function updateEngineStatus(el: HTMLElement): Promise<void> {
       el.textContent = "Engine connected";
       el.className = "engine-status ok";
     } else {
-      el.textContent = "Engine not reachable — start docker compose in server/";
+      el.textContent = "Engine not reachable. Start docker compose in server/";
       el.className = "engine-status err";
     }
   } catch {
-    el.textContent = "Engine not reachable — start docker compose in server/";
+    el.textContent = "Engine not reachable. Start docker compose in server/";
     el.className = "engine-status err";
   }
 }

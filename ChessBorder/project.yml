@@ -31,7 +31,7 @@ targets:
       CODE_SIGN_STYLE: Automatic
       ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
       MARKETING_VERSION: "1.0.0"
-      CURRENT_PROJECT_VERSION: "5"
+      CURRENT_PROJECT_VERSION: "6"
       TARGETED_DEVICE_FAMILY: "1"
       INFOPLIST_KEY_UILaunchScreen_Generation: YES
       INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
@@ -41,9 +41,8 @@ targets:
       properties:
         CFBundleDisplayName: Border Chess
         CFBundleShortVersionString: "1.0.0"
-        CFBundleVersion: "5"
+        CFBundleVersion: "6"
         UILaunchScreen:
-          UIImageName: LaunchLogo
           UIColorName: LaunchBackground
         EngineServerURL: https://borderchess.org
         ITSAppUsesNonExemptEncryption: false
@@ -75,7 +74,7 @@ targets:
       DEVELOPMENT_TEAM: LG3L588JT3
       CODE_SIGN_STYLE: Automatic
       MARKETING_VERSION: "1.0.0"
-      CURRENT_PROJECT_VERSION: "5"
+      CURRENT_PROJECT_VERSION: "6"
       INFOPLIST_KEY_CFBundleDisplayName: Border Chess
       GENERATE_INFOPLIST_FILE: YES
       ENABLE_TESTABILITY: YES

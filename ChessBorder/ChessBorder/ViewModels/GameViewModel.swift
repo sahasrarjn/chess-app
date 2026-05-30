@@ -464,9 +464,9 @@ final class GameViewModel: ObservableObject {
                 BotLogging.debug("maybePlayBotMove: applied fallback \(fallback.uci)")
                 self.beginMoveAnimation(move: fallback, piece: piece)
                 if let lastError {
-                    self.botEngineError = "\(lastError) — played a fallback move. Tap Retry Bot to try the server again."
+                    self.botEngineError = "\(lastError). Played a fallback move. Tap Retry Bot to try the server again."
                 } else {
-                    self.botEngineError = "Engine unavailable — played a fallback move. Tap Retry Bot for a stronger reply."
+                    self.botEngineError = "Engine unavailable. Played a fallback move. Tap Retry Bot for a stronger reply."
                 }
                 self.notifyChange()
                 return
@@ -474,7 +474,7 @@ final class GameViewModel: ObservableObject {
 
             BotLogging.debug("maybePlayBotMove: no move applied")
             if !lastUci.isEmpty {
-                self.botEngineError = "Engine move (\(lastUci)) was not legal here — try Undo or New Game."
+                self.botEngineError = "Engine move (\(lastUci)) was not legal here. Try Undo or New Game."
             } else if let lastError {
                 self.botEngineError = lastError
             } else {
@@ -533,13 +533,13 @@ final class GameViewModel: ObservableObject {
             }
             return game.activeColor == .white ? "White to move" : "Black to move"
         case .checkmate(let winner):
-            return winner == .white ? "Checkmate — White wins" : "Checkmate — Black wins"
+            return winner == .white ? "Checkmate. White wins" : "Checkmate. Black wins"
         case .resignation(let winner):
-            return winner == .white ? "Black resigned — White wins" : "White resigned — Black wins"
+            return winner == .white ? "Black resigned. White wins" : "White resigned. Black wins"
         case .stalemate:
-            return "Stalemate — Draw"
+            return "Stalemate. Draw"
         case .draw(let reason):
-            return "Draw — \(reason)"
+            return "Draw: \(reason)"
         }
     }
 

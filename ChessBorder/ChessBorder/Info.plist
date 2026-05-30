@@ -19,7 +19,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>1.0.0</string>
 	<key>CFBundleVersion</key>
-	<string>5</string>
+	<string>6</string>
 	<key>EngineServerURL</key>
 	<string>https://borderchess.org</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
@@ -28,8 +28,6 @@
 	<dict>
 		<key>UIColorName</key>
 		<string>LaunchBackground</string>
-		<key>UIImageName</key>
-		<string>LaunchLogo</string>
 	</dict>
 </dict>
 </plist>

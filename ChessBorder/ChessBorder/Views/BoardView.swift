@@ -194,13 +194,10 @@ private struct MoveAnimationOverlay: View {
 enum GameBoardLayout {
     /// Horizontal inset from screen edge (web uses 12px per side).
     static let horizontalInset: CGFloat = 6
-    /// Rough space for header, status, move list, and controls when height is tight.
-    static let chromeReserve: CGFloat = 210
 
+    /// Width-first; vertical centering is handled by spacers in GameView.
     static func boardSide(in geo: GeometryProxy) -> CGFloat {
-        let widthBased = geo.size.width - horizontalInset * 2
-        let heightBased = geo.size.height - chromeReserve
-        return max(0, min(widthBased, heightBased))
+        max(0, geo.size.width - horizontalInset * 2)
     }
 }
 

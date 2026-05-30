@@ -27,12 +27,7 @@ struct HomeView: View {
 
                 VStack(spacing: 32) {
                     VStack(spacing: 12) {
-                        Image("LaunchLogo")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 88, height: 88)
-                            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                            .shadow(color: .black.opacity(0.25), radius: 12, y: 6)
+                        LaunchBrandMark(size: 88)
 
                         Text("Border Chess")
                             .font(.largeTitle.bold())
@@ -113,11 +108,11 @@ private struct ModeButtonLabel: View {
         .foregroundStyle(.white)
         .padding(18)
         .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.white.opacity(0.1))
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(BoardTheme.surface)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(BoardTheme.accent.opacity(0.35), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(BoardTheme.border, lineWidth: 1)
                 )
         )
     }

@@ -359,16 +359,16 @@ export class GameController {
         return this.game.activeColor === "white" ? "White to move" : "Black to move";
       case "checkmate":
         return result.winner === "white"
-          ? "Checkmate — White wins"
-          : "Checkmate — Black wins";
+          ? "Checkmate. White wins"
+          : "Checkmate. Black wins";
       case "resignation":
         return result.winner === "white"
-          ? "Black resigned — White wins"
-          : "White resigned — Black wins";
+          ? "Black resigned. White wins"
+          : "White resigned. Black wins";
       case "stalemate":
-        return "Stalemate — Draw";
+        return "Stalemate. Draw";
       case "draw":
-        return `Draw — ${result.reason}`;
+        return `Draw: ${result.reason}`;
     }
   }
 
@@ -457,13 +457,13 @@ export class GameController {
         token === this.botMoveToken
       ) {
         this.botEngineError =
-          "Engine unavailable — played a fallback move. Tap Retry Bot for a stronger reply.";
+          "Engine unavailable. Played a fallback move. Tap Retry Bot for a stronger reply.";
         this.notify();
         return;
       }
 
       this.botEngineError = lastUci
-        ? `Engine move (${lastUci}) was not legal here — try Undo or New Game.`
+        ? `Engine move (${lastUci}) was not legal here. Try Undo or New Game.`
         : "Engine did not return a move. Try again.";
     } catch (err) {
       if (token !== this.botMoveToken || abort.signal.aborted) return;
@@ -477,7 +477,7 @@ export class GameController {
               : err instanceof Error
                 ? err.message
                 : "Engine unreachable";
-          this.botEngineError = `${detail} — played a fallback move. Tap Retry Bot to try the server again.`;
+          this.botEngineError = `${detail}. Played a fallback move. Tap Retry Bot to try the server again.`;
           this.notify();
           return;
         }

@@ -13,7 +13,7 @@ struct MoveListView: View {
                     ForEach(groupedMoves, id: \.moveNumber) { group in
                         HStack(spacing: 6) {
                             Text("\(group.moveNumber).")
-                                .foregroundStyle(.white.opacity(0.45))
+                                .foregroundStyle(BoardTheme.muted)
                                 .font(.caption.monospaced())
 
                             moveButton(group.white, ply: group.whitePly)
@@ -52,12 +52,16 @@ struct MoveListView: View {
         } label: {
             Text(san)
                 .font(.caption.weight(.semibold).monospaced())
-                .foregroundStyle(ply == selectedPly ? .black : .white)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .foregroundStyle(ply == selectedPly ? .black.opacity(0.9) : .white.opacity(0.9))
+                .padding(.horizontal, 9)
+                .padding(.vertical, 5)
                 .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(ply == selectedPly ? BoardTheme.accent : Color.white.opacity(0.1))
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(ply == selectedPly ? BoardTheme.accent : BoardTheme.background.opacity(0.6))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(ply == selectedPly ? Color.clear : BoardTheme.border, lineWidth: 1)
                 )
         }
         .id(ply)

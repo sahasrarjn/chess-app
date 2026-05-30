@@ -10,6 +10,7 @@
 		013EE86B5109C7A16583599B /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D1A353C72F516AC4A79E174 /* SplashView.swift */; };
 		0388C84C3737D710304A4EA2 /* ChessBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 641458CF36924B909D13651C /* ChessBot.swift */; };
 		0621CCFF7EE1C6208E0931C6 /* BotServerConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 077CC73AF9FF87AAD4027FED /* BotServerConfig.swift */; };
+		070591DC370F64D0E66F15BB /* GameChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C64455C43DF234253EDBC19 /* GameChrome.swift */; };
 		072D1B151011DB14089AB3EF /* MoveNotation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 907A49B2C8531C4C828DD6AB /* MoveNotation.swift */; };
 		078370140F322523387533D8 /* SavedGameStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D14527393BDA64C94DADFFC6 /* SavedGameStore.swift */; };
 		08C89A0DAB61DD63B7A6FFA0 /* GameViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2898D2FF9EE958488B06A438 /* GameViewModel.swift */; };
@@ -55,6 +56,7 @@
 		BCC243C9E66E4131D3D486F7 /* FairyStockfishBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6445AB9B4709C280E598091 /* FairyStockfishBot.swift */; };
 		C10CE935821133205E96E891 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D1A353C72F516AC4A79E174 /* SplashView.swift */; };
 		C568AC1B1AAF6F730A3F2FB8 /* BotLogging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8205CA20A5DC79CBF61239CA /* BotLogging.swift */; };
+		C89F77EC7984635A74314DFC /* GameChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C64455C43DF234253EDBC19 /* GameChrome.swift */; };
 		C9326EE3EF6DF85CB2EF473A /* BotDifficulty+Engine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6256C2B541B88DF31B937CE /* BotDifficulty+Engine.swift */; };
 		C9B5C4DB2EA70FE9F3664839 /* UCIParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5D422DAC760ECA795133D3E /* UCIParser.swift */; };
 		CA3EF8C7995F898AB2C8A895 /* GameMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83AFD65A0999E58B59EF7AD4 /* GameMode.swift */; };
@@ -129,6 +131,7 @@
 		651BC030E32722D0B826D180 /* HybridBotPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HybridBotPlayer.swift; sourceTree = "<group>"; };
 		679CCAACD5276A2F0453E88C /* ChessBorderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChessBorderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		67E4798FA9879BA230E5DA0D /* ChessBorderAppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ChessBorderAppStore.entitlements; sourceTree = "<group>"; };
+		6C64455C43DF234253EDBC19 /* GameChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameChrome.swift; sourceTree = "<group>"; };
 		6DFE99402032904F40BF126D /* ChessBorderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessBorderApp.swift; sourceTree = "<group>"; };
 		6F8D99E4EB6E52E62423A54D /* variants.ini */ = {isa = PBXFileReference; path = variants.ini; sourceTree = "<group>"; };
 		8205CA20A5DC79CBF61239CA /* BotLogging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotLogging.swift; sourceTree = "<group>"; };
@@ -208,6 +211,7 @@
 			isa = PBXGroup;
 			children = (
 				DB05B3595E69DCB456B559B7 /* BoardTheme.swift */,
+				6C64455C43DF234253EDBC19 /* GameChrome.swift */,
 				53C7BCE50DA7090FD7889D96 /* PlatformChrome.swift */,
 			);
 			path = Theme;
@@ -441,6 +445,7 @@
 				AF7E484200CB24E4DA53DFA8 /* FEN.swift in Sources */,
 				BCC243C9E66E4131D3D486F7 /* FairyStockfishBot.swift in Sources */,
 				5D80C3A67CA7F85A7D763685 /* FallbackMove.swift in Sources */,
+				070591DC370F64D0E66F15BB /* GameChrome.swift in Sources */,
 				CA3EF8C7995F898AB2C8A895 /* GameMode.swift in Sources */,
 				A99595C69E835DB8A9E8B199 /* GameView.swift in Sources */,
 				EF68489A71C589594AEBC8B5 /* GameViewModel.swift in Sources */,
@@ -476,6 +481,7 @@
 				F82E0ECF4BAA030657FB9BE5 /* FEN.swift in Sources */,
 				E2E46C8E1C880FB76A890758 /* FairyStockfishBot.swift in Sources */,
 				76F8B47BC8415F27DF4D1C09 /* FallbackMove.swift in Sources */,
+				C89F77EC7984635A74314DFC /* GameChrome.swift in Sources */,
 				3FB0F20BCD71E588D3F3189A /* GameMode.swift in Sources */,
 				4DD2CBEC68C9365087349719 /* GameView.swift in Sources */,
 				08C89A0DAB61DD63B7A6FFA0 /* GameViewModel.swift in Sources */,
@@ -568,7 +574,7 @@
 				CODE_SIGN_ENTITLEMENTS = ChessBorder/ChessBorder.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = LG3L588JT3;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -608,7 +614,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = LG3L588JT3;
 				INFOPLIST_FILE = ChessBorder/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Border Chess";
@@ -632,7 +638,7 @@
 				CODE_SIGN_ENTITLEMENTS = ChessBorder/ChessBorder.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = LG3L588JT3;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -735,7 +741,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = LG3L588JT3;
 				INFOPLIST_FILE = ChessBorder/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Border Chess";

@@ -2,13 +2,10 @@ import SwiftUI
 
 @main
 struct ChessBorderApp: App {
-    #if os(macOS)
     @State private var showSplash = true
-    #endif
 
     var body: some Scene {
         WindowGroup {
-            #if os(macOS)
             ZStack {
                 HomeView()
                     .preferredColorScheme(.dark)
@@ -18,15 +15,16 @@ struct ChessBorderApp: App {
                 }
             }
             .task {
-                try? await Task.sleep(for: .milliseconds(700))
-                withAnimation(.easeOut(duration: 0.25)) {
+                #if os(macOS)
+                let splashMs: UInt64 = 700
+                #else
+                let splashMs: UInt64 = 850
+                #endif
+                try? await Task.sleep(for: .milliseconds(splashMs))
+                withAnimation(.easeOut(duration: 0.28)) {
                     showSplash = false
                 }
             }
-            #else
-            HomeView()
-                .preferredColorScheme(.dark)
-            #endif
         }
     }
 }

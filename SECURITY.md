@@ -9,12 +9,15 @@ Email **[sahasraranjan@gmail.com](mailto:sahasraranjan@gmail.com)** privately (d
 Border Chess uses a **two-layer API** for the bot engine:
 
 ```
-Browser / iPhone  →  Cloudflare Worker (public)  →  AWS App Runner (private)
+Browser / iPhone  →  CloudFront (borderchess.org)  →  S3 (static)
+                              │
+                              └─ /v1/move → Cloudflare Worker  →  AWS App Runner
 ```
 
 | Layer | Who calls it | Authentication |
 |-------|----------------|----------------|
-| **Cloudflare Worker** | Web app, iPhone app | Public HTTPS; rate limited per IP |
+| **CloudFront + S3** | Web app (static) | Public HTTPS |
+| **Cloudflare Worker** | Web app, iPhone app (bot API) | Public HTTPS; rate limited per IP |
 | **App Runner engine** | Cloudflare Worker only | `X-API-Key` header (server-side secret) |
 
 **Clients must not embed the backend API key.** The worker stores `API_KEY` as a Wrangler secret and adds it when proxying to App Runner.

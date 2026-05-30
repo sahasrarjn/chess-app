@@ -3,14 +3,8 @@ main = "src/index.ts"
 compatibility_date = "2026-05-01"
 workers_dev = true
 
-# Custom domains (DNS + SSL managed by Cloudflare when zone uses CF nameservers)
-[[routes]]
-pattern = "borderchess.org"
-custom_domain = true
-
-[[routes]]
-pattern = "www.borderchess.org"
-custom_domain = true
+# borderchess.org DNS → CloudFront (see docs/DOMAIN.md).
+# API paths /v1/move and /health are proxied by CloudFront to workers.dev origin.
 
 [observability]
 enabled = true
@@ -19,20 +13,10 @@ enabled = true
 PUBLIC_MAX_MOVETIME_MS = "5000"
 RATE_LIMIT_PER_MINUTE = "120"
 
-
 [[kv_namespaces]]
 binding = "RATE_LIMIT"
 id = "355497f42150450393b3927567c899eb"
 
-[assets]
-directory = "./public"
-binding = "ASSETS"
-run_worker_first = true
-
-# Public URLs:
-#   https://borderchess.org
-#   https://borderchess.org/play/
-#   https://chess-engine.<your-subdomain>.workers.dev (workers.dev alias)
 # Secrets (wrangler secret put):
 #   ENGINE_ORIGIN — App Runner URL from server/aws/deploy.sh
 #   API_KEY       — same key as AWS stack (required for production)

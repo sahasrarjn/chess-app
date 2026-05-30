@@ -1,4 +1,4 @@
-export const privacyHTML = `<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -65,7 +65,8 @@ export const privacyHTML = `<!doctype html>
 
   <h2>Third-party services</h2>
   <ul>
-    <li><strong>Cloudflare</strong> — public HTTPS front door and rate limiting</li>
+    <li><strong>Amazon CloudFront</strong> — static site CDN and HTTPS</li>
+    <li><strong>Cloudflare Workers</strong> — rate-limited bot move API proxy</li>
     <li><strong>AWS App Runner</strong> — private chess engine backend</li>
     <li><strong>PostHog</strong> (web only) — anonymous usage analytics (page views, basic interaction events). The iPhone app does not use PostHog.</li>
   </ul>
@@ -81,4 +82,4 @@ export const privacyHTML = `<!doctype html>
   <p><a href="https://github.com/sahasrarjn/chess-app/blob/main/PRIVACY.md">Markdown version on GitHub</a></p>
 </div>
 </body>
-</html>`;
+</html>

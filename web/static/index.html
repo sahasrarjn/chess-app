@@ -1,15 +1,12 @@
-const LOGO_CDN_URL =
-  "https://dkxinbm7riorm.cloudfront.net/ChessBorder/logo.png";
-
-export const landingHTML = `<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Border Chess — 10×10 chess with a border twist</title>
 <meta name="description" content="Border Chess: classic chess on an 8×8 board surrounded by a one-square border. Play in your browser — phone app coming soon.">
-<link rel="icon" href="${LOGO_CDN_URL}" type="image/png">
-<link rel="apple-touch-icon" href="${LOGO_CDN_URL}">
+<link rel="icon" href="/logo.png" type="image/png">
+<link rel="apple-touch-icon" href="/logo.png">
 <style>
   :root {
     color-scheme: dark;
@@ -72,7 +69,7 @@ export const landingHTML = `<!doctype html>
 <body>
 <div class="wrap">
   <nav>
-    <div class="brand"><img src="${LOGO_CDN_URL}" width="32" height="32" alt=""> Border Chess</div>
+    <div class="brand"><img src="/logo.png" width="32" height="32" alt=""> Border Chess</div>
   </nav>
 
   <section class="hero">
@@ -85,16 +82,7 @@ export const landingHTML = `<!doctype html>
       </div>
     </div>
     <div class="board" aria-hidden="true">
-      ${Array.from({ length: 100 }, (_, i) => {
-        const r = Math.floor(i / 10);
-        const c = i % 10;
-        const onBorder = r === 0 || r === 9 || c === 0 || c === 9;
-        const innerR = r - 1;
-        const innerC = c - 1;
-        const light = !onBorder && (innerR + innerC) % 2 === 0;
-        const cls = onBorder ? "border" : light ? "light" : "dark";
-        return `<div class="sq ${cls}"></div>`;
-      }).join("")}
+      <div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq border"></div><div class="sq border"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq border"></div><div class="sq border"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq border"></div><div class="sq border"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq border"></div><div class="sq border"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq border"></div><div class="sq border"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq border"></div><div class="sq border"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq border"></div><div class="sq border"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div>
     </div>
   </section>
 
@@ -119,4 +107,4 @@ export const landingHTML = `<!doctype html>
   </footer>
 </div>
 </body>
-</html>`;
+</html>

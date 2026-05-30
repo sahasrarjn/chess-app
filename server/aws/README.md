@@ -1,21 +1,22 @@
 # AWS deployment (cost-optimized)
 
-Deploys the Fairy-Stockfish engine to **App Runner** — smallest practical size with **HTTPS included** (required for iPhone).
+Deploys the Fairy-Stockfish engine to **App Runner** and the public static site to **S3 + CloudFront**.
 
-## Estimated monthly cost (us-east-1, always on)
+## Estimated monthly cost (us-east-1)
 
 | Component | ~Cost |
 |-----------|-------|
 | App Runner 0.25 vCPU + 1 GB | **$5–8** |
+| CloudFront + S3 (static) | **$1–3** |
+| WAF (optional, on by default) | **~$6** |
 | ECR storage (few images) | **< $1** |
-| **Total** | **~$6–9/mo** |
+| **Total** | **~$7–18/mo** (credits apply) |
 
-Skipped on purpose (too expensive for a personal bot):
-
-- Application Load Balancer (~$16+/mo) + ECS Fargate
-- NAT Gateway (~$32+/mo)
+Cloudflare Worker (API proxy) remains free tier or **$5/mo** paid plan.
 
 ## Deploy
+
+### Engine (App Runner)
 
 ```bash
 export ALERT_EMAIL="you@example.com"   # optional 5xx alarm
@@ -23,19 +24,29 @@ chmod +x server/aws/deploy.sh
 ./server/aws/deploy.sh
 ```
 
-First run builds the Docker image (compiles Fairy-Stockfish — ~10 min), pushes to ECR, and creates the App Runner service. The backend `API_KEY` is stored in App Runner env vars — **not** in client apps.
+### Static site (S3 + CloudFront) — once
 
-Then deploy the Cloudflare worker:
+```bash
+chmod +x server/aws/deploy-static.sh
+./server/aws/deploy-static.sh
+# Add ACM + site CNAMEs in Cloudflare (see docs/DOMAIN.md)
+./web/scripts/sync-s3-static.sh
+```
+
+### API worker + full release
 
 ```bash
 ./server/worker/deploy.sh
+# Or everything:
+./scripts/deploy-site.sh
 ```
 
 ## Update after code changes
 
 ```bash
-./server/aws/deploy.sh
-./server/worker/deploy.sh
+./server/aws/deploy.sh                  # engine image
+./web/scripts/sync-s3-static.sh         # web / landing / pieces
+./server/worker/deploy.sh               # API worker
 ```
 
 ## Rotate API key
@@ -61,6 +72,8 @@ Confirm the SNS subscription email after deploy.
 ## Tear down
 
 ```bash
+aws s3 rm s3://borderchess-static-$(aws sts get-caller-identity --query Account --output text) --recursive
+aws cloudformation delete-stack --stack-name chess-border-static --region us-east-1
 aws cloudformation delete-stack --stack-name chess-border-engine --region us-east-1
 aws ecr delete-repository --repository-name chess-border-engine --force --region us-east-1
 ```

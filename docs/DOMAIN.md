@@ -1,75 +1,82 @@
-# borderchess.org — DNS setup
+# borderchess.org — DNS & hosting
 
-The **chess-engine** Cloudflare Worker is already configured with custom domains:
+## Architecture
 
-- `borderchess.org`
-- `www.borderchess.org`
-
-Deploy config: `server/worker/wrangler.toml` (`[[routes]]` with `custom_domain = true`).
-
-## Your step (Namecheap)
-
-1. [Namecheap](https://www.namecheap.com) → **Domain List** → **Manage** `borderchess.org`
-2. **Nameservers** → **Custom DNS**
-3. Paste the two nameservers from Cloudflare (**Websites** → `borderchess.org` → overview sidebar)
-4. Save
-
-Propagation is usually 15 minutes–2 hours. Cloudflare will show **Active** when ready.
-
-## URLs after DNS is active
-
-| URL | Content |
-|-----|---------|
-| https://borderchess.org | Landing |
-| https://borderchess.org/play/ | Web game |
-| https://borderchess.org/privacy | Privacy policy |
-| https://borderchess.org/health | Engine health (via worker proxy) |
-
-Legacy workers.dev URL still works: `https://chess-engine.sahasraranjan.workers.dev`
-
-## Redeploy worker (after code changes)
-
-```bash
-cd web && npm run sync-worker
-cd ../server/worker && npm run deploy
-# Or: SYNC_WEB=1 ./server/worker/deploy.sh  (syncs web + secrets + deploy)
+```
+Browser / iPhone
+       │
+       ▼
+  CloudFront (borderchess.org)  ← AWS S3 static: /, /play/, /privacy, pieces
+       │
+       ├── /v1/move, /health ──► Cloudflare Worker (workers.dev origin)
+       │                              │
+       │                              ▼
+       │                         AWS App Runner (engine)
+       │
+       └── everything else ──► S3 bucket
 ```
 
-Or full engine + worker: `./server/aws/deploy.sh` then `./server/worker/deploy.sh`
+- **Static site:** S3 + CloudFront (`server/aws/static-site.yaml`)
+- **Bot API:** Cloudflare Worker — rate limiting + API key proxy
+- **Engine:** AWS App Runner (private)
 
-## Redirect www → apex (Cloudflare dashboard)
-
-Do this manually in Cloudflare so `www.borderchess.org` always serves the same site as `borderchess.org`.
-
-1. Log in to [Cloudflare](https://dash.cloudflare.com) → select zone **borderchess.org**
-2. **Rules** → **Redirect Rules** → **Create rule**
-3. **Rule name:** `www to apex`
-4. **When incoming requests match…**
-   - Field: **Hostname**
-   - Operator: **equals**
-   - Value: `www.borderchess.org`
-   - Click **Or** and add:
-   - Field: **Wildcard pattern**
-   - Operator: **matches**
-   - Value: `www.borderchess.org/*`
-   - *(Alternatively use a single expression: `http.host eq "www.borderchess.org"` if your plan shows the expression editor.)*
-5. **Then…**
-   - Type: **Dynamic**
-   - Expression: `concat("https://borderchess.org", http.request.uri.path)`
-   - Status code: **301** (Permanent Redirect)
-6. **Deploy** / **Save**
-
-Quick check after DNS is active:
+## One-time AWS setup
 
 ```bash
-curl -sI https://www.borderchess.org/ | grep -i '^location:'
-# Expect: location: https://borderchess.org/
+chmod +x server/aws/deploy-static.sh
+./server/aws/deploy-static.sh
 ```
 
-## Optional: apex → /play/ (homepage shortcut)
+This creates the S3 bucket, CloudFront distribution, ACM certificate, and optional WAF rate limit.
 
-Only if you want the bare domain to open the game directly:
+### DNS in Cloudflare
 
-- **Rules → Redirect Rules**
-- Match: URI path equals `/` on hostname `borderchess.org`
-- Redirect to `https://borderchess.org/play/` with **302**
+1. **ACM validation** — add the CNAME records printed by `deploy-static.sh` (wait until certificate status is `ISSUED`).
+2. **Site CNAME** — point both hostnames to the CloudFront domain (**DNS only / grey cloud**, not proxied):
+   - `borderchess.org` → `dxxxx.cloudfront.net`
+   - `www.borderchess.org` → `dxxxx.cloudfront.net`
+3. **Remove** old Cloudflare Worker custom-domain routes for `borderchess.org` (already removed from `wrangler.toml`; redeploy worker to apply).
+
+Optional www → apex redirect: CloudFront Function or Cloudflare redirect rule (see previous setup).
+
+## Deploy updates
+
+```bash
+# Full stack + automated smoke tests
+./scripts/deploy-site.sh
+
+# Or step by step:
+./server/aws/deploy.sh              # engine
+./web/scripts/sync-all-static.sh    # S3 + CloudFront
+./server/worker/deploy.sh           # API worker
+./scripts/verify-site.sh            # smoke test
+```
+
+## URLs
+
+| URL | Served by |
+|-----|-----------|
+| https://borderchess.org | CloudFront → S3 landing |
+| https://borderchess.org/play/ | CloudFront → S3 game |
+| https://borderchess.org/privacy | CloudFront → S3 |
+| https://borderchess.org/v1/move | CloudFront → Worker → App Runner |
+| https://borderchess.org/ChessBorder/pieces/ | CloudFront → S3 |
+
+Worker direct URL (debug): `https://chess-engine.sahasraranjan.workers.dev`
+
+## Environment (.env)
+
+```bash
+CHESS_STATIC_BUCKET=borderchess-static-ACCOUNTID   # optional; auto from stack
+CHESS_STATIC_CF_DISTRIBUTION_ID=E123...            # optional; auto from stack
+ENABLE_WAF=true                                    # deploy-static.sh
+WAF_RATE_LIMIT=600                                 # ~120 req/min per IP on /v1/move
+```
+
+## Tear down static stack
+
+```bash
+# Empty bucket first
+aws s3 rm s3://borderchess-static-ACCOUNTID --recursive
+aws cloudformation delete-stack --stack-name chess-border-static --region us-east-1
+```

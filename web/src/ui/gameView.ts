@@ -1,3 +1,4 @@
+import { pieceImgSrc } from "../assets/pieceImages";
 import { GameController } from "../game/gameController";
 import {
   clearSavedGame,
@@ -8,7 +9,6 @@ import {
 import { squaresEqual } from "../engine/chessGame";
 import {
   BOARD_SIZE,
-  pieceAssetName,
   type Piece,
   engineFileLabel,
   engineRankLabel,
@@ -17,12 +17,6 @@ import {
   type Square,
 } from "../engine/types";
 
-const PIECE_CDN =
-  (import.meta.env.VITE_PIECE_CDN_URL as string | undefined)?.replace(/\/?$/, "/") ??
-  "https://dkxinbm7riorm.cloudfront.net/ChessBorder/pieces/";
-const PIECE_BASE = import.meta.env.DEV
-  ? `${import.meta.env.BASE_URL}pieces/`
-  : PIECE_CDN;
 
 type SquareCell = {
   btn: HTMLButtonElement;
@@ -257,7 +251,7 @@ class GameScreen {
     const row = el("div", "captured-pieces");
     for (const p of pieces) {
       const img = document.createElement("img");
-      img.src = `${PIECE_BASE}${pieceAssetName(p)}.svg`;
+      img.src = pieceImgSrc(p);
       img.alt = p.kind;
       row.appendChild(img);
     }
@@ -306,7 +300,7 @@ class GameScreen {
       }
 
       const piece = this.ctrl.piece(square);
-      const asset = piece ? `${PIECE_BASE}${pieceAssetName(piece)}.svg` : null;
+      const asset = piece ? pieceImgSrc(piece) : null;
 
       if (!piece) {
         if (cell.pieceImg) {
@@ -314,11 +308,17 @@ class GameScreen {
           cell.pieceImg = null;
         }
       } else if (!cell.pieceImg) {
-        cell.pieceImg = document.createElement("img");
-        cell.pieceImg.className = "piece-img";
+        const existing = cell.btn.querySelector<HTMLImageElement>(".piece-img");
+        cell.pieceImg =
+          existing ??
+          (() => {
+            const img = document.createElement("img");
+            img.className = "piece-img";
+            cell.btn.appendChild(img);
+            return img;
+          })();
         cell.pieceImg.alt = piece.kind;
         cell.pieceImg.src = asset!;
-        cell.btn.appendChild(cell.pieceImg);
       } else if (cell.pieceImg.src !== asset) {
         cell.pieceImg.src = asset!;
         cell.pieceImg.alt = piece.kind;
@@ -456,11 +456,11 @@ class GameScreen {
     const panel = el("div", "overlay-panel");
     panel.appendChild(el("h3", "", "Promote pawn"));
     const opts = el("div", "promotion-options");
-    const color = this.ctrl.game.activeColor === "white" ? "w" : "b";
+    const color = this.ctrl.game.activeColor;
     for (const kind of ["Q", "R", "B", "N"] as const) {
       const btn = el("button", "");
       const img = document.createElement("img");
-      img.src = `${PIECE_BASE}${color}${kind}.svg`;
+      img.src = pieceImgSrc({ kind, color });
       img.alt = kind;
       btn.appendChild(img);
       btn.onclick = () => this.ctrl.promote(kind);

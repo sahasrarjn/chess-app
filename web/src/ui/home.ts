@@ -6,12 +6,11 @@ import {
 } from "../bot/engineConfig";
 import type { BotDifficulty } from "../engine/types";
 
-const LOGO_CDN =
+const LOGO_SRC =
   (import.meta.env.VITE_LOGO_CDN_URL as string | undefined) ??
-  "https://dkxinbm7riorm.cloudfront.net/ChessBorder/logo.png";
-const LOGO_SRC = import.meta.env.DEV
-  ? `${import.meta.env.BASE_URL}logo.png`
-  : LOGO_CDN;
+  (import.meta.env.DEV
+    ? `${import.meta.env.BASE_URL}logo.png`
+    : "/logo.png");
 
 export type HomeStart = {
   mode: "vsBot" | "localTwoPlayer";

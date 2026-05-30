@@ -1,10 +1,11 @@
-# Chess Engine — Cloudflare Worker
+# Chess Engine — Cloudflare Worker (API only)
 
-Public landing page, browser game (`/play/`), and **rate-limited** engine API proxy. iPhone app is coming soon (no public OTA install on the landing page yet).
+Rate-limited proxy for `/v1/move` and `/health`. Static site is on **CloudFront + S3** — see [docs/DOMAIN.md](../../docs/DOMAIN.md).
 
 ```
-Browser / iPhone  →  chess-engine.<you>.workers.dev  →  AWS App Runner
-                         (no client API key)              (X-API-Key secret)
+Browser / iPhone  →  borderchess.org (CloudFront)
+                         ├─ /play/ …        → S3
+                         └─ /v1/move        → Worker → App Runner
 ```
 
 ## Deploy
@@ -15,29 +16,22 @@ Browser / iPhone  →  chess-engine.<you>.workers.dev  →  AWS App Runner
 ALERT_EMAIL=you@example.com ./server/aws/deploy.sh
 ```
 
-### 2. Cloudflare Worker
+### 2. Static site (S3 + CloudFront) — one-time + on web changes
+
+```bash
+./server/aws/deploy-static.sh          # once
+./web/scripts/sync-s3-static.sh        # each web release
+```
+
+### 3. Cloudflare Worker (API)
 
 ```bash
 ./server/worker/deploy.sh
 ```
 
-Creates a KV namespace for rate limiting on first deploy and syncs secrets:
+Or all at once: `./scripts/deploy-site.sh`
 
-- `ENGINE_ORIGIN` — App Runner URL
-- `API_KEY` — backend key (never shipped to clients)
-
-**Public site:** `https://borderchess.org` (also `https://chess-engine.sahasraranjan.workers.dev`)
-
-### 3. iPhone app
-
-Only the **worker URL** is baked into `Info.plist` — no API key. Publish IPA:
-
-```bash
-cd ChessBorder
-./scripts/release-ios.sh
-./scripts/publish-release.sh
-npm run deploy   # in server/worker — includes /play/ web build if configured
-```
+**Worker URL:** `https://chess-engine.sahasraranjan.workers.dev` (CloudFront origin for API paths)
 
 ## Tuning
 
@@ -46,13 +40,16 @@ In `wrangler.toml`:
 | Setting | Default | Purpose |
 |---------|---------|---------|
 | `PUBLIC_MAX_MOVETIME_MS` | `5000` | Cap bot think time for anonymous users |
-| `RATE_LIMIT_PER_MINUTE` | `120` | Max `/v1/move` requests per IP per minute (~60 bot moves with retries) |
+| `RATE_LIMIT_PER_MINUTE` | `120` | Max `/v1/move` requests per IP per minute |
+
+WAF on CloudFront also rate-limits `/v1/move` (see `server/aws/static-site.yaml`).
 
 ## Local dev
 
 ```bash
 docker compose -f server/docker-compose.yml up
 cd server/worker && npm run dev
+cd web && npm run dev   # Vite proxies /v1/move to worker
 ```
 
 ## Security

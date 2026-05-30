@@ -1,0 +1,233 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Border Chess public site — S3 + CloudFront (static) with Worker origin for
+  /v1/move and /health. Deploy in us-east-1 (CloudFront + ACM requirement).
+
+Parameters:
+  DomainName:
+    Type: String
+    Default: borderchess.org
+  WwwDomainName:
+    Type: String
+    Default: www.borderchess.org
+  WorkerOriginDomain:
+    Type: String
+    Default: chess-engine.sahasraranjan.workers.dev
+    Description: Cloudflare Worker workers.dev hostname (API proxy origin)
+  EnableWaf:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: Attach WAF rate-based rule on /v1/move (uses AWS credits)
+  WafRateLimit:
+    Type: Number
+    Default: 600
+    Description: Max /v1/move requests per IP per 5 minutes (~120/min)
+
+Conditions:
+  UseWaf: !Equals [!Ref EnableWaf, "true"]
+
+Resources:
+  StaticBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "borderchess-static-${AWS::AccountId}"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  StaticOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${AWS::StackName}-oac"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  StaticBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref StaticBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontRead
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${StaticBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution}"
+
+  SiteCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      SubjectAlternativeNames:
+        - !Ref WwwDomainName
+      ValidationMethod: DNS
+
+  StaticUrlRewriteFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub "${AWS::StackName}-url-rewrite"
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Rewrite /privacy and directory paths to index.html
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var uri = request.uri;
+          if (uri === "/privacy") {
+            request.uri = "/privacy/index.html";
+            return request;
+          }
+          if (uri.endsWith("/") && uri.length > 1) {
+            request.uri = uri + "index.html";
+            return request;
+          }
+          return request;
+        }
+
+  ApiWebAcl:
+    Type: AWS::WAFv2::WebACL
+    Condition: UseWaf
+    Properties:
+      Name: !Sub "${AWS::StackName}-api-rate-limit"
+      Scope: CLOUDFRONT
+      DefaultAction:
+        Allow: {}
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: !Sub "${AWS::StackName}-waf"
+      Rules:
+        - Name: RateLimitMoveApi
+          Priority: 1
+          Action:
+            Block: {}
+          Statement:
+            RateBasedStatement:
+              Limit: !Ref WafRateLimit
+              AggregateKeyType: IP
+              ScopeDownStatement:
+                ByteMatchStatement:
+                  FieldToMatch:
+                    UriPath: {}
+                  PositionalConstraint: STARTS_WITH
+                  SearchString: /v1/move
+                  TextTransformations:
+                    - Priority: 0
+                      Type: LOWERCASE
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: RateLimitMoveApi
+
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub "${AWS::StackName} Border Chess static + API"
+        Aliases:
+          - !Ref DomainName
+          - !Ref WwwDomainName
+        DefaultRootObject: index.html
+        HttpVersion: http2and3
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          AcmCertificateArn: !Ref SiteCertificate
+          MinimumProtocolVersion: TLSv1.2_2021
+          SslSupportMethod: sni-only
+        WebACLId: !If [UseWaf, !GetAtt ApiWebAcl.Arn, !Ref AWS::NoValue]
+        Origins:
+          - Id: S3Static
+            DomainName: !GetAtt StaticBucket.RegionalDomainName
+            OriginAccessControlId: !Ref StaticOAC
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+          - Id: WorkerApi
+            DomainName: !Ref WorkerOriginDomain
+            CustomOriginConfig:
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols:
+                - TLSv1.2
+        DefaultCacheBehavior:
+          TargetOriginId: S3Static
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD, OPTIONS]
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt StaticUrlRewriteFunction.FunctionMetadata.FunctionARN
+        CacheBehaviors:
+          - PathPattern: /v1/move
+            TargetOriginId: WorkerApi
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+          - PathPattern: /health
+            TargetOriginId: WorkerApi
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+          - PathPattern: /ChessBorder/*
+            TargetOriginId: S3Static
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD, OPTIONS]
+            Compress: true
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          - PathPattern: /play/assets/*
+            TargetOriginId: S3Static
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD, OPTIONS]
+            Compress: true
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+
+Outputs:
+  StaticBucketName:
+    Description: S3 bucket for static site uploads
+    Value: !Ref StaticBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-BucketName"
+  DistributionId:
+    Description: CloudFront distribution ID (for cache invalidation)
+    Value: !Ref Distribution
+    Export:
+      Name: !Sub "${AWS::StackName}-DistributionId"
+  DistributionDomainName:
+    Description: CloudFront domain — point borderchess.org DNS here (grey cloud)
+    Value: !GetAtt Distribution.DomainName
+  SiteUrl:
+    Description: Public site URL after DNS is configured
+    Value: !Sub "https://${DomainName}"
+  CertificateArn:
+    Description: ACM certificate ARN (us-east-1)
+    Value: !Ref SiteCertificate
+  DnsValidationHint:
+    Description: Add ACM DNS validation CNAMEs in Cloudflare, then site CNAME
+    Value: >-
+      Cloudflare DNS → borderchess.org CNAME to DistributionDomainName (DNS only /
+      grey cloud). Remove Worker custom-domain routes after cutover.

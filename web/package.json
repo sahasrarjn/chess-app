@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "sync-worker": "bash scripts/sync-worker-public.sh",
+    "sync-s3": "bash scripts/sync-s3-static.sh",
+    "sync-all": "bash scripts/sync-all-static.sh",
     "publish-pieces": "bash scripts/publish-pieces.sh"
   },
   "devDependencies": {

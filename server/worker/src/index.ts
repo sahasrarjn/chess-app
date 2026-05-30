@@ -1,14 +1,11 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { landingHTML } from "./landing";
-import { privacyHTML } from "./privacy";
 import { checkRateLimit } from "./rateLimit";
 import { clampPublicMovetime, parseMovePayload } from "./validation";
 
 export type Env = {
   ENGINE_ORIGIN: string;
   API_KEY?: string;
-  ASSETS: Fetcher;
   RATE_LIMIT?: KVNamespace;
   RATE_LIMIT_PER_MINUTE?: string;
   PUBLIC_MAX_MOVETIME_MS?: string;
@@ -49,12 +46,6 @@ const apiCors = cors({
 app.use("/health", apiCors);
 app.use("/v1/*", apiCors);
 
-app.get("/", (c) => c.html(landingHTML));
-
-app.get("/privacy", (c) => c.html(privacyHTML));
-
-app.get("/logo.png", (c) => c.env.ASSETS.fetch(c.req.raw));
-
 app.get("/health", async (c) => {
   const origin = c.env.ENGINE_ORIGIN?.replace(/\/$/, "");
   if (!origin) {
@@ -67,7 +58,7 @@ app.get("/health", async (c) => {
       status: res.status,
       headers: { "Content-Type": res.headers.get("Content-Type") ?? "application/json" },
     });
-  } catch (err) {
+  } catch {
     return c.json({ status: "error", detail: "Engine origin unreachable" }, 502);
   }
 });
@@ -75,9 +66,6 @@ app.get("/health", async (c) => {
 app.options("/v1/move", (c) => c.body(null, 204));
 
 app.post("/v1/move", async (c) => {
-  const limited = await checkRateLimit(c.req.raw, c.env);
-  if (limited) return limited;
-
   const origin = c.env.ENGINE_ORIGIN?.replace(/\/$/, "");
   if (!origin) {
     return c.json({ error: "Engine not configured" }, 503);
@@ -88,6 +76,9 @@ app.post("/v1/move", async (c) => {
   if ("error" in parsed) {
     return c.json({ error: parsed.error }, 400);
   }
+
+  const limited = await checkRateLimit(c.req.raw, c.env);
+  if (limited) return limited;
 
   const maxMovetime = parseInt(c.env.PUBLIC_MAX_MOVETIME_MS ?? "5000", 10);
   const movetimeMs = clampPublicMovetime(parsed.movetime_ms, maxMovetime);
@@ -112,13 +103,4 @@ app.post("/v1/move", async (c) => {
   }
 });
 
-/** API routes above; everything else (e.g. /play/) is served from ASSETS. */
-export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const response = await app.fetch(request, env, ctx);
-    if (response.status === 404) {
-      return env.ASSETS.fetch(request);
-    }
-    return response;
-  },
-};
+export default app;

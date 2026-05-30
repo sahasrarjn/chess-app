@@ -23,17 +23,13 @@ cd web
 npm run build
 ```
 
-Output is in `web/dist/`. Piece SVGs are served from CloudFront in production (`npm run publish-pieces` uploads them). To bundle with the Cloudflare worker:
+Output is in `web/dist/`. Deploy to production:
 
 ```bash
-cd web && npm run build
-rm -rf ../server/worker/public/play
-mkdir -p ../server/worker/public/play
-cp -r dist/* ../server/worker/public/play/
-cp public/logo.png ../server/worker/public/play/logo.png
+npm run sync-all   # build + upload to S3 + invalidate CloudFront
 ```
 
-Then deploy the worker (`server/worker`). The game is served at `/play/`.
+Piece SVGs are inlined in the JS bundle; legacy CDN paths are kept via `sync-s3-static.sh`.
 
 ## Bot engine
 

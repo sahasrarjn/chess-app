@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy Cloudflare Worker proxy after AWS App Runner is live.
+# Deploy Cloudflare Worker API proxy after AWS App Runner is live.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -33,12 +33,7 @@ from pathlib import Path
 import sys
 path = Path(sys.argv[1])
 block = f'\n[[kv_namespaces]]\nbinding = "RATE_LIMIT"\nid = "{sys.argv[2]}"\n'
-text = path.read_text()
-if "[assets]" in text:
-    text = text.replace("[assets]", block + "\n[assets]", 1)
-else:
-    text += block
-path.write_text(text)
+path.write_text(path.read_text().rstrip() + block + "\n")
 PY
 }
 
@@ -54,11 +49,6 @@ if [[ -z "$ORIGIN" ]]; then
 fi
 
 echo "==> Engine origin: $ORIGIN"
-
-if [[ "${SYNC_WEB:-}" == "1" || "${SYNC_WEB:-}" == "true" ]]; then
-  echo "==> Syncing web build to worker public assets"
-  (cd "${ROOT}/web" && npm run sync-worker)
-fi
 
 cd "$WORKER_DIR"
 npm install
@@ -90,4 +80,5 @@ fi
 
 npm run deploy
 echo ""
-echo "Public site: https://borderchess.org (workers.dev alias still enabled)"
+echo "API worker: https://chess-engine.sahasraranjan.workers.dev"
+echo "Public site: https://borderchess.org (CloudFront → S3; /v1/move proxied to worker)"

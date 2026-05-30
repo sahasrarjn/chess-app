@@ -10,8 +10,8 @@ xcuserdata/
 **/project.xcworkspace/xcshareddata/
 web/node_modules/
 web/dist/
-server/worker/public/play/
 server/worker/node_modules/
 server/worker/.dev.vars
+.wrangler/
 server/worker/.wrangler/
 .env

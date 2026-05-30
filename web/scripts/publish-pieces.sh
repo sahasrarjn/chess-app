@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Upload Border Chess web assets (piece SVGs, logo) to S3 / CloudFront.
+# Prefer: ./web/scripts/sync-s3-static.sh (unified borderchess.org bucket).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"

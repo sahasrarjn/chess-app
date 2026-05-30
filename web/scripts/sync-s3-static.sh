@@ -77,12 +77,12 @@ aws s3 cp static/privacy/index.html "s3://${BUCKET}/privacy/index.html" \
   --cache-control "public, max-age=3600"
 
 echo "==> Uploading logo + piece SVGs (ChessBorder CDN paths)"
-aws s3 cp public/logo.png "s3://${BUCKET}/logo.png" \
+aws s3 cp public/logo_v2.png "s3://${BUCKET}/logo_v2.png" \
   --region "$REGION" \
   --content-type "image/png" \
   --cache-control "public, max-age=31536000, immutable"
 
-aws s3 cp public/logo.png "s3://${BUCKET}/ChessBorder/logo.png" \
+aws s3 cp public/logo_v2.png "s3://${BUCKET}/ChessBorder/logo_v2.png" \
   --region "$REGION" \
   --content-type "image/png" \
   --cache-control "public, max-age=31536000, immutable"

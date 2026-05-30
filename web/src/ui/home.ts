@@ -9,8 +9,8 @@ import type { BotDifficulty } from "../engine/types";
 const LOGO_SRC =
   (import.meta.env.VITE_LOGO_CDN_URL as string | undefined) ??
   (import.meta.env.DEV
-    ? `${import.meta.env.BASE_URL}logo.png`
-    : "/logo.png");
+    ? `${import.meta.env.BASE_URL}logo_v2.png`
+    : "/logo_v2.png");
 
 export type HomeStart = {
   mode: "vsBot" | "localTwoPlayer";
@@ -32,8 +32,8 @@ export function renderHome(
     logo.className = "home-logo";
     logo.src = LOGO_SRC;
     logo.alt = "Border Chess";
-    logo.width = 1536;
-    logo.height = 1536;
+    logo.width = 1024;
+    logo.height = 1024;
     home.appendChild(logo);
 
     home.appendChild(el("h1", "", "Border Chess"));

@@ -27,7 +27,7 @@ struct HomeView: View {
 
                 VStack(spacing: 32) {
                     VStack(spacing: 12) {
-                        LaunchBrandMark(size: 88)
+                        AppLogo(size: 88)
 
                         Text("Border Chess")
                             .font(.largeTitle.bold())

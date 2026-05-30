@@ -26,7 +26,7 @@ echo "==> Static assets ($BASE)"
 check "landing"        "$BASE/"
 check "game"           "$BASE/play/"
 check "privacy"        "$BASE/privacy/"
-check "logo"           "$BASE/logo.png"
+check "logo"           "$BASE/logo_v2.png"
 check "piece (CDN path)" "$BASE/ChessBorder/pieces/wP.svg"
 check "piece (legacy)"   "$BASE/play/pieces/wP.svg"
 

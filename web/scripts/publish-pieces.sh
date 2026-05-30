@@ -5,7 +5,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 PIECES_DIR="$ROOT/web/public/pieces"
-LOGO="$ROOT/web/public/logo.png"
+LOGO="$ROOT/web/public/logo_v2.png"
 
 # shellcheck disable=SC1091
 source "$ROOT/ChessBorder/scripts/release-env.sh"
@@ -15,7 +15,7 @@ BUCKET="${CHESS_DOWNLOAD_BUCKET:-${BRAIN_DOWNLOAD_BUCKET:-brain-downloads-731049
 CF_DIST_ID="${CHESS_CF_DISTRIBUTION_ID:-${BRAIN_CF_DISTRIBUTION_ID:-EC6D5X1HA219F}}"
 CF_BASE="${CHESS_DOWNLOAD_URL:-https://dkxinbm7riorm.cloudfront.net}"
 PREFIX="ChessBorder/pieces"
-LOGO_KEY="ChessBorder/logo.png"
+LOGO_KEY="ChessBorder/logo_v2.png"
 
 chess_require_aws_publish
 

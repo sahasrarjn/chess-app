@@ -60,57 +60,68 @@ struct GameView: View {
         viewModel.previewPly ?? viewModel.livePly
     }
 
+    private var hasCaptures: Bool {
+        !viewModel.capturedByWhite.isEmpty || !viewModel.capturedByBlack.isEmpty
+    }
+
     var body: some View {
-        ZStack {
-            BoardTheme.background.ignoresSafeArea()
+        GeometryReader { geo in
+            let boardSide = GameBoardLayout.boardSide(in: geo)
 
-            VStack(spacing: 6) {
-                header
+            ZStack {
+                BoardTheme.background.ignoresSafeArea()
 
-                CapturedPiecesBar(
-                    capturedByWhite: viewModel.capturedByWhite,
-                    capturedByBlack: viewModel.capturedByBlack
-                )
-                .padding(.horizontal, 8)
+                VStack(spacing: 6) {
+                    header
 
-                Text(viewModel.statusText)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(BoardTheme.accent)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 8)
-                    .frame(minHeight: 20)
+                    if hasCaptures {
+                        CapturedPiecesBar(
+                            capturedByWhite: viewModel.capturedByWhite,
+                            capturedByBlack: viewModel.capturedByBlack
+                        )
+                    }
 
-                BoardView(viewModel: viewModel)
-                    .layoutPriority(1)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.horizontal, 2)
+                    Text(viewModel.statusText)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.65))
+                        .multilineTextAlignment(.center)
+                        .frame(minHeight: 18)
 
-                if !viewModel.recordedMoves.isEmpty {
-                    MoveListView(
-                        moves: viewModel.recordedMoves,
-                        selectedPly: displayedPly,
-                        livePly: viewModel.livePly,
-                        onSelect: { viewModel.goToMove(ply: $0) }
+                    BoardView(viewModel: viewModel, boardSide: boardSide)
+
+                    Spacer(minLength: 0)
+
+                    if !viewModel.recordedMoves.isEmpty {
+                        MoveListView(
+                            moves: viewModel.recordedMoves,
+                            selectedPly: displayedPly,
+                            livePly: viewModel.livePly,
+                            onSelect: { viewModel.goToMove(ply: $0) }
+                        )
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 6)
+                        .background(Color.white.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+
+                    gameControls
+                }
+                .padding(.horizontal, GameBoardLayout.horizontalInset)
+                .padding(.bottom, 6)
+                .safeAreaPadding(.top, 2)
+
+                if viewModel.pendingPromotion != nil {
+                    Color.black.opacity(0.5).ignoresSafeArea()
+                    PromotionPickerView(
+                        color: viewModel.game.activeColor,
+                        onSelect: { viewModel.promote(to: $0) },
+                        onCancel: { viewModel.cancelPromotion() }
                     )
-                    .frame(maxHeight: 72)
-                    .padding(.horizontal, 8)
                 }
 
-                historyControls
-                actionButtons
-            }
-
-            if viewModel.pendingPromotion != nil {
-                Color.black.opacity(0.5).ignoresSafeArea()
-                PromotionPickerView(
-                    color: viewModel.game.activeColor,
-                    onSelect: { viewModel.promote(to: $0) },
-                    onCancel: { viewModel.cancelPromotion() }
-                )
-            }
-
-            if viewModel.result != .ongoing, !gameOverDismissed {
-                gameOverOverlay
+                if viewModel.result != .ongoing, !gameOverDismissed {
+                    gameOverOverlay
+                }
             }
         }
         .chessAppNavigationChromeHidden()
@@ -131,7 +142,7 @@ struct GameView: View {
     }
 
     private var header: some View {
-        HStack {
+        HStack(spacing: 10) {
             Button {
                 if let onReturnHome {
                     onReturnHome()
@@ -139,93 +150,129 @@ struct GameView: View {
                     dismiss()
                 }
             } label: {
-                Image(systemName: "chevron.left")
-                    .font(.title3.weight(.semibold))
+                Text("← Back")
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.white.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
-            Text(viewModel.mode.rawValue)
+            Text(headerTitle)
                 .font(.headline)
                 .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+
+            Spacer(minLength: 8)
 
             if viewModel.mode == .localTwoPlayer {
                 Button { viewModel.toggleAutoFlipBoard() } label: {
                     Text("Auto-flip")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(viewModel.autoFlipBoard ? BoardTheme.accent : .white.opacity(0.6))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
                 }
             }
 
             Button { viewModel.toggleBoardFlip() } label: {
-                Image(systemName: "arrow.up.arrow.down")
-                    .font(.title3)
+                Text("Flip")
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(
                         viewModel.mode == .localTwoPlayer && viewModel.autoFlipBoard
                             ? Color.white.opacity(0.35)
                             : Color.white
                     )
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.white.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .disabled(viewModel.mode == .localTwoPlayer && viewModel.autoFlipBoard)
         }
-        .padding(.horizontal)
-        .padding(.top, 4)
+        .padding(.top, 2)
     }
 
-    private var historyControls: some View {
-        HStack(spacing: 16) {
-            Button { viewModel.stepBack() } label: {
-                Image(systemName: "backward.fill")
-            }
-            .disabled(displayedPly == 0)
-
-            Button {
-                if viewModel.isBrowsingHistory {
-                    viewModel.returnToLivePosition()
-                }
-            } label: {
-                Image(systemName: "forward.end.fill")
-            }
-            .disabled(!viewModel.isBrowsingHistory)
-
-            Button { viewModel.stepForward() } label: {
-                Image(systemName: "forward.fill")
-            }
-            .disabled(displayedPly >= viewModel.livePly)
+    private var headerTitle: String {
+        switch viewModel.mode {
+        case .vsBot:
+            return "Play vs Bot (\(viewModel.botDifficulty.rawValue.lowercased()))"
+        case .localTwoPlayer:
+            return "Play with Friend"
         }
-        .font(.body)
-        .foregroundStyle(.white.opacity(0.85))
-        .padding(.horizontal)
     }
 
-    private var actionButtons: some View {
-        VStack(spacing: 12) {
+    private var gameControls: some View {
+        VStack(spacing: 10) {
             if viewModel.canRetryBot {
                 Button("Retry Bot Move") { viewModel.retryBotMove() }
                     .buttonStyle(PrimaryGameButtonStyle())
+                    .frame(maxWidth: .infinity)
             }
 
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
                 if viewModel.livePly > 0 {
-                    Button("Undo") { viewModel.undo() }
-                        .buttonStyle(SecondaryGameButtonStyle())
+                    controlButton("Undo") { viewModel.undo() }
                         .disabled(viewModel.isBrowsingHistory || viewModel.isThinking)
                 }
 
-                Button("New Game") {
+                controlButton("◀") { viewModel.stepBack() }
+                    .disabled(displayedPly == 0)
+
+                controlButton("▶") { viewModel.stepForward() }
+                    .disabled(displayedPly >= viewModel.livePly)
+
+                controlButton("Live") {
+                    if viewModel.isBrowsingHistory {
+                        viewModel.returnToLivePosition()
+                    }
+                }
+                .disabled(!viewModel.isBrowsingHistory)
+
+                controlButton("Resign", role: .destructive) { showResignConfirm = true }
+                    .disabled(viewModel.result != .ongoing)
+
+                Button {
                     gameOverDismissed = false
                     viewModel.newGame()
+                } label: {
+                    Text("New Game")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(BoardTheme.accent)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
-                    .buttonStyle(SecondaryGameButtonStyle())
-
-                Button("Resign") { showResignConfirm = true }
-                    .buttonStyle(SecondaryGameButtonStyle())
-                    .disabled(viewModel.result != .ongoing)
             }
         }
-        .padding(.horizontal)
-        .padding(.bottom, 8)
+    }
+
+    private enum ControlButtonRole {
+        case normal
+        case destructive
+    }
+
+    private func controlButton(
+        _ title: String,
+        role: ControlButtonRole = .normal,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(role == .destructive ? Color(red: 1, green: 0.7, blue: 0.7) : .white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(role == .destructive ? Color(red: 0.36, green: 0.16, blue: 0.16) : Color.white.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
     }
 
     @ViewBuilder

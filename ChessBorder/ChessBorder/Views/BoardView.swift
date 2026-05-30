@@ -3,13 +3,20 @@ import SwiftUI
 struct PieceView: View {
     let piece: Piece
     var elevated = false
+    /// When set (board squares), piece fills this fraction of the cell — matches web ~88% but slightly larger for touch.
+    var cellSize: CGFloat?
+
+    private var pieceExtent: CGFloat? {
+        guard let cellSize else { return nil }
+        return cellSize * (elevated ? 0.96 : 0.94)
+    }
 
     var body: some View {
         Image(piece.assetName)
             .resizable()
             .aspectRatio(contentMode: .fit)
-            .padding(elevated ? 1 : 2)
-            .scaleEffect(elevated ? 1.06 : 1.0)
+            .frame(width: pieceExtent, height: pieceExtent)
+            .scaleEffect(elevated ? 1.04 : 1.0)
             .shadow(color: elevated ? .black.opacity(0.35) : .clear, radius: elevated ? 5 : 0, y: elevated ? 2 : 0)
             .animation(.spring(response: 0.28, dampingFraction: 0.78), value: elevated)
     }
@@ -72,7 +79,7 @@ struct SquareView: View {
             }
 
             if let piece = viewModel.piece(at: square) {
-                PieceView(piece: piece, elevated: isSelected)
+                PieceView(piece: piece, elevated: isSelected, cellSize: squareSize)
                     .zIndex(isSelected ? 1 : 0)
             }
 
@@ -154,7 +161,7 @@ private struct MoveAnimationOverlay: View {
     @State private var traveled = false
 
     var body: some View {
-        PieceView(piece: animation.piece)
+        PieceView(piece: animation.piece, cellSize: squareSize)
             .frame(width: squareSize, height: squareSize)
             .position(point(for: traveled ? animation.move.to : animation.move.from))
             .id(animation.move)
@@ -184,8 +191,22 @@ private struct MoveAnimationOverlay: View {
     }
 }
 
+enum GameBoardLayout {
+    /// Horizontal inset from screen edge (web uses 12px per side).
+    static let horizontalInset: CGFloat = 6
+    /// Rough space for header, status, move list, and controls when height is tight.
+    static let chromeReserve: CGFloat = 210
+
+    static func boardSide(in geo: GeometryProxy) -> CGFloat {
+        let widthBased = geo.size.width - horizontalInset * 2
+        let heightBased = geo.size.height - chromeReserve
+        return max(0, min(widthBased, heightBased))
+    }
+}
+
 struct BoardView: View {
     @ObservedObject var viewModel: GameViewModel
+    var boardSide: CGFloat
 
     private var displayRows: [Int] {
         viewModel.boardFlipped ? Array((0..<BoardConstants.size).reversed()) : Array(0..<BoardConstants.size)
@@ -196,15 +217,12 @@ struct BoardView: View {
     }
 
     var body: some View {
-        GeometryReader { geo in
-            let boardSize = min(geo.size.width, geo.size.height)
-            let squareSize = boardSize / CGFloat(BoardConstants.size)
+        let squareSize = boardSide / CGFloat(BoardConstants.size)
 
-            boardGrid(squareSize: squareSize, boardSize: boardSize)
-                .frame(width: boardSize, height: boardSize)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .animation(.easeOut(duration: 0.2), value: viewModel.previewPly)
+        boardGrid(squareSize: squareSize, boardSize: boardSide)
+            .frame(width: boardSide, height: boardSide)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .animation(.easeOut(duration: 0.2), value: viewModel.previewPly)
     }
 
     @ViewBuilder
@@ -238,9 +256,10 @@ struct BoardView: View {
                 .allowsHitTesting(false)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .shadow(color: .black.opacity(0.45), radius: 12, y: 4)
         .overlay(
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: 4)
                 .stroke(Color.black.opacity(0.25), lineWidth: 2)
         )
     }

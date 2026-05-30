@@ -43,7 +43,7 @@ struct MoveListView: View {
                 }
             }
         }
-        .frame(height: 34)
+        .frame(minHeight: 40)
     }
 
     private func moveButton(_ san: String, ply: Int) -> some View {
@@ -105,7 +105,7 @@ struct CapturedPiecesBar: View {
     let capturedByWhite: [Piece]
     let capturedByBlack: [Piece]
 
-    private let pieceSize: CGFloat = 20
+    private let pieceSize: CGFloat = 24
 
     var body: some View {
         HStack(alignment: .top, spacing: 6) {

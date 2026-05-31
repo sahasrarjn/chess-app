@@ -74,11 +74,16 @@ struct Square: Hashable, Codable {
     /// Parse 10×10 engine square (a1–j10), including border cells.
     static func fromEngineNotation(_ text: String) -> Square? {
         let trimmed = text.lowercased()
-        guard trimmed.count == 2,
-              let file = trimmed.first,
-              let rank = Int(String(trimmed.last!)),
-              rank >= 1, rank <= BoardConstants.size else { return nil }
+        guard !trimmed.isEmpty, let file = trimmed.first, file >= "a", file <= "j" else { return nil }
         let col = Int(file.asciiValue! - 97)
+        var index = trimmed.index(after: trimmed.startIndex)
+        guard index < trimmed.endIndex else { return nil }
+        var rankEnd = trimmed.index(after: index)
+        if trimmed[index] == "1", rankEnd < trimmed.endIndex, trimmed[rankEnd] == "0" {
+            rankEnd = trimmed.index(after: rankEnd)
+        }
+        let rankText = String(trimmed[index..<rankEnd])
+        guard let rank = Int(rankText), (1...BoardConstants.size).contains(rank) else { return nil }
         let row = BoardConstants.size - rank
         let sq = Square(row: row, col: col)
         return sq.isValid ? sq : nil

@@ -1,5 +1,9 @@
 import Foundation
 
+enum FENError: Error {
+    case invalid
+}
+
 extension ChessGame {
     /// FEN for Fairy-Stockfish (10×10 border chess, ranks 10→1 top to bottom).
     func toFEN() -> String {
@@ -93,7 +97,8 @@ extension ChessGame {
 
         var seen = Set<String>()
         for (from, to, promotion) in candidates {
-            let key = "\(from.row),\(from.col),\(to.row),\(to.col),\(promotion?.rawValue ?? "")"
+            let promoKey = promotion.map { String($0.rawValue) } ?? ""
+            let key = "\(from.row),\(from.col),\(to.row),\(to.col),\(promoKey)"
             if seen.contains(key) { continue }
             seen.insert(key)
 

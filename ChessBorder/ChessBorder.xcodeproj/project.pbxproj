@@ -45,6 +45,7 @@
 		916FCFCC54D989001EC82393 /* BoardTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB05B3595E69DCB456B559B7 /* BoardTheme.swift */; };
 		97B0FCF07104D3E4C264EE9A /* ChessBorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DFE99402032904F40BF126D /* ChessBorderApp.swift */; };
 		A108F0AE7BDF4DF9C95E6185 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C7D400D7C64F9C599A1ED64E /* Assets.xcassets */; };
+		A8705B436CE996F08312245E /* SharedCorpusParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EAA04B7B31B105005662A6F /* SharedCorpusParityTests.swift */; };
 		A99595C69E835DB8A9E8B199 /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47D9330D945C0EDDC3BBA1D4 /* GameView.swift */; };
 		AB0F8D6042262BA76BB83392 /* UCIProcessClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACFF1ABE9D507EF35EBAD2A7 /* UCIProcessClient.swift */; };
 		AD397CDF27AD968B25966CF1 /* Piece.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17F81A527E32095EAB109CA7 /* Piece.swift */; };
@@ -133,6 +134,7 @@
 		67E4798FA9879BA230E5DA0D /* ChessBorderAppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ChessBorderAppStore.entitlements; sourceTree = "<group>"; };
 		6C64455C43DF234253EDBC19 /* GameChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameChrome.swift; sourceTree = "<group>"; };
 		6DFE99402032904F40BF126D /* ChessBorderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessBorderApp.swift; sourceTree = "<group>"; };
+		6EAA04B7B31B105005662A6F /* SharedCorpusParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedCorpusParityTests.swift; sourceTree = "<group>"; };
 		6F8D99E4EB6E52E62423A54D /* variants.ini */ = {isa = PBXFileReference; path = variants.ini; sourceTree = "<group>"; };
 		8205CA20A5DC79CBF61239CA /* BotLogging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotLogging.swift; sourceTree = "<group>"; };
 		82F0440ACD9F88E3B4DAB6C3 /* EngineBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineBundle.swift; sourceTree = "<group>"; };
@@ -203,6 +205,7 @@
 			isa = PBXGroup;
 			children = (
 				88423B33C2EBE9FEF281B471 /* BotEvalTests.swift */,
+				6EAA04B7B31B105005662A6F /* SharedCorpusParityTests.swift */,
 			);
 			path = ChessBorderTests;
 			sourceTree = "<group>";
@@ -425,6 +428,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8852876ACAC79BB59793764C /* BotEvalTests.swift in Sources */,
+				A8705B436CE996F08312245E /* SharedCorpusParityTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

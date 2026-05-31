@@ -38,6 +38,86 @@ final class ChessGame {
         registerPosition()
     }
 
+    /// Clear move history after FEN import (mirrors web `resetLoadedPosition`).
+    func resetLoadedPosition() {
+        moveHistory = []
+        recordedMoves = []
+        lastMove = nil
+        snapshots = [GameSnapshot(from: self)]
+        positionCounts = [:]
+        registerPosition()
+    }
+
+    /// Load a Fairy-Stockfish chessborder FEN (mirrors web `fromFEN`).
+    static func fromFEN(_ fen: String) throws -> ChessGame {
+        let parts = fen.trimmingCharacters(in: .whitespaces).split(whereSeparator: \.isWhitespace).map(String.init)
+        guard parts.count >= 4 else { throw FENError.invalid }
+
+        let ranks = parts[0].split(separator: "/").map(String.init)
+        guard ranks.count == BoardConstants.size else { throw FENError.invalid }
+
+        let game = ChessGame()
+        for row in 0..<BoardConstants.size {
+            try game.parseFenRank(ranks[row], row: row)
+        }
+
+        game.activeColor = parts[1] == "b" ? .black : .white
+        game.castlingRights = game.parseCastling(parts[2])
+        game.enPassantTarget = game.parseEnPassant(parts[3])
+        game.halfmoveClock = parts.count > 4 ? Int(parts[4]) ?? 0 : 0
+        game.fullmoveNumber = parts.count > 5 ? Int(parts[5]) ?? 1 : 1
+        game.resetLoadedPosition()
+        return game
+    }
+
+    private func parseFenRank(_ rankStr: String, row: Int) throws {
+        var col = 0
+        for ch in rankStr {
+            if col >= BoardConstants.size { break }
+            if ch == "." {
+                board[row][col] = nil
+                col += 1
+                continue
+            }
+            if ch.isNumber, let empty = ch.wholeNumberValue, empty > 0 {
+                for _ in 0..<empty where col < BoardConstants.size {
+                    board[row][col] = nil
+                    col += 1
+                }
+                continue
+            }
+            let upper = Character(String(ch).uppercased())
+            guard let kind = PieceKind(rawValue: upper) else { throw FENError.invalid }
+            let color: PieceColor = ch.isUppercase ? .white : .black
+            board[row][col] = Piece(kind: kind, color: color)
+            col += 1
+        }
+        while col < BoardConstants.size {
+            board[row][col] = nil
+            col += 1
+        }
+    }
+
+    private func parseCastling(_ text: String) -> CastlingRights {
+        if text == "-" {
+            return CastlingRights(
+                whiteKingSide: false, whiteQueenSide: false,
+                blackKingSide: false, blackQueenSide: false
+            )
+        }
+        return CastlingRights(
+            whiteKingSide: text.contains("K"),
+            whiteQueenSide: text.contains("Q"),
+            blackKingSide: text.contains("k"),
+            blackQueenSide: text.contains("q")
+        )
+    }
+
+    private func parseEnPassant(_ text: String) -> Square? {
+        if text == "-" { return nil }
+        return Square.fromEngineNotation(text) ?? Square.fromStandardNotation(text)
+    }
+
     // MARK: - Starting position
 
     static func startingBoard() -> [[Piece?]] {

@@ -6,12 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "test": "tsx --test \"src/**/*.test.ts\"",
     "preview": "vite preview",
     "sync-s3": "bash scripts/sync-s3-static.sh",
     "sync-all": "bash scripts/sync-all-static.sh",
     "publish-pieces": "bash scripts/publish-pieces.sh"
   },
   "devDependencies": {
+    "tsx": "^4.22.3",
     "typescript": "^5.8.3",
     "vite": "^6.3.5"
   },

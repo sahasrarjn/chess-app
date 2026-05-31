@@ -56,7 +56,7 @@ struct HybridBotPlayer: BotPlayer {
         }
         #endif
 
-        if let move = minimax.chooseMove(in: game, difficulty: difficulty) {
+        if let move = await minimax.chooseMove(in: game, difficulty: difficulty) {
             BotLogging.debug("chooseEngineMove: built-in minimax \(move.uci)")
             return BotEngineAttempt(move: move, lastUci: move.uci, lastError: lastError)
         }

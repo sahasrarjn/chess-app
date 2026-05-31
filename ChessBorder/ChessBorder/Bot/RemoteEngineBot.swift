@@ -60,13 +60,11 @@ struct RemoteEngineBot: BotPlayer {
                 request.httpBody = try JSONEncoder().encode(payload)
                 BotLogging.debug("RemoteEngine: POST \(endpoint.absoluteString) attempt=\(attempt + 1)")
                 let (data, response) = try await URLSession.shared.data(for: request)
-                guard let http = response as? HTTPURLResponse else {
-                    BotLogging.debug("RemoteEngine: non-HTTP response")
-                    lastFailure = .invalidResponse
-                } else if (200...299).contains(http.statusCode) {
-                    let decoded = try JSONDecoder().decode(RemoteMoveResponse.self, from: data)
-                    return .success(decoded.uci)
-                } else {
+                if let http = response as? HTTPURLResponse {
+                    if (200...299).contains(http.statusCode) {
+                        let decoded = try JSONDecoder().decode(RemoteMoveResponse.self, from: data)
+                        return .success(decoded.uci)
+                    }
                     let body = String(data: data, encoding: .utf8) ?? ""
                     BotLogging.debug("RemoteEngine: HTTP \(http.statusCode) \(body)")
                     let message = parseHTTPError(
@@ -81,6 +79,8 @@ struct RemoteEngineBot: BotPlayer {
                     }
                     return .failure(lastFailure)
                 }
+                BotLogging.debug("RemoteEngine: non-HTTP response")
+                lastFailure = .invalidResponse
             } catch let error as URLError where error.code == .timedOut {
                 BotLogging.debug("RemoteEngine: timed out")
                 lastFailure = .timedOut

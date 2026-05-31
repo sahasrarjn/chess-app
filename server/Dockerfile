@@ -43,6 +43,7 @@ COPY server/engine_manager.py /app/engine_manager.py
 COPY server/validation.py /app/validation.py
 COPY server/client_move_check.py /app/client_move_check.py
 COPY server/fen_transform.py /app/fen_transform.py
+COPY shared/engine-column-map.json /app/shared/engine-column-map.json
 COPY server/main.py /app/main.py
 
 WORKDIR /app

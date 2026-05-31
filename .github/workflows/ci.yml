@@ -58,6 +58,7 @@ jobs:
           docker compose -f server/docker-compose.yml logs
           exit 1
       - run: bash server/test_integration.sh http://localhost:8081
+      - run: bash server/test_engine_parity.sh http://localhost:8081
       - run: bash scripts/validate-engine-corpus.sh
         env:
           ENGINE_URL: http://localhost:8081

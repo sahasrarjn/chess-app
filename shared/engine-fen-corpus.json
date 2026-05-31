@@ -19,5 +19,30 @@
     "fen": "........../.rnbqkbnr./.pppppppp./......../......../......../......../.PPPPPPPP./.RNBQKBNR./.......... w KQkq - 0 1",
     "setup_uci": ["f2f4"],
     "uci": "h9g7"
+  },
+  {
+    "name": "c9a10 left border bishop (PostHog c9b10 failure)",
+    "fen": "1R8/2nbqkb3/1pppppppp1/........../........../7n2/8P1/1PPPPPPP2/1RNBQKBN2/.......... b Q - 0 5",
+    "uci": "c9a10"
+  },
+  {
+    "name": "h7h5 pawn double (PostHog fallback)",
+    "fen": "........../1rnbqkbn1r/1pppppp1p1/7p2/........../5P4/3N2N3/1PPP1PPP1/1R1BQKB1R1/.......... b KQq f4 0 3",
+    "uci": "h7h5"
+  },
+  {
+    "name": "f7f5 pawn double (PostHog fallback)",
+    "fen": "........../6B1k1/1p8/5p1Q2/7N2/R9/4N5/1P1PK1PPP1/6B3/8R1 b - - 0 54",
+    "uci": "f7f5"
+  },
+  {
+    "name": "fallback c7c5 midgame",
+    "fen": "5b4/5k4/1pbpp5/2pn1p2p1/........../3B1PN3/3N3R2/rPr1PK2P1/........../.......... b - - 4 22",
+    "uci": "c7c5"
+  },
+  {
+    "name": "left border piece preserved in FEN round-trip",
+    "fen": "R......../........../........../........../........../........../........../........../........../.......... w - - 0 1",
+    "uci": "a10a9"
   }
 ]

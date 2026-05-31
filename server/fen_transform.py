@@ -1,114 +1,68 @@
-"""Map between client-centered FEN/UCI and Fairy-Stockfish left-aligned coordinates.
+"""Legacy coordinate remap (unused).
 
-The web/iOS apps keep the inner 8×8 on board columns 1–8 with a border ring on
-all sides. Fairy-Stockfish places the same pieces on files a–h (columns 0–7) with
-only a right-hand border (files i–j). Each rank string is shifted one file left
-when talking to the engine, and engine UCI is shifted one file right for clients.
+Fairy-Stockfish chessborder accepts the same client-centered FEN/UCI as the web
+and iOS apps (see ChessBorder/Resources/Engine/variants.ini). The server passes
+client FEN through unchanged; do not call these helpers in the move pipeline.
 """
 
 from __future__ import annotations
 
+import json
 import re
+from functools import lru_cache
+from pathlib import Path
 
 _SQUARE = re.compile(r"^([a-j])(10|[1-9])")
 
+_CLIENT_TO_ENGINE_COL = tuple(
+    json.loads(
+        (
+            Path(__file__).resolve().parent / "shared" / "engine-column-map.json"
+            if (Path(__file__).resolve().parent / "shared" / "engine-column-map.json").is_file()
+            else Path(__file__).resolve().parent.parent / "shared" / "engine-column-map.json"
+        ).read_text(encoding="utf-8")
+    )["clientColToEngineCol"]
+)
+_ENGINE_TO_CLIENT_COL = tuple(_CLIENT_TO_ENGINE_COL.index(c) for c in range(10))
 
-def _shift_square(square: str, delta: int) -> str:
-    match = _SQUARE.match(square)
+
+def client_col_to_engine_col(client_col: int) -> int:
+    return _CLIENT_TO_ENGINE_COL[client_col]
+
+
+def engine_col_to_client_col(engine_col: int) -> int:
+    return _ENGINE_TO_CLIENT_COL[engine_col]
+
+
+@lru_cache(maxsize=256)
+def _parse_square(square: str) -> tuple[int, int]:
+    match = _SQUARE.match(square.strip().lower())
     if not match:
-        return square
-    file_ch = match.group(1)
-    rank = match.group(2)
-    new_ord = ord(file_ch) + delta
-    if new_ord < ord("a") or new_ord > ord("j"):
-        return square
-    return f"{chr(new_ord)}{rank}"
+        raise ValueError(f"Invalid square: {square}")
+    col = ord(match.group(1)) - ord("a")
+    rank = int(match.group(2))
+    return col, rank
 
 
-def _shift_uci_files(uci: str, delta: int) -> str:
-    trimmed = uci.strip().lower()
-    promo = ""
-    if len(trimmed) > 4 and trimmed[4] in "qrbn":
-        promo = trimmed[4]
-        trimmed = trimmed[:4]
-    if len(trimmed) < 4:
-        return uci
-
-    from_sq = trimmed[:2]
-    if trimmed[1:3] == "10":
-        from_sq = trimmed[:3]
-        to_start = 3
-    else:
-        to_start = 2
-    to_sq = trimmed[to_start : to_start + 2]
-    if trimmed[to_start + 1 : to_start + 3] == "10":
-        to_sq = trimmed[to_start : to_start + 3]
-
-    return _shift_square(from_sq, delta) + _shift_square(to_sq, delta) + promo
+def _format_square(col: int, rank: int) -> str:
+    file_ch = chr(ord("a") + col)
+    rank_text = "10" if rank == 10 else str(rank)
+    return f"{file_ch}{rank_text}"
 
 
-def _expand_rank_to_10(rank: str) -> str:
-    """Decode a client FEN rank (run-length or dotted) into exactly 10 cells."""
-    cells: list[str] = []
-    col = 0
-    for ch in rank:
-        if col >= 10:
-            break
-        if ch == ".":
-            cells.append(".")
-            col += 1
-            continue
-        if ch.isdigit():
-            empty = int(ch)
-            for _ in range(min(empty, 10 - col)):
-                cells.append(".")
-                col += 1
-            continue
-        cells.append(ch)
-        col += 1
-    while len(cells) < 10:
-        cells.append(".")
-    return "".join(cells[:10])
+def client_square_to_engine_square(square: str) -> str:
+    col, rank = _parse_square(square)
+    return _format_square(client_col_to_engine_col(col), rank)
 
 
-def _shift_rank_client_to_engine(rank: str) -> str:
-    rank = _expand_rank_to_10(rank)
-    if all(ch == "." for ch in rank):
-        return ".........."
-    out = ["."] * 10
-    for client_col in range(1, 9):
-        out[client_col - 1] = rank[client_col]
-    out[8] = rank[9]
-    return "".join(out)
-
-
-def _shift_rank_engine_to_client(rank: str) -> str:
-    if len(rank) != 10:
-        raise ValueError("Each FEN rank must be 10 characters")
-    out = ["." ] * 10
-    for engine_col in range(8):
-        out[engine_col + 1] = rank[engine_col]
-    out[9] = rank[8]
-    return "".join(out)
+def engine_square_to_client_square(square: str) -> str:
+    col, rank = _parse_square(square)
+    return _format_square(engine_col_to_client_col(col), rank)
 
 
 def client_fen_to_engine_fen(fen: str) -> str:
-    """Convert client-centered FEN to Fairy-Stockfish coordinates."""
-    parts = fen.split()
-    if len(parts) < 4:
-        raise ValueError("Invalid FEN")
-    ranks = parts[0].split("/")
-    if len(ranks) != 10:
-        raise ValueError("Invalid FEN board")
-    engine_ranks = [_shift_rank_client_to_engine(rank) for rank in ranks]
-    ep = parts[3]
-    if ep != "-":
-        ep = _shift_square(ep, -1)
-    parts[0] = "/".join(engine_ranks)
-    parts[3] = ep
-    return " ".join(parts)
+    raise NotImplementedError("Coordinate remap is disabled; pass client FEN to the engine")
 
 
 def engine_uci_to_client_uci(uci: str) -> str:
-    """Convert Fairy-Stockfish UCI to client-centered coordinates."""
-    return _shift_uci_files(uci, 1)
+    raise NotImplementedError("Coordinate remap is disabled; engine UCI is already client-native")

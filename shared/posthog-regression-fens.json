@@ -1,0 +1,50 @@
+[
+  {
+    "name": "PostHog c9b10 bishop trap",
+    "fen": "1R8/2nbqkb3/1pppppppp1/........../........../7n2/8P1/1PPPPPPP2/1RNBQKBN2/.......... b Q - 0 5"
+  },
+  {
+    "name": "PostHog h9h2 rook slide ep",
+    "fen": "........../1rnbqkb1r1/1pp1p1ppp1/3p1pn3/5P4/4P5/6Q3/1PPP2PPP1/1RNB1KBNR1/.......... b KQkq e4 0 4"
+  },
+  {
+    "name": "PostHog i9i2 right border rook",
+    "fen": "........../1rnbqkbnr1/1ppppppp2/8p1/........../5P4/........../1PPPP1PPP1/1RNBQKBN1R/.......... b Qkq - 1 2"
+  },
+  {
+    "name": "PostHog f8e7 bishop",
+    "fen": "........../1r1bqkbnr1/1p1ppppp2/2pn4pQ/........../3B1P4/4P5/1PPP2PPP1/1RNB1K1NR1/.......... b KQkq - 0 4"
+  },
+  {
+    "name": "PostHog c6b5 knight fork",
+    "fen": "5r4/2nbqkb1B1/1ppp1p2p1/4p2p2/4P1p3/3B1P4/6N3/1PPP2PPP1/1RN1QK4/.......... b Q - 2 9"
+  },
+  {
+    "name": "PostHog c7b6 pawn capture",
+    "fen": "5r4/2n2k2B1/1pp5p1/3pp2p2/4NPb3/3q1p4/........../1PPP3PP1/4QK4/1R8 b - - 1 18"
+  },
+  {
+    "name": "PostHog b10h10 left border rook",
+    "fen": "3q6/1r1b1kbnr1/1ppp2ppp1/3n1p4/4p5/........../2P7/1PBPPPPPP1/2N1QKBN1R/9R b kq - 2 5"
+  },
+  {
+    "name": "PostHog b10c9 corner",
+    "fen": "4kr4/2n5B1/1p6p1/7p2/3Qpp3b/5p1b2/2P2K4/1P1P3PP1/........../1R8 b - - 4 26"
+  },
+  {
+    "name": "PostHog en passant f4",
+    "fen": "........../1rnbqkbn1r/1pppppp1p1/7p2/........../5P4/3N2N3/1PPP1PPP1/1R1BQKB1R1/.......... b KQq f4 0 3"
+  },
+  {
+    "name": "PostHog d7d5 midgame pawn",
+    "fen": "........../1rn2kb2r/2p3pp2/1p1p1p2p1/........../q3PP4/2B1N1N1P1/1PPP2PP1b/4QK3R/9R b q - 5 14"
+  },
+  {
+    "name": "PostHog rank-10 promotion zone",
+    "fen": "5r4/2n2k2B1/1pp5p1/4pb1p2/4pP3b/4Qp4/2P7/1P1P1K1PP1/........../1R8 b - - 0 22"
+  },
+  {
+    "name": "PostHog left border white rook",
+    "fen": "R........./........../........../........../........../........../........../........../........../.......... w - - 0 1"
+  }
+]

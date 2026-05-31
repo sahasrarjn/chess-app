@@ -14,7 +14,6 @@ from pydantic import BaseModel, Field, field_validator
 
 from client_move_check import client_accepts_move, log_structured
 from engine_manager import EngineManager
-from fen_transform import client_fen_to_engine_fen, engine_uci_to_client_uci
 from validation import validate_fen
 
 logging.basicConfig(
@@ -128,21 +127,18 @@ def move(
     fen_hash = fen_fingerprint(req.fen)
     started = time.monotonic()
     try:
-        engine_fen = client_fen_to_engine_fen(req.fen)
-        last_engine_uci = ""
+        # Fairy-Stockfish chessborder uses the same client-centered FEN/UCI as the
+        # apps (see variants.ini startFen). Do not remap coordinates.
         last_uci = ""
         for attempt in range(MAX_PARITY_RETRIES):
             movetime_ms = req.movetime_ms + attempt * 50
-            engine_uci = engine.best_move(engine_fen, req.elo, movetime_ms)
-            uci = engine_uci_to_client_uci(engine_uci)
-            last_engine_uci = engine_uci
+            uci = engine.best_move(req.fen, req.elo, movetime_ms)
             last_uci = uci
             if not CLIENT_PARITY_CHECK or client_accepts_move(req.fen, uci):
                 elapsed_ms = int((time.monotonic() - started) * 1000)
                 log_structured(
                     "move_ok",
                     uci=uci,
-                    engine_uci=engine_uci,
                     fen_hash=fen_hash,
                     movetime_ms=movetime_ms,
                     elapsed_ms=elapsed_ms,
@@ -155,7 +151,6 @@ def move(
         log_structured(
             "move_reject_client_parity",
             uci=last_uci,
-            engine_uci=last_engine_uci,
             fen_hash=fen_hash,
             movetime_ms=req.movetime_ms,
             elapsed_ms=elapsed_ms,

@@ -8,7 +8,49 @@ import { fromFEN, matchEngineMove, toFEN } from "../src/engine/fen";
 function usage(): never {
   console.error("Usage: validate-move-cli.ts <fen> <uci>");
   console.error("   or: validate-move-cli.ts --corpus <path-to-engine-fen-corpus.json> [--server <url>]");
+  console.error(
+    "   or: validate-move-cli.ts --regression-fens <path-to-posthog-regression-fens.json> --server <url>"
+  );
   process.exit(2);
+}
+
+/** FEN-only cases: require live engine to return a move legal under client rules. */
+async function validateRegressionFens(fensPath: string, serverUrl: string): Promise<number> {
+  const raw = readFileSync(fensPath, "utf8");
+  const cases = JSON.parse(raw) as Array<{ name: string; fen: string }>;
+  let failed = 0;
+
+  for (const testCase of cases) {
+    const res = await fetch(`${serverUrl.replace(/\/$/, "")}/v1/move`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env.API_KEY ? { "X-API-Key": process.env.API_KEY } : {}),
+      },
+      body: JSON.stringify({ fen: testCase.fen, elo: 1200, movetime_ms: 100 }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error(`FAIL ${testCase.name}: server HTTP ${res.status} ${text.slice(0, 120)}`);
+      failed++;
+      continue;
+    }
+    const data = (await res.json()) as { uci?: string };
+    if (!data.uci) {
+      console.error(`FAIL ${testCase.name}: server returned no uci`);
+      failed++;
+      continue;
+    }
+    const game = fromFEN(testCase.fen);
+    const move = matchEngineMove(game, data.uci);
+    if (!move || !game.applyMove(move)) {
+      console.error(`FAIL ${testCase.name}: server uci ${data.uci} not legal locally`);
+      failed++;
+      continue;
+    }
+    console.log(`OK ${testCase.name} (${data.uci})`);
+  }
+  return failed > 0 ? 1 : 0;
 }
 
 async function validateCorpus(corpusPath: string, serverUrl?: string): Promise<number> {
@@ -89,6 +131,17 @@ async function main(): Promise<void> {
     const serverIdx = args.indexOf("--server");
     const serverUrl = serverIdx >= 0 ? args[serverIdx + 1] : undefined;
     process.exit(await validateCorpus(corpusPath, serverUrl));
+  }
+
+  if (args[0] === "--regression-fens") {
+    const fensPath = resolve(args[1] ?? usage());
+    const serverIdx = args.indexOf("--server");
+    const serverUrl = serverIdx >= 0 ? args[serverIdx + 1] : undefined;
+    if (!serverUrl) {
+      console.error("FATAL: --regression-fens requires --server <url>");
+      process.exit(2);
+    }
+    process.exit(await validateRegressionFens(fensPath, serverUrl));
   }
 
   const [fen, uci] = args;

@@ -8,6 +8,8 @@
     "build": "tsc && vite build",
     "test": "tsx --test \"src/**/*.test.ts\"",
     "test:corpus": "tsx scripts/validate-move-cli.ts --corpus ../shared/engine-fen-corpus.json",
+    "test:parity-sim": "tsx scripts/engine-parity-sim.ts",
+    "test:probe-parity": "tsx scripts/probe-engine-parity.ts",
     "preview": "vite preview",
     "sync-s3": "bash scripts/sync-s3-static.sh",
     "sync-all": "bash scripts/sync-all-static.sh",

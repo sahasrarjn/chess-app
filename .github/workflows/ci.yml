@@ -19,6 +19,8 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+      - run: npm test
+      - run: bash ../scripts/validate-engine-corpus.sh
       - run: npm run build
 
   worker:
@@ -56,6 +58,9 @@ jobs:
           docker compose -f server/docker-compose.yml logs
           exit 1
       - run: bash server/test_integration.sh http://localhost:8081
+      - run: bash scripts/validate-engine-corpus.sh
+        env:
+          ENGINE_URL: http://localhost:8081
       - if: always()
         run: docker compose -f server/docker-compose.yml down -v
 

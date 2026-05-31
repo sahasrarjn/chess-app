@@ -16,6 +16,14 @@ const CENTER_SQUARES: Square[] = [
   sq(5, 5),
 ];
 
+let searchDeadlineMs = Number.POSITIVE_INFINITY;
+let searchNodes = 0;
+
+function isSearchTimedOut(): boolean {
+  if (searchNodes++ % 512 !== 0) return false;
+  return performance.now() >= searchDeadlineMs;
+}
+
 function isCenter(row: number, col: number): boolean {
   return CENTER_SQUARES.some((s) => s.row === row && s.col === col);
 }
@@ -65,6 +73,8 @@ function minimax(
   rootColor: PieceColor,
   maxDepth: number
 ): number {
+  if (isSearchTimedOut()) return evaluate(game, rootColor);
+
   const result = game.result;
   if (result.type === "checkmate") {
     const win = result.winner === rootColor;
@@ -84,6 +94,7 @@ function minimax(
   if (maximizing === rootColor) {
     let maxEval = Number.MIN_SAFE_INTEGER;
     for (const move of moves) {
+      if (isSearchTimedOut()) return maxEval === Number.MIN_SAFE_INTEGER ? evaluate(game, rootColor) : maxEval;
       const copy = game.copy();
       copy.applyMoveUnchecked(move, false);
       const evalScore = minimax(
@@ -104,6 +115,7 @@ function minimax(
 
   let minEval = Number.MAX_SAFE_INTEGER;
   for (const move of moves) {
+    if (isSearchTimedOut()) return minEval === Number.MAX_SAFE_INTEGER ? evaluate(game, rootColor) : minEval;
     const copy = game.copy();
     copy.applyMoveUnchecked(move, false);
     const evalScore = minimax(
@@ -122,13 +134,17 @@ function minimax(
   return minEval;
 }
 
-/** Built-in bot: minimax with alpha-beta (same logic as iOS ChessBot). */
-export function chooseMinimaxMove(
+function chooseMinimaxMoveInternal(
   game: ChessGame,
-  difficulty: BotDifficulty
+  difficulty: BotDifficulty,
+  maxMs?: number
 ): Move | null {
   const moves = game.legalMoves();
   if (moves.length === 0) return null;
+
+  searchNodes = 0;
+  searchDeadlineMs =
+    maxMs == null ? Number.POSITIVE_INFINITY : performance.now() + maxMs;
 
   const randomness = difficultyRandomness(difficulty);
   if (randomness > 0 && Math.random() < randomness) {
@@ -141,6 +157,7 @@ export function chooseMinimaxMove(
   let bestScore = Number.MIN_SAFE_INTEGER;
 
   for (const move of moves) {
+    if (isSearchTimedOut()) break;
     const copy = game.copy();
     copy.applyMoveUnchecked(move, false);
     const score = minimax(
@@ -159,4 +176,21 @@ export function chooseMinimaxMove(
   }
 
   return bestMove;
+}
+
+/** Built-in bot: minimax with alpha-beta (same logic as iOS ChessBot). */
+export function chooseMinimaxMove(
+  game: ChessGame,
+  difficulty: BotDifficulty
+): Move | null {
+  return chooseMinimaxMoveInternal(game, difficulty);
+}
+
+/** Same search with a hard time budget (for Web Worker / offline fallback). */
+export function chooseMinimaxMoveTimed(
+  game: ChessGame,
+  difficulty: BotDifficulty,
+  maxMs: number
+): Move | null {
+  return chooseMinimaxMoveInternal(game, difficulty, maxMs);
 }

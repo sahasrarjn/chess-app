@@ -1,8 +1,6 @@
-#!/usr/bin/env python3
-"""HTTP API for Border Chess - Fairy-Stockfish on the server."""
-
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import time
@@ -14,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
+from client_move_check import client_accepts_move, log_structured
 from engine_manager import EngineManager
 from validation import validate_fen
 
@@ -32,8 +31,13 @@ ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 MAX_BODY_BYTES = int(os.environ.get("MAX_BODY_BYTES", "4096"))
+CLIENT_PARITY_CHECK = os.environ.get("CLIENT_PARITY_CHECK", "1") != "0"
 
 engine: EngineManager | None = None
+
+
+def fen_fingerprint(fen: str) -> str:
+    return hashlib.sha256(fen.encode("utf-8")).hexdigest()[:16]
 
 
 @asynccontextmanager
@@ -119,22 +123,45 @@ def move(
     if engine is None:
         raise HTTPException(status_code=503, detail="Engine not ready")
 
+    fen_hash = fen_fingerprint(req.fen)
     started = time.monotonic()
     try:
         uci = engine.best_move(req.fen, req.elo, req.movetime_ms)
         elapsed_ms = int((time.monotonic() - started) * 1000)
-        logger.info(
-            "move ok uci=%s movetime_ms=%d elapsed_ms=%d",
-            uci,
-            req.movetime_ms,
-            elapsed_ms,
+
+        if CLIENT_PARITY_CHECK and not client_accepts_move(req.fen, uci):
+            log_structured(
+                "move_reject_client_parity",
+                uci=uci,
+                fen_hash=fen_hash,
+                movetime_ms=req.movetime_ms,
+                elapsed_ms=elapsed_ms,
+                elo=req.elo,
+            )
+            raise HTTPException(
+                status_code=422,
+                detail=f"Engine move ({uci}) failed client rules validation",
+            )
+
+        log_structured(
+            "move_ok",
+            uci=uci,
+            fen_hash=fen_hash,
+            movetime_ms=req.movetime_ms,
+            elapsed_ms=elapsed_ms,
+            elo=req.elo,
         )
         return MoveResponse(uci=uci)
+    except HTTPException:
+        raise
     except ValueError as exc:
+        log_structured("move_bad_request", fen_hash=fen_hash, error=str(exc))
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError:
+        log_structured("move_engine_unavailable", fen_hash=fen_hash)
         logger.exception("Engine move failed after restart")
         raise HTTPException(status_code=503, detail="Engine unavailable") from None
     except Exception:
+        log_structured("move_engine_error", fen_hash=fen_hash)
         logger.exception("Unexpected engine failure")
         raise HTTPException(status_code=500, detail="Engine error") from None

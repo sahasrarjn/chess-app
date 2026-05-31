@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "test": "tsx --test \"src/**/*.test.ts\"",
+    "test:corpus": "tsx scripts/validate-move-cli.ts --corpus ../shared/engine-fen-corpus.json",
     "preview": "vite preview",
     "sync-s3": "bash scripts/sync-s3-static.sh",
     "sync-all": "bash scripts/sync-all-static.sh",
@@ -14,6 +15,7 @@
   },
   "devDependencies": {
     "tsx": "^4.22.3",
+    "esbuild": "^0.25.5",
     "typescript": "^5.8.3",
     "vite": "^6.3.5"
   },

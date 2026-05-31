@@ -213,16 +213,65 @@ select {
   color: var(--accent);
 }
 
+.status-wrap {
+  margin-bottom: 6px;
+}
+
 .status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   text-align: center;
   font-size: 0.9rem;
   color: var(--muted);
   min-height: 1.4em;
-  margin-bottom: 6px;
+}
+
+.status-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--accent);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: status-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.status-spinner[hidden] {
+  display: none;
+}
+
+@keyframes status-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.status-hint {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--muted);
+  min-height: 1.1em;
+  line-height: 1.35;
+  padding: 0 8px;
+}
+
+.status-hint[hidden] {
+  display: none;
 }
 
 .status-bar.error {
   color: #ff8a80;
+}
+
+.status-bar.thinking {
+  color: var(--accent);
+}
+
+.game-controls button.retry-emphasis:not([hidden]) {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+  font-weight: 600;
 }
 
 .captured-bar {

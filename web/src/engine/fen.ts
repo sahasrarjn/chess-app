@@ -1,14 +1,15 @@
 import {
   BOARD_SIZE,
+  type CastlingRights,
   engineNotation,
   fromEngineNotation,
   fromStandardNotation,
+  type Piece,
   type PieceKind,
   type Square,
 } from "./types";
-import type { ChessGame } from "./chessGame";
-import { squaresEqual } from "./chessGame";
-import { parseEngineMove } from "./uci";
+import { ChessGame, squaresEqual } from "./chessGame";
+import { resolveUciInterpretations } from "./uci";
 
 export function toFEN(game: ChessGame): string {
   const ranks: string[] = [];
@@ -20,6 +21,77 @@ export function toFEN(game: ChessGame): string {
   const castle = fenCastling(game);
   const ep = game.enPassantTarget ? engineNotation(game.enPassantTarget) : "-";
   return `${placement} ${side} ${castle} ${ep} ${game.halfmoveClock} ${game.fullmoveNumber}`;
+}
+
+/** Load a Fairy-Stockfish chessborder FEN (for tests and diagnostics). */
+export function fromFEN(fen: string): ChessGame {
+  const parts = fen.trim().split(/\s+/);
+  if (parts.length < 4) throw new Error("Invalid FEN");
+
+  const ranks = parts[0].split("/");
+  if (ranks.length !== BOARD_SIZE) throw new Error("Invalid FEN board");
+
+  const game = new ChessGame();
+  for (let row = 0; row < BOARD_SIZE; row++) {
+    parseFenRank(ranks[row] ?? "", row, game.board);
+  }
+
+  game.activeColor = parts[1] === "b" ? "black" : "white";
+  game.castlingRights = parseCastling(parts[2] ?? "-");
+  game.enPassantTarget = parseEnPassant(parts[3] ?? "-");
+  game.halfmoveClock = parts[4] ? parseInt(parts[4], 10) : 0;
+  game.fullmoveNumber = parts[5] ? parseInt(parts[5], 10) : 1;
+  game.resetLoadedPosition();
+  return game;
+}
+
+function parseFenRank(rankStr: string, row: number, board: (Piece | null)[][]): void {
+  let col = 0;
+  for (const ch of rankStr) {
+    if (col >= BOARD_SIZE) break;
+    if (ch === ".") {
+      board[row][col++] = null;
+      continue;
+    }
+    if (ch >= "1" && ch <= "9") {
+      const empty = parseInt(ch, 10);
+      for (let i = 0; i < empty && col < BOARD_SIZE; i++) {
+        board[row][col++] = null;
+      }
+      continue;
+    }
+    board[row][col++] = parsePieceChar(ch);
+  }
+  while (col < BOARD_SIZE) {
+    board[row][col++] = null;
+  }
+}
+
+function parsePieceChar(ch: string): Piece {
+  const kind = ch.toUpperCase() as PieceKind;
+  return { kind, color: ch === ch.toUpperCase() ? "white" : "black" };
+}
+
+function parseCastling(text: string): CastlingRights {
+  if (text === "-") {
+    return {
+      whiteKingSide: false,
+      whiteQueenSide: false,
+      blackKingSide: false,
+      blackQueenSide: false,
+    };
+  }
+  return {
+    whiteKingSide: text.includes("K"),
+    whiteQueenSide: text.includes("Q"),
+    blackKingSide: text.includes("k"),
+    blackQueenSide: text.includes("q"),
+  };
+}
+
+function parseEnPassant(text: string): Square | null {
+  if (text === "-") return null;
+  return fromEngineNotation(text) ?? fromStandardNotation(text);
 }
 
 function fenRank(game: ChessGame, row: number): string {
@@ -54,46 +126,35 @@ function fenCastling(game: ChessGame): string {
   return s || "-";
 }
 
-/** Match Fairy-Stockfish UCI to a legal move (mirrors Swift move(fromEngineUCI:)). */
-export function matchEngineMove(game: ChessGame, uci: string): ReturnType<ChessGame["legalMoves"]>[0] | null {
-  const trimmed = uci.trim().toLowerCase();
-  if (trimmed.length < 4) return null;
-
-  let from: Square | null = null;
-  let to: Square | null = null;
-  let promotion: PieceKind | undefined;
-
-  const engineParsed = parseEngineMove(trimmed);
-  if (engineParsed) {
-    from = engineParsed.from;
-    to = engineParsed.to;
-    promotion = engineParsed.promotion;
-  } else {
-    const fromStr = trimmed.slice(0, 2);
-    const toStr = trimmed.slice(2, 4);
-    const promoChar = trimmed.length > 4 ? trimmed[4] : undefined;
-    from = fromStandardNotation(fromStr) ?? fromEngineNotation(fromStr);
-    to = fromStandardNotation(toStr) ?? fromEngineNotation(toStr);
-    if (promoChar && ["q", "r", "b", "n"].includes(promoChar)) {
-      promotion = promoChar.toUpperCase() as PieceKind;
-    }
-  }
-
-  if (!from || !to) return null;
-
+function matchLegalMove(
+  game: ChessGame,
+  from: Square,
+  to: Square,
+  promotion?: PieceKind
+): ReturnType<ChessGame["legalMoves"]>[0] | null {
   const color = game.activeColor;
-  const candidates = game.legalMoves(color).filter(
+  const strict = game.legalMoves(color).filter(
     (m) =>
       squaresEqual(m.from, from) &&
       squaresEqual(m.to, to) &&
       (promotion === undefined || m.promotion === promotion)
   );
-
+  if (strict[0]) return strict[0];
   return (
-    candidates[0] ??
     game.legalMoves(color).find(
       (m) => squaresEqual(m.from, from) && squaresEqual(m.to, to)
-    ) ??
-    null
+    ) ?? null
   );
+}
+
+/** Match Fairy-Stockfish UCI to a legal move (mirrors Swift move(fromEngineUCI:)). */
+export function matchEngineMove(
+  game: ChessGame,
+  uci: string
+): ReturnType<ChessGame["legalMoves"]>[0] | null {
+  for (const { from, to, promotion } of resolveUciInterpretations(uci)) {
+    const matched = matchLegalMove(game, from, to, promotion);
+    if (matched) return matched;
+  }
+  return null;
 }

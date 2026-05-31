@@ -48,7 +48,7 @@ Resources:
       AutoScalingConfigurationName: chess-border-engine
       MinSize: 1
       MaxSize: 3
-      MaxConcurrency: 8
+      MaxConcurrency: 12
 
   AppRunnerService:
     Type: AWS::AppRunner::Service
@@ -238,7 +238,7 @@ Outputs:
   ServiceArn:
     Value: !GetAtt AppRunnerService.ServiceArn
   AutoScalingConfigurationArn:
-    Description: Autoscale 1-3 instances, MaxConcurrency 8
+    Description: Autoscale 1-3 instances, MaxConcurrency 12
     Value: !GetAtt AppRunnerAutoScaling.AutoScalingConfigurationArn
   DashboardName:
     Description: CloudWatch dashboard for traffic and instance count

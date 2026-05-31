@@ -68,33 +68,43 @@ extension ChessGame {
     private func matchMove(uci: String, preferEngineCoordinates: Bool) -> Move? {
         let trimmed = uci.trimmingCharacters(in: .whitespaces).lowercased()
 
-        let from: Square?
-        let to: Square?
-        let promotion: PieceKind?
+        var candidates: [(Square, Square, PieceKind?)] = []
 
         if preferEngineCoordinates, let parsed = UCIParser.parseEngineMove(trimmed) {
-            from = parsed.from
-            to = parsed.to
-            promotion = parsed.promotion
-        } else {
-            guard trimmed.count >= 4 else { return nil }
+            candidates.append((parsed.from, parsed.to, parsed.promotion))
+        }
+
+        if trimmed.count >= 4 {
             let fromStr = String(trimmed.prefix(2))
             let toStr = String(trimmed.dropFirst(2).prefix(2))
             let promoChar = trimmed.count > 4 ? trimmed.last! : nil
-            from = Square.fromStandardNotation(fromStr) ?? Square.fromEngineNotation(fromStr)
-            to = Square.fromStandardNotation(toStr) ?? Square.fromEngineNotation(toStr)
-            promotion = promoChar.flatMap { ch in
+            let promotion = promoChar.flatMap { ch in
                 PieceKind(rawValue: Character(String(ch).uppercased()))
+            }
+            if let from = Square.fromStandardNotation(fromStr), let to = Square.fromStandardNotation(toStr) {
+                candidates.append((from, to, promotion))
+            }
+            let fromMix = Square.fromStandardNotation(fromStr) ?? Square.fromEngineNotation(fromStr)
+            let toMix = Square.fromStandardNotation(toStr) ?? Square.fromEngineNotation(toStr)
+            if let fromMix, let toMix {
+                candidates.append((fromMix, toMix, promotion))
             }
         }
 
-        guard let from, let to, to.isValid else { return nil }
+        var seen = Set<String>()
+        for (from, to, promotion) in candidates {
+            let key = "\(from.row),\(from.col),\(to.row),\(to.col),\(promotion?.rawValue ?? "")"
+            if seen.contains(key) { continue }
+            seen.insert(key)
 
-        let candidates = legalMoves(for: activeColor).filter {
-            $0.from == from && $0.to == to && $0.promotion == promotion
+            let strict = legalMoves(for: activeColor).filter {
+                $0.from == from && $0.to == to && $0.promotion == promotion
+            }
+            if let move = strict.first { return move }
+            if let move = legalMoves(for: activeColor).first(where: { $0.from == from && $0.to == to }) {
+                return move
+            }
         }
-        return candidates.first ?? legalMoves(for: activeColor).first {
-            $0.from == from && $0.to == to
-        }
+        return nil
     }
 }

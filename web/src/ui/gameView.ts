@@ -41,6 +41,9 @@ export function renderGame(
 class GameScreen {
   private ctrl: GameController;
   private statusEl!: HTMLDivElement;
+  private statusHintEl!: HTMLDivElement;
+  private statusSpinnerEl!: HTMLSpanElement;
+  private thinkingTimer: number | null = null;
   private capBlackEl!: HTMLElement;
   private capWhiteEl!: HTMLElement;
   private gridEl!: HTMLDivElement;
@@ -112,8 +115,15 @@ class GameScreen {
     capBar.appendChild(this.capWhiteEl);
     screen.appendChild(capBar);
 
+    const statusWrap = el("div", "status-wrap");
     this.statusEl = el("div", "status-bar") as HTMLDivElement;
-    screen.appendChild(this.statusEl);
+    this.statusSpinnerEl = el("span", "status-spinner") as HTMLSpanElement;
+    this.statusSpinnerEl.setAttribute("aria-hidden", "true");
+    this.statusEl.appendChild(this.statusSpinnerEl);
+    this.statusHintEl = el("div", "status-hint") as HTMLDivElement;
+    statusWrap.appendChild(this.statusEl);
+    statusWrap.appendChild(this.statusHintEl);
+    screen.appendChild(statusWrap);
 
     const boardWrap = el("div", "board-wrap");
     boardWrap.appendChild(el("div", "board-frame"));
@@ -127,14 +137,14 @@ class GameScreen {
     screen.appendChild(moveWrap);
 
     const controls = el("div", "game-controls");
-    this.undoBtn = el("button", "", "Undo") as HTMLButtonElement;
-    this.undoBtn.onclick = () => this.ctrl.undo();
-    controls.appendChild(this.undoBtn);
-
-    this.retryBtn = el("button", "primary", "Retry Bot") as HTMLButtonElement;
+    this.retryBtn = el("button", "primary retry-emphasis", "Retry Bot") as HTMLButtonElement;
     this.retryBtn.onclick = () => this.ctrl.retryBotMove();
     this.retryBtn.hidden = true;
     controls.appendChild(this.retryBtn);
+
+    this.undoBtn = el("button", "", "Undo") as HTMLButtonElement;
+    this.undoBtn.onclick = () => this.ctrl.undo();
+    controls.appendChild(this.undoBtn);
 
     this.backBtn = el("button", "", "◀") as HTMLButtonElement;
     this.backBtn.onclick = () => this.ctrl.stepBack();
@@ -166,6 +176,10 @@ class GameScreen {
   }
 
   destroy(): void {
+    if (this.thinkingTimer != null) {
+      window.clearInterval(this.thinkingTimer);
+      this.thinkingTimer = null;
+    }
     this.ctrl.dispose();
     this.promotionEl?.remove();
     this.gameOverEl?.remove();
@@ -233,8 +247,23 @@ class GameScreen {
   }
 
   private updateStatus(): void {
+    const thinking = this.ctrl.isThinking && !this.ctrl.botEngineError;
     this.statusEl.textContent = this.ctrl.statusText();
+    this.statusSpinnerEl.hidden = !thinking;
+
+    const hint = this.ctrl.statusSubtext();
+    this.statusHintEl.textContent = hint ?? "";
+    this.statusHintEl.hidden = !hint;
+
     this.statusEl.classList.toggle("error", !!this.ctrl.botEngineError);
+    this.statusEl.classList.toggle("thinking", thinking);
+
+    if (thinking && this.thinkingTimer == null) {
+      this.thinkingTimer = window.setInterval(() => this.updateStatus(), 500);
+    } else if (!thinking && this.thinkingTimer != null) {
+      window.clearInterval(this.thinkingTimer);
+      this.thinkingTimer = null;
+    }
   }
 
   private updateCaptured(): void {
@@ -379,8 +408,7 @@ class GameScreen {
 
   private updateControls(): void {
     const gameOver = this.ctrl.game.result.type !== "ongoing";
-    this.undoBtn.disabled =
-      gameOver || this.ctrl.game.moveHistory.length === 0 || this.ctrl.isThinking;
+    this.undoBtn.disabled = gameOver || this.ctrl.game.moveHistory.length === 0;
     this.resignBtn.disabled = gameOver;
     this.retryBtn.hidden = !this.ctrl.canRetryBot;
     this.retryBtn.disabled = !this.ctrl.canRetryBot;

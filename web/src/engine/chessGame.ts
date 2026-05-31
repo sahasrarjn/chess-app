@@ -52,6 +52,17 @@ export interface GameSnapshot {
   lastMove: Move | null;
 }
 
+/** Serializable position for the offline bot Web Worker. */
+export type BotSearchState = {
+  board: (Piece | null)[][];
+  activeColor: PieceColor;
+  castlingRights: CastlingRights;
+  enPassantTarget: Square | null;
+  halfmoveClock: number;
+  fullmoveNumber: number;
+  resignedBy: PieceColor | null;
+};
+
 const BISHOP_DIRS: [number, number][] = [
   [-1, -1],
   [-1, 1],
@@ -345,6 +356,41 @@ export class ChessGame {
     return g;
   }
 
+  /** Clear move history after FEN import or bot-worker load. */
+  resetLoadedPosition(): void {
+    this.moveHistory = [];
+    this.recordedMoves = [];
+    this.lastMove = null;
+    this.snapshots = [snapshotFrom(this)];
+    this.positionCounts = new Map();
+    this.registerPosition();
+  }
+
+  static fromSearchState(state: BotSearchState): ChessGame {
+    const g = new ChessGame();
+    g.board = state.board.map((r) => r.map((c) => (c ? { ...c } : null)));
+    g.activeColor = state.activeColor;
+    g.castlingRights = { ...state.castlingRights };
+    g.enPassantTarget = state.enPassantTarget;
+    g.halfmoveClock = state.halfmoveClock;
+    g.fullmoveNumber = state.fullmoveNumber;
+    g.resignedBy = state.resignedBy;
+    g.resetLoadedPosition();
+    return g;
+  }
+
+  toSearchState(): BotSearchState {
+    return {
+      board: this.board.map((r) => r.map((c) => (c ? { ...c } : null))),
+      activeColor: this.activeColor,
+      castlingRights: { ...this.castlingRights },
+      enPassantTarget: this.enPassantTarget,
+      halfmoveClock: this.halfmoveClock,
+      fullmoveNumber: this.fullmoveNumber,
+      resignedBy: this.resignedBy,
+    };
+  }
+
   private pseudoLegalMoves(from: Square, piece: Piece): Move[] {
     switch (piece.kind) {
       case "P":
@@ -408,6 +454,18 @@ export class ChessGame {
           squareIsValid(twoForward) &&
           isPlayable(twoForward.row, twoForward.col) &&
           !this.board[twoForward.row][twoForward.col]
+        ) {
+          moves.push({ from, to: twoForward });
+        }
+      } else if (from.row === this.pawnStartRow(color) + dir) {
+        // Fairy-Stockfish chessborder: a pawn on engine rank 7 (one step from start)
+        // may still advance two squares (e.g. d7d5 in engine UCI).
+        const twoForward = sq(from.row + 2 * dir, from.col);
+        if (
+          squareIsValid(twoForward) &&
+          isPlayable(twoForward.row, twoForward.col) &&
+          !this.board[twoForward.row][twoForward.col] &&
+          !this.board[from.row + dir][from.col]
         ) {
           moves.push({ from, to: twoForward });
         }

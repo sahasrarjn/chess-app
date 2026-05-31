@@ -1,4 +1,60 @@
-import { BOARD_SIZE, fromEngineNotation, type PieceKind, type Square } from "./types";
+import {
+  BOARD_SIZE,
+  fromEngineNotation,
+  fromStandardNotation,
+  type PieceKind,
+  type Square,
+} from "./types";
+
+export type UciSquares = { from: Square; to: Square; promotion?: PieceKind };
+
+function promotionFromUciSuffix(trimmed: string): PieceKind | undefined {
+  if (trimmed.length <= 4) return undefined;
+  const ch = trimmed[4]?.toUpperCase();
+  if (ch && ["Q", "R", "B", "N"].includes(ch)) return ch as PieceKind;
+  return undefined;
+}
+
+/**
+ * Fairy-Stockfish may return inner-board moves as standard a–h/1–8 UCI (d7d5)
+ * or full-grid engine UCI (h9g7). Try every plausible coordinate mapping.
+ */
+export function resolveUciInterpretations(uci: string): UciSquares[] {
+  const trimmed = uci.trim().toLowerCase();
+  if (trimmed.length < 4) return [];
+
+  const out: UciSquares[] = [];
+  const seen = new Set<string>();
+  const push = (from: Square, to: Square, promotion?: PieceKind): void => {
+    const key = `${from.row},${from.col},${to.row},${to.col},${promotion ?? ""}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ from, to, promotion });
+  };
+
+  const suffixPromo = promotionFromUciSuffix(trimmed);
+
+  const engineParsed = parseEngineMove(trimmed);
+  if (engineParsed) {
+    push(
+      engineParsed.from,
+      engineParsed.to,
+      engineParsed.promotion ?? suffixPromo
+    );
+  }
+
+  const fromStr = trimmed.slice(0, 2);
+  const toStr = trimmed.slice(2, 4);
+  const fromStd = fromStandardNotation(fromStr);
+  const toStd = fromStandardNotation(toStr);
+  if (fromStd && toStd) push(fromStd, toStd, suffixPromo);
+
+  const fromMix = fromStandardNotation(fromStr) ?? fromEngineNotation(fromStr);
+  const toMix = fromStandardNotation(toStr) ?? fromEngineNotation(toStr);
+  if (fromMix && toMix) push(fromMix, toMix, suffixPromo);
+
+  return out;
+}
 
 export function parseEngineMove(
   uci: string

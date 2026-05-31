@@ -348,6 +348,20 @@ export class GameController {
     );
   }
 
+  /** Modal headline when the game has ended (player is always white in vs bot). */
+  gameOverTitle(): string {
+    if (this.mode === "vsBot") {
+      const result = this.game.result;
+      if (
+        (result.type === "checkmate" || result.type === "resignation") &&
+        result.winner === "white"
+      ) {
+        return "Congratulations!";
+      }
+    }
+    return "Game over";
+  }
+
   statusText(): string {
     if (this.isBrowsingHistory) {
       return `Reviewing move ${this.previewPly} of ${this.livePly}`;

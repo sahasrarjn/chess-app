@@ -482,7 +482,7 @@ class GameScreen {
     };
     const panel = el("div", "overlay-panel");
     panel.onclick = (ev) => ev.stopPropagation();
-    panel.appendChild(el("h3", "", "Game over"));
+    panel.appendChild(el("h3", "", this.ctrl.gameOverTitle()));
     panel.appendChild(el("p", "", this.ctrl.statusText()));
     const btn = el("button", "primary", "New Game");
     btn.onclick = () => this.startNewGame();

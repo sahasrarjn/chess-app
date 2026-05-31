@@ -416,7 +416,11 @@ export class ChessGame {
 
     for (const dc of [-1, 1]) {
       const capture = sq(from.row + dir, from.col + dc);
-      if (!this.isPawnDestination(capture, color)) continue;
+      // A pawn may capture diagonally onto a border square: enemy pieces can
+      // slide onto the outer ring, and a diagonally adjacent pawn must be able
+      // to take them. Unlike forward moves, captures aren't limited to playable
+      // squares (isPawnDestination); any on-board square with an enemy is fair.
+      if (!squareIsValid(capture)) continue;
 
       const target = this.board[capture.row][capture.col];
       if (target && target.color !== color) {

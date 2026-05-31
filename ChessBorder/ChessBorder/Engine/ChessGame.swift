@@ -216,7 +216,11 @@ final class ChessGame {
 
         for dc in [-1, 1] {
             let capture = Square(row: square.row + dir, col: square.col + dc)
-            guard isPawnDestination(capture, color: color) else { continue }
+            // A pawn may capture diagonally onto a border square: enemy pieces can
+            // slide onto the outer ring, and a diagonally adjacent pawn must be able
+            // to take them. Unlike forward moves, captures aren't limited to playable
+            // squares (isPawnDestination); any on-board square with an enemy is fair.
+            guard capture.isValid else { continue }
 
             if let target = board[capture.row][capture.col], target.color != color {
                 if capture.row == promotionRow(for: color) {

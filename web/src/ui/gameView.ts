@@ -41,7 +41,6 @@ export function renderGame(
 class GameScreen {
   private ctrl: GameController;
   private statusEl!: HTMLDivElement;
-  private statusHintEl!: HTMLDivElement;
   private statusSpinnerEl!: HTMLSpanElement;
   private capBlackEl!: HTMLElement;
   private capWhiteEl!: HTMLElement;
@@ -120,9 +119,7 @@ class GameScreen {
     this.statusSpinnerEl = el("span", "status-spinner") as HTMLSpanElement;
     this.statusSpinnerEl.setAttribute("aria-hidden", "true");
     this.statusEl.appendChild(this.statusSpinnerEl);
-    this.statusHintEl = el("div", "status-hint") as HTMLDivElement;
     statusWrap.appendChild(this.statusEl);
-    statusWrap.appendChild(this.statusHintEl);
     top.appendChild(statusWrap);
     screen.appendChild(top);
 
@@ -255,7 +252,6 @@ class GameScreen {
       this.ctrl.isThinking || (this.ctrl.isBotTurn && !this.ctrl.botEngineError);
     this.statusEl.textContent = this.ctrl.statusText();
     this.statusSpinnerEl.hidden = !showSpinner;
-    this.statusHintEl.hidden = true;
     this.statusEl.classList.toggle("error", false);
     this.statusEl.classList.toggle("thinking", showBotStatus);
   }

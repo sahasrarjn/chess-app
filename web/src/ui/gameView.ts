@@ -191,7 +191,7 @@ class GameScreen {
         const isLight = (row + col) % 2 === 0;
         const btn = el("button", `square ${isLight ? "light" : "dark"}`) as HTMLButtonElement;
         const square: Square = { row, col };
-        btn.onclick = () => this.ctrl.handleSquareTap(square);
+        bindTap(btn, () => this.ctrl.handleSquareTap(square));
 
         const cell: SquareCell = { btn, pieceImg: null, dot: null, ring: null };
 
@@ -500,4 +500,111 @@ function el(tag: string, className: string, text?: string): HTMLElement {
   if (text) node.textContent = text;
   if (tag === "button") (node as HTMLButtonElement).type = "button";
   return node;
+}
+
+/** Reliable tap on touchscreens (incl. iOS Safari): touchend + pointer, deduped. */
+const TAP_SLOP_PX = 14;
+const TAP_SLOP_SQ = TAP_SLOP_PX * TAP_SLOP_PX;
+
+function bindTap(target: HTMLElement, onTap: () => void): void {
+  let start: { x: number; y: number } | null = null;
+  let consumed = false;
+
+  const reset = (): void => {
+    start = null;
+  };
+
+  const withinSlop = (x: number, y: number): boolean => {
+    if (!start) return false;
+    const dx = x - start.x;
+    const dy = y - start.y;
+    return dx * dx + dy * dy <= TAP_SLOP_SQ;
+  };
+
+  const commitTap = (e: Event): void => {
+    if (consumed) return;
+    consumed = true;
+    e.preventDefault();
+    onTap();
+  };
+
+  const begin = (x: number, y: number): void => {
+    start = { x, y };
+    consumed = false;
+  };
+
+  // iOS Safari: touchend is the most reliable path; passive:false allows suppressing ghost click.
+  target.addEventListener(
+    "touchstart",
+    (e) => {
+      if (e.touches.length !== 1) {
+        reset();
+        return;
+      }
+      const t = e.touches[0]!;
+      begin(t.clientX, t.clientY);
+    },
+    { passive: true }
+  );
+
+  target.addEventListener(
+    "touchend",
+    (e) => {
+      if (!start || e.changedTouches.length !== 1) {
+        reset();
+        return;
+      }
+      const t = e.changedTouches[0]!;
+      if (!withinSlop(t.clientX, t.clientY)) {
+        reset();
+        return;
+      }
+      reset();
+      commitTap(e);
+    },
+    { passive: false }
+  );
+
+  target.addEventListener("touchcancel", reset);
+
+  // Mouse / pen (skip touch — handled above to avoid double-fire on iOS).
+  target.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "touch") return;
+    if (!e.isPrimary) return;
+    begin(e.clientX, e.clientY);
+  });
+
+  target.addEventListener("pointerup", (e) => {
+    if (e.pointerType === "touch") return;
+    if (!start || !withinSlop(e.clientX, e.clientY)) {
+      reset();
+      return;
+    }
+    reset();
+    commitTap(e);
+  });
+
+  target.addEventListener("pointercancel", reset);
+
+  target.addEventListener(
+    "click",
+    (e) => {
+      if (consumed) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      if (e.detail === 0) return;
+      onTap();
+    },
+    true
+  );
+
+  if (target instanceof HTMLButtonElement) {
+    target.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      onTap();
+    });
+  }
 }

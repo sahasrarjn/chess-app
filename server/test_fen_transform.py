@@ -26,6 +26,15 @@ class FenTransformTests(unittest.TestCase):
         client_move = engine_uci_to_client_uci(engine_move)
         self.assertEqual(client_move, "b3b4")
 
+    def test_midgame_fen_expands_run_length_ranks(self) -> None:
+        midgame = (
+            "........../1rn2kb2r/2p3pp2/1p1p1p2p1/........../q3PP4/2B1N1N1P1/"
+            "1PPP2PP1b/4QK3R/9R b q - 5 14"
+        )
+        engine_fen = client_fen_to_engine_fen(midgame)
+        for rank in engine_fen.split()[0].split("/"):
+            self.assertEqual(len(rank), 10, msg=rank)
+
 
 if __name__ == "__main__":
     unittest.main()

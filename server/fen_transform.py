@@ -47,16 +47,32 @@ def _shift_uci_files(uci: str, delta: int) -> str:
     return _shift_square(from_sq, delta) + _shift_square(to_sq, delta) + promo
 
 
-def _normalize_client_rank(rank: str) -> str:
-    if len(rank) == 10:
-        return rank
-    if len(rank) == 8:
-        return rank + ".."
-    raise ValueError("Each FEN rank must be 8 or 10 characters")
+def _expand_rank_to_10(rank: str) -> str:
+    """Decode a client FEN rank (run-length or dotted) into exactly 10 cells."""
+    cells: list[str] = []
+    col = 0
+    for ch in rank:
+        if col >= 10:
+            break
+        if ch == ".":
+            cells.append(".")
+            col += 1
+            continue
+        if ch.isdigit():
+            empty = int(ch)
+            for _ in range(min(empty, 10 - col)):
+                cells.append(".")
+                col += 1
+            continue
+        cells.append(ch)
+        col += 1
+    while len(cells) < 10:
+        cells.append(".")
+    return "".join(cells[:10])
 
 
 def _shift_rank_client_to_engine(rank: str) -> str:
-    rank = _normalize_client_rank(rank)
+    rank = _expand_rank_to_10(rank)
     if all(ch == "." for ch in rank):
         return ".........."
     out = ["."] * 10

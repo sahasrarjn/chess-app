@@ -40,7 +40,16 @@ async function validateCorpus(corpusPath: string, serverUrl?: string): Promise<n
     }
 
     if (serverUrl) {
-      const fenForServer = toFEN(game);
+      const serverGame = fromFEN(testCase.fen);
+      for (const setup of testCase.setup_uci ?? []) {
+        const setupMove = matchEngineMove(serverGame, setup);
+        if (!setupMove || !serverGame.applyMove(setupMove)) {
+          console.error(`FAIL setup ${testCase.name}: ${setup}`);
+          failed++;
+          continue;
+        }
+      }
+      const fenForServer = toFEN(serverGame);
       const res = await fetch(`${serverUrl.replace(/\/$/, "")}/v1/move`, {
         method: "POST",
         headers: {
@@ -60,7 +69,7 @@ async function validateCorpus(corpusPath: string, serverUrl?: string): Promise<n
         failed++;
         continue;
       }
-      const serverMove = matchEngineMove(game, data.uci);
+      const serverMove = matchEngineMove(serverGame, data.uci);
       if (!serverMove) {
         console.error(`FAIL ${testCase.name}: server uci ${data.uci} not legal locally`);
         failed++;

@@ -33,6 +33,7 @@ ALLOWED_ORIGINS = [
 ]
 MAX_BODY_BYTES = int(os.environ.get("MAX_BODY_BYTES", "4096"))
 CLIENT_PARITY_CHECK = os.environ.get("CLIENT_PARITY_CHECK", "1") != "0"
+MAX_PARITY_RETRIES = int(os.environ.get("MAX_PARITY_RETRIES", "4"))
 
 engine: EngineManager | None = None
 
@@ -128,35 +129,43 @@ def move(
     started = time.monotonic()
     try:
         engine_fen = client_fen_to_engine_fen(req.fen)
-        engine_uci = engine.best_move(engine_fen, req.elo, req.movetime_ms)
-        uci = engine_uci_to_client_uci(engine_uci)
+        last_engine_uci = ""
+        last_uci = ""
+        for attempt in range(MAX_PARITY_RETRIES):
+            movetime_ms = req.movetime_ms + attempt * 50
+            engine_uci = engine.best_move(engine_fen, req.elo, movetime_ms)
+            uci = engine_uci_to_client_uci(engine_uci)
+            last_engine_uci = engine_uci
+            last_uci = uci
+            if not CLIENT_PARITY_CHECK or client_accepts_move(req.fen, uci):
+                elapsed_ms = int((time.monotonic() - started) * 1000)
+                log_structured(
+                    "move_ok",
+                    uci=uci,
+                    engine_uci=engine_uci,
+                    fen_hash=fen_hash,
+                    movetime_ms=movetime_ms,
+                    elapsed_ms=elapsed_ms,
+                    elo=req.elo,
+                    attempt=attempt + 1,
+                )
+                return MoveResponse(uci=uci)
+
         elapsed_ms = int((time.monotonic() - started) * 1000)
-
-        if CLIENT_PARITY_CHECK and not client_accepts_move(req.fen, uci):
-            log_structured(
-                "move_reject_client_parity",
-                uci=uci,
-                engine_uci=engine_uci,
-                fen_hash=fen_hash,
-                movetime_ms=req.movetime_ms,
-                elapsed_ms=elapsed_ms,
-                elo=req.elo,
-            )
-            raise HTTPException(
-                status_code=422,
-                detail=f"Engine move ({uci}) failed client rules validation",
-            )
-
         log_structured(
-            "move_ok",
-            uci=uci,
-            engine_uci=engine_uci,
+            "move_reject_client_parity",
+            uci=last_uci,
+            engine_uci=last_engine_uci,
             fen_hash=fen_hash,
             movetime_ms=req.movetime_ms,
             elapsed_ms=elapsed_ms,
             elo=req.elo,
+            attempts=MAX_PARITY_RETRIES,
         )
-        return MoveResponse(uci=uci)
+        raise HTTPException(
+            status_code=422,
+            detail=f"Engine move ({last_uci}) failed client rules validation",
+        )
     except HTTPException:
         raise
     except ValueError as exc:

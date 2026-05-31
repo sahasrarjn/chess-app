@@ -24,6 +24,8 @@ import { toFEN } from "../engine/fen";
 
 export type GameUpdateListener = () => void;
 
+const MAX_BOT_SILENT_RETRIES = 2;
+
 export class GameController {
   game = new ChessGame();
   selectedSquare: Square | null = null;
@@ -32,7 +34,6 @@ export class GameController {
   pendingPromotion: { from: Square; to: Square } | null = null;
   isThinking = false;
   botThinkingPhase: "remote" | "local" | null = null;
-  botThinkingStartedAt: number | null = null;
   boardFlipped = false;
   /** Pass-and-play: rotate board for the side to move (default on). */
   autoFlipBoard = true;
@@ -264,7 +265,6 @@ export class GameController {
     this.pendingPromotion = null;
     this.isThinking = false;
     this.botThinkingPhase = null;
-    this.botThinkingStartedAt = null;
     this.boardFlipped = false;
     this.autoFlipBoard = true;
     this.previewPly = null;
@@ -283,7 +283,6 @@ export class GameController {
     this.pendingPromotion = null;
     this.isThinking = false;
     this.botThinkingPhase = null;
-    this.botThinkingStartedAt = null;
     this.boardFlipped = boardFlipped;
     this.autoFlipBoard = autoFlipBoard;
     this.previewPly = null;
@@ -384,20 +383,8 @@ export class GameController {
     const result = this.game.result;
     switch (result.type) {
       case "ongoing":
-        if (this.botEngineError && this.mode === "vsBot") return this.botEngineError;
-        if (this.isThinking) {
-          const elapsedSec =
-            this.botThinkingStartedAt == null
-              ? 0
-              : Math.floor((performance.now() - this.botThinkingStartedAt) / 1000);
-          const suffix = elapsedSec >= 2 ? ` (${elapsedSec}s)` : "";
-          if (this.botThinkingPhase === "local") {
-            return `Engine offline — finding a move locally…${suffix}`;
-          }
-          return `Bot is thinking…${suffix}`;
-        }
-        if (this.isBotTurn && this.mode === "vsBot") {
-          return "Waiting for the bot…";
+        if (this.mode === "vsBot" && (this.isThinking || this.isBotTurn || this.botEngineError)) {
+          return "Bot is thinking…";
         }
         if (this.game.isInCheck(this.game.activeColor)) {
           return this.game.activeColor === "white"
@@ -422,16 +409,6 @@ export class GameController {
 
   /** Secondary line under the status bar (bot wait / retry hints). */
   statusSubtext(): string | null {
-    if (this.mode !== "vsBot" || this.game.result.type !== "ongoing") return null;
-    if (this.botEngineError) {
-      return "Tap Retry Bot below, or Undo to take back your last move.";
-    }
-    if (this.isThinking) {
-      return "Board locked while the bot decides. Undo and move review still work.";
-    }
-    if (this.isBotTurn) {
-      return "Your move is done — the bot is about to reply.";
-    }
     return null;
   }
 
@@ -447,7 +424,6 @@ export class GameController {
     this.botAbort = null;
     this.isThinking = false;
     this.botThinkingPhase = null;
-    this.botThinkingStartedAt = null;
   }
 
   private async maybePlayBotMove(): Promise<void> {
@@ -467,50 +443,140 @@ export class GameController {
 
     this.isThinking = true;
     this.botThinkingPhase = "remote";
-    this.botThinkingStartedAt = performance.now();
     this.botEngineError = null;
     this.notify();
 
-    const start = performance.now();
     const plyAtRequest = this.game.recordedMoves.length;
     const fenAtRequest = toFEN(this.game);
 
     try {
-      if (token !== this.botMoveToken) return;
-      if (this.game.recordedMoves.length !== plyAtRequest) return;
+      for (let attempt = 0; attempt <= MAX_BOT_SILENT_RETRIES; attempt++) {
+        if (token !== this.botMoveToken) return;
+        if (this.game.recordedMoves.length !== plyAtRequest) return;
 
-      const snapshot = this.game.copy();
-      const outcome = await chooseBotMove(
-        snapshot,
-        this.botDifficulty,
-        abort.signal,
-        (phase) => {
-          if (token === this.botMoveToken) {
-            this.botThinkingPhase = phase;
-            this.notify();
-          }
+        if (attempt > 0) {
+          this.isThinking = true;
+          this.botThinkingPhase = "remote";
+          this.botEngineError = null;
+          this.notify();
+          await sleep(400 * attempt);
+          if (token !== this.botMoveToken) return;
+          if (this.game.recordedMoves.length !== plyAtRequest) return;
         }
-      );
 
-      if (
-        token !== this.botMoveToken ||
-        this.mode !== "vsBot" ||
-        this.game.activeColor !== "black" ||
-        this.game.result.type !== "ongoing" ||
-        this.game.recordedMoves.length !== plyAtRequest
-      ) {
-        return;
-      }
+        const start = performance.now();
+        const snapshot = this.game.copy();
+        let outcome;
+        try {
+          outcome = await chooseBotMove(
+            snapshot,
+            this.botDifficulty,
+            abort.signal,
+            (phase) => {
+              if (token === this.botMoveToken) {
+                this.botThinkingPhase = phase;
+                this.notify();
+              }
+            }
+          );
+        } catch (err) {
+          if (token !== this.botMoveToken || abort.signal.aborted) return;
+          if (err instanceof DOMException && err.name === "AbortError") return;
 
-      const move = outcome.move;
-      const usedBuiltin = outcome.source === "builtin";
-      const serverError = outcome.serverError;
-      const serverUci = outcome.serverUci;
+          const msg = err instanceof Error ? err.message : String(err);
+          const errorMsg =
+            err instanceof DOMException && err.name === "TimeoutError"
+              ? "Engine request timed out."
+              : msg || "Cannot reach the chess engine.";
+          trackBotMoveError({
+            source: "builtin",
+            difficulty: this.botDifficulty,
+            elapsedMs: performance.now() - start,
+            ply: plyAtRequest,
+            error: errorMsg,
+            fen: fenAtRequest,
+          });
+          if (attempt < MAX_BOT_SILENT_RETRIES) continue;
+          this.botEngineError = errorMsg;
+          return;
+        }
 
-      if (move && !this.game.applyMove(move)) {
-        const errorMsg = serverError ?? "Could not apply the bot move. Try Retry Bot or Undo.";
+        if (
+          token !== this.botMoveToken ||
+          this.mode !== "vsBot" ||
+          this.game.activeColor !== "black" ||
+          this.game.result.type !== "ongoing" ||
+          this.game.recordedMoves.length !== plyAtRequest
+        ) {
+          return;
+        }
+
+        const move = outcome.move;
+        const usedBuiltin = outcome.source === "builtin";
+        const serverError = outcome.serverError;
+        const serverUci = outcome.serverUci;
+
+        if (move && !this.game.applyMove(move)) {
+          const errorMsg = serverError ?? "Could not apply the bot move.";
+          trackBotMoveError({
+            source: outcome.source === "server" ? "server" : "builtin",
+            difficulty: this.botDifficulty,
+            elapsedMs: performance.now() - start,
+            ply: plyAtRequest,
+            serverError,
+            serverUci,
+            fen: outcome.fen,
+            error: errorMsg,
+          });
+          if (attempt < MAX_BOT_SILENT_RETRIES) continue;
+          this.botEngineError = errorMsg;
+          return;
+        }
+
+        const minMs = difficultyMinThinkMs(this.botDifficulty);
+        const elapsed = performance.now() - start;
+        if (elapsed < minMs) {
+          await sleep(minMs - elapsed);
+        }
+
+        if (token !== this.botMoveToken) return;
+
+        if (move) {
+          if (usedBuiltin && serverError) {
+            console.debug("Bot used built-in fallback:", serverError);
+          }
+          trackBotMove({
+            source: usedBuiltin ? "builtin" : "server",
+            difficulty: this.botDifficulty,
+            elapsedMs: performance.now() - start,
+            ply: plyAtRequest,
+            serverError: usedBuiltin ? serverError : undefined,
+            serverUci: usedBuiltin ? serverUci : serverUci ?? moveUci(move),
+            appliedUci: moveUci(move),
+            fen: outcome.fen,
+            usedLocalFallback: usedBuiltin && !!outcome.usedLocalFallback,
+          });
+          this.notify();
+          return;
+        }
+
+        if (this.game.recordedMoves.length !== plyAtRequest) return;
+
+        const errorMsg =
+          serverError ??
+          "Could not get a bot move from the engine.";
+        if (serverUci) {
+          trackBotMoveRejected({
+            difficulty: this.botDifficulty,
+            elapsedMs: performance.now() - start,
+            ply: plyAtRequest,
+            serverError,
+            serverUci,
+            fen: outcome.fen,
+          });
+        }
         trackBotMoveError({
-          source: outcome.source === "server" ? "server" : "builtin",
+          source: "server",
           difficulty: this.botDifficulty,
           elapsedMs: performance.now() - start,
           ply: plyAtRequest,
@@ -519,87 +585,15 @@ export class GameController {
           fen: outcome.fen,
           error: errorMsg,
         });
+        if (attempt < MAX_BOT_SILENT_RETRIES) continue;
         this.botEngineError = errorMsg;
         return;
       }
-
-      const minMs = difficultyMinThinkMs(this.botDifficulty);
-      const elapsed = performance.now() - start;
-      if (elapsed < minMs) {
-        await sleep(minMs - elapsed);
-      }
-
-      if (token !== this.botMoveToken) return;
-
-      if (move) {
-        if (usedBuiltin && serverError) {
-          console.debug("Bot used built-in fallback:", serverError);
-        }
-        trackBotMove({
-          source: usedBuiltin ? "builtin" : "server",
-          difficulty: this.botDifficulty,
-          elapsedMs: performance.now() - start,
-          ply: plyAtRequest,
-          serverError: usedBuiltin ? serverError : undefined,
-          serverUci: usedBuiltin ? serverUci : serverUci ?? moveUci(move),
-          appliedUci: moveUci(move),
-          fen: outcome.fen,
-          usedLocalFallback: usedBuiltin && !!outcome.usedLocalFallback,
-        });
-        this.notify();
-        return;
-      }
-
-      if (this.game.recordedMoves.length !== plyAtRequest) return;
-
-      const errorMsg =
-        serverError ??
-        "Could not get a bot move from the engine. Tap Retry Bot or Undo.";
-      if (serverUci) {
-        trackBotMoveRejected({
-          difficulty: this.botDifficulty,
-          elapsedMs: performance.now() - start,
-          ply: plyAtRequest,
-          serverError,
-          serverUci,
-          fen: outcome.fen,
-        });
-      }
-      trackBotMoveError({
-        source: "server",
-        difficulty: this.botDifficulty,
-        elapsedMs: performance.now() - start,
-        ply: plyAtRequest,
-        serverError,
-        serverUci,
-        fen: outcome.fen,
-        error: errorMsg,
-      });
-      this.botEngineError = errorMsg;
-    } catch (err) {
-      if (token !== this.botMoveToken || abort.signal.aborted) return;
-      if (err instanceof DOMException && err.name === "AbortError") return;
-
-      const msg = err instanceof Error ? err.message : String(err);
-      const errorMsg =
-        err instanceof DOMException && err.name === "TimeoutError"
-          ? "Engine request timed out. Tap Retry Bot."
-          : msg || "Cannot reach the chess engine.";
-      trackBotMoveError({
-        source: "builtin",
-        difficulty: this.botDifficulty,
-        elapsedMs: performance.now() - start,
-        ply: plyAtRequest,
-        error: errorMsg,
-        fen: fenAtRequest,
-      });
-      this.botEngineError = errorMsg;
     } finally {
       if (token === this.botMoveToken) {
         this.botAbort = null;
         this.isThinking = false;
         this.botThinkingPhase = null;
-        this.botThinkingStartedAt = null;
         this.notify();
       }
     }

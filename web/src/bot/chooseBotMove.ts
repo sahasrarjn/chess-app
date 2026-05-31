@@ -43,16 +43,12 @@ export async function chooseBotMove(
       throw err;
     }
     if (err instanceof EngineMoveRejectedError) {
-      return {
-        move: null,
-        source: "server",
-        serverError: err.message,
-        serverUci: err.serverUci,
-        fen,
-      };
+      serverError = err.message;
+      serverUci = err.serverUci;
+    } else {
+      serverError =
+        err instanceof Error ? err.message : "Cannot reach the chess engine";
     }
-    serverError =
-      err instanceof Error ? err.message : "Cannot reach the chess engine";
   }
 
   onPhase?.("local");

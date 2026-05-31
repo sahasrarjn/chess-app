@@ -43,7 +43,6 @@ class GameScreen {
   private statusEl!: HTMLDivElement;
   private statusHintEl!: HTMLDivElement;
   private statusSpinnerEl!: HTMLSpanElement;
-  private thinkingTimer: number | null = null;
   private capBlackEl!: HTMLElement;
   private capWhiteEl!: HTMLElement;
   private gridEl!: HTMLDivElement;
@@ -91,6 +90,7 @@ class GameScreen {
     this.root.innerHTML = "";
     const screen = el("div", "game-screen");
 
+    const top = el("div", "game-top");
     const header = el("div", "game-header");
     const back = el("button", "back", "← Back");
     back.onclick = () => this.onBack();
@@ -106,14 +106,14 @@ class GameScreen {
     this.flipBtn = el("button", "", "Flip") as HTMLButtonElement;
     this.flipBtn.onclick = () => this.ctrl.toggleBoardFlip();
     header.appendChild(this.flipBtn);
-    screen.appendChild(header);
+    top.appendChild(header);
 
     const capBar = el("div", "captured-bar");
     this.capBlackEl = el("div", "captured-side captured-side-black");
     this.capWhiteEl = el("div", "captured-side captured-side-white");
     capBar.appendChild(this.capBlackEl);
     capBar.appendChild(this.capWhiteEl);
-    screen.appendChild(capBar);
+    top.appendChild(capBar);
 
     const statusWrap = el("div", "status-wrap");
     this.statusEl = el("div", "status-bar") as HTMLDivElement;
@@ -123,18 +123,22 @@ class GameScreen {
     this.statusHintEl = el("div", "status-hint") as HTMLDivElement;
     statusWrap.appendChild(this.statusEl);
     statusWrap.appendChild(this.statusHintEl);
-    screen.appendChild(statusWrap);
+    top.appendChild(statusWrap);
+    screen.appendChild(top);
 
+    const boardSlot = el("div", "game-board-slot");
     const boardWrap = el("div", "board-wrap");
     boardWrap.appendChild(el("div", "board-frame"));
     this.gridEl = el("div", "board-grid") as HTMLDivElement;
     boardWrap.appendChild(this.gridEl);
-    screen.appendChild(boardWrap);
+    boardSlot.appendChild(boardWrap);
+    screen.appendChild(boardSlot);
 
+    const bottom = el("div", "game-bottom");
     const moveWrap = el("div", "move-list-wrap");
     this.moveListEl = el("div", "move-list") as HTMLDivElement;
     moveWrap.appendChild(this.moveListEl);
-    screen.appendChild(moveWrap);
+    bottom.appendChild(moveWrap);
 
     const controls = el("div", "game-controls");
     this.retryBtn = el("button", "primary retry-emphasis", "Retry Bot") as HTMLButtonElement;
@@ -168,7 +172,8 @@ class GameScreen {
     newGame.onclick = () => this.startNewGame();
     controls.appendChild(newGame);
 
-    screen.appendChild(controls);
+    bottom.appendChild(controls);
+    screen.appendChild(bottom);
     this.root.appendChild(screen);
 
     this.rebuildBoardGrid();
@@ -176,10 +181,6 @@ class GameScreen {
   }
 
   destroy(): void {
-    if (this.thinkingTimer != null) {
-      window.clearInterval(this.thinkingTimer);
-      this.thinkingTimer = null;
-    }
     this.ctrl.dispose();
     this.promotionEl?.remove();
     this.gameOverEl?.remove();
@@ -247,23 +248,16 @@ class GameScreen {
   }
 
   private updateStatus(): void {
-    const thinking = this.ctrl.isThinking && !this.ctrl.botEngineError;
+    const showBotStatus =
+      this.mode === "vsBot" &&
+      (this.ctrl.isThinking || this.ctrl.isBotTurn || !!this.ctrl.botEngineError);
+    const showSpinner =
+      this.ctrl.isThinking || (this.ctrl.isBotTurn && !this.ctrl.botEngineError);
     this.statusEl.textContent = this.ctrl.statusText();
-    this.statusSpinnerEl.hidden = !thinking;
-
-    const hint = this.ctrl.statusSubtext();
-    this.statusHintEl.textContent = hint ?? "";
-    this.statusHintEl.hidden = !hint;
-
-    this.statusEl.classList.toggle("error", !!this.ctrl.botEngineError);
-    this.statusEl.classList.toggle("thinking", thinking);
-
-    if (thinking && this.thinkingTimer == null) {
-      this.thinkingTimer = window.setInterval(() => this.updateStatus(), 500);
-    } else if (!thinking && this.thinkingTimer != null) {
-      window.clearInterval(this.thinkingTimer);
-      this.thinkingTimer = null;
-    }
+    this.statusSpinnerEl.hidden = !showSpinner;
+    this.statusHintEl.hidden = true;
+    this.statusEl.classList.toggle("error", false);
+    this.statusEl.classList.toggle("thinking", showBotStatus);
   }
 
   private updateCaptured(): void {

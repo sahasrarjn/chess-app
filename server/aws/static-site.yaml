@@ -88,6 +88,15 @@ Resources:
         function handler(event) {
           var request = event.request;
           var uri = request.uri;
+          if (uri === "/play") {
+            return {
+              statusCode: 301,
+              statusDescription: "Moved Permanently",
+              headers: {
+                location: { value: "/play/" },
+              },
+            };
+          }
           if (uri === "/privacy") {
             request.uri = "/privacy/index.html";
             return request;

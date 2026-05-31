@@ -56,6 +56,13 @@ echo ""
 echo "==> Static assets ($BASE)"
 check "landing"        "$BASE/"
 check "game"           "$BASE/play/"
+code="$("$CURL" -s -o /dev/null -w "%{http_code}" "$BASE/play" || echo "000")"
+if [[ "$code" == "301" || "$code" == "200" ]]; then
+  echo "OK   game (no slash) ($code)"
+else
+  echo "FAIL game (no slash) (got $code, want 301 or 200) - $BASE/play"
+  FAIL=1
+fi
 check "privacy"        "$BASE/privacy/"
 check "logo"           "$BASE/logo_v2.png"
 check "piece (CDN path)" "$BASE/ChessBorder/pieces/wP.svg"

@@ -58,12 +58,24 @@ aws s3 sync dist/ "s3://${BUCKET}/play/" \
   --delete \
   --region "$REGION" \
   --cache-control "public, max-age=3600" \
-  --exclude "assets/*"
+  --exclude "assets/*" \
+  --exclude "index.html"
+
+aws s3 cp dist/index.html "s3://${BUCKET}/play/index.html" \
+  --region "$REGION" \
+  --content-type "text/html; charset=utf-8" \
+  --cache-control "public, max-age=0, must-revalidate"
 
 aws s3 sync dist/assets/ "s3://${BUCKET}/play/assets/" \
   --delete \
   --region "$REGION" \
   --cache-control "public, max-age=31536000, immutable"
+
+echo "==> Uploading /play redirect (no trailing slash)"
+aws s3 cp static/play-redirect.html "s3://${BUCKET}/play" \
+  --region "$REGION" \
+  --content-type "text/html; charset=utf-8" \
+  --cache-control "public, max-age=300"
 
 echo "==> Uploading landing + privacy"
 aws s3 cp static/index.html "s3://${BUCKET}/index.html" \

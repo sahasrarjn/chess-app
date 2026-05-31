@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from client_move_check import client_accepts_move, log_structured
 from engine_manager import EngineManager
+from fen_transform import client_fen_to_engine_fen, engine_uci_to_client_uci
 from validation import validate_fen
 
 logging.basicConfig(
@@ -126,13 +127,16 @@ def move(
     fen_hash = fen_fingerprint(req.fen)
     started = time.monotonic()
     try:
-        uci = engine.best_move(req.fen, req.elo, req.movetime_ms)
+        engine_fen = client_fen_to_engine_fen(req.fen)
+        engine_uci = engine.best_move(engine_fen, req.elo, req.movetime_ms)
+        uci = engine_uci_to_client_uci(engine_uci)
         elapsed_ms = int((time.monotonic() - started) * 1000)
 
         if CLIENT_PARITY_CHECK and not client_accepts_move(req.fen, uci):
             log_structured(
                 "move_reject_client_parity",
                 uci=uci,
+                engine_uci=engine_uci,
                 fen_hash=fen_hash,
                 movetime_ms=req.movetime_ms,
                 elapsed_ms=elapsed_ms,
@@ -146,6 +150,7 @@ def move(
         log_structured(
             "move_ok",
             uci=uci,
+            engine_uci=engine_uci,
             fen_hash=fen_hash,
             movetime_ms=req.movetime_ms,
             elapsed_ms=elapsed_ms,

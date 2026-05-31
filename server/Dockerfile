@@ -20,7 +20,8 @@ FROM node:22-bookworm-slim AS validator-build
 WORKDIR /build
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
-COPY web/tsconfig.json web/scripts/validate-move-cli.ts ./
+COPY web/tsconfig.json ./
+COPY web/scripts/validate-move-cli.ts ./scripts/
 COPY web/src ./src
 RUN npx esbuild scripts/validate-move-cli.ts \
     --bundle \
@@ -41,6 +42,7 @@ COPY server/engine.py /app/engine.py
 COPY server/engine_manager.py /app/engine_manager.py
 COPY server/validation.py /app/validation.py
 COPY server/client_move_check.py /app/client_move_check.py
+COPY server/fen_transform.py /app/fen_transform.py
 COPY server/main.py /app/main.py
 
 WORKDIR /app

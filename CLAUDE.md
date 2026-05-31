@@ -28,6 +28,8 @@ borderchess.org (CloudFront + S3 static)
 
 **App Runner deploy pitfall:** `describe-service` redacts `API_KEY` as the literal string `None`. `server/aws/deploy.sh` must not pass that to CloudFormation — omit `ApiKey` to use previous stack value, or set `API_KEY` explicitly when rotating.
 
+**Cloudflare Worker:** No KV — rate limiting is CloudFront WAF only (`WAF_RATE_LIMIT` in `deploy-static.sh`). After any `server/worker/` change, run `./server/worker/deploy.sh`; git changes alone do not update production bindings. Post-deploy, live bindings should be only `PUBLIC_MAX_MOVETIME_MS` + secrets (`ENGINE_ORIGIN`, `API_KEY`) — no `RATE_LIMIT` KV. Orphan KV namespaces can be deleted in the dashboard or via `wrangler kv namespace delete`.
+
 **DNS fix:** `./scripts/cloudflare-dns-cutover.sh` (auto-sources `.env`). Diagnose: `./scripts/check-dns.sh`. SSL mismatch → [docs/DOMAIN.md](docs/DOMAIN.md).
 
 **Observability:** `./scripts/engine-observability.sh` — CloudWatch logs (30d retention), dashboard `chess-border-engine-engine`, SNS alarms when `ALERT_EMAIL` set at deploy.

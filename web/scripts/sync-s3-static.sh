@@ -7,6 +7,10 @@ WEB="$ROOT/web"
 STATIC_STACK="${STATIC_STACK_NAME:-chess-border-static}"
 REGION="${AWS_REGION:-us-east-1}"
 
+# Browsers must never keep a stale shell that points at deleted hashed bundles.
+HTML_CACHE='no-cache, no-store, must-revalidate'
+ASSET_CACHE='public, max-age=31536000, immutable'
+
 # shellcheck disable=SC1091
 source "$ROOT/ChessBorder/scripts/release-env.sh"
 chess_load_env "$ROOT/ChessBorder/scripts"
@@ -53,40 +57,44 @@ else
   echo "(skip build - using existing dist/)"
 fi
 
-echo "==> Uploading /play/ (game bundle)"
-aws s3 sync dist/ "s3://${BUCKET}/play/" \
-  --delete \
+echo "==> Uploading /play/assets/ (content-hashed; keep old hashes for stale shells)"
+aws s3 sync dist/assets/ "s3://${BUCKET}/play/assets/" \
   --region "$REGION" \
-  --cache-control "public, max-age=3600" \
-  --exclude "assets/*" \
-  --exclude "index.html"
+  --cache-control "$ASSET_CACHE"
 
+echo "==> Uploading /play/index.html (never cache in browser)"
 aws s3 cp dist/index.html "s3://${BUCKET}/play/index.html" \
   --region "$REGION" \
   --content-type "text/html; charset=utf-8" \
-  --cache-control "public, max-age=0, must-revalidate"
+  --cache-control "$HTML_CACHE"
 
-aws s3 sync dist/assets/ "s3://${BUCKET}/play/assets/" \
-  --delete \
+aws s3 cp dist/logo_v2.png "s3://${BUCKET}/play/logo_v2.png" \
   --region "$REGION" \
-  --cache-control "public, max-age=31536000, immutable"
+  --content-type "image/png" \
+  --cache-control "$ASSET_CACHE"
+
+if [[ -d dist/pieces ]]; then
+  aws s3 sync dist/pieces/ "s3://${BUCKET}/play/pieces/" \
+    --region "$REGION" \
+    --cache-control "$ASSET_CACHE"
+fi
 
 echo "==> Uploading /play redirect (no trailing slash)"
 aws s3 cp static/play-redirect.html "s3://${BUCKET}/play" \
   --region "$REGION" \
   --content-type "text/html; charset=utf-8" \
-  --cache-control "public, max-age=300"
+  --cache-control "$HTML_CACHE"
 
 echo "==> Uploading landing + privacy"
 aws s3 cp static/index.html "s3://${BUCKET}/index.html" \
   --region "$REGION" \
   --content-type "text/html; charset=utf-8" \
-  --cache-control "public, max-age=300"
+  --cache-control "$HTML_CACHE"
 
 aws s3 cp static/privacy/index.html "s3://${BUCKET}/privacy/index.html" \
   --region "$REGION" \
   --content-type "text/html; charset=utf-8" \
-  --cache-control "public, max-age=3600"
+  --cache-control "$HTML_CACHE"
 
 echo "==> Uploading logo + piece SVGs (ChessBorder CDN paths)"
 aws s3 cp public/logo_v2.png "s3://${BUCKET}/logo_v2.png" \
@@ -111,7 +119,7 @@ if [[ -n "$DIST_ID" && "$DIST_ID" != "None" ]]; then
   echo "==> Invalidating CloudFront (${DIST_ID})"
   aws cloudfront create-invalidation \
     --distribution-id "$DIST_ID" \
-    --paths "/*" \
+    --paths "/index.html" "/play" "/play/" "/play/index.html" "/privacy/index.html" "/play/assets/*" \
     --query 'Invalidation.Id' \
     --output text >/dev/null
 else

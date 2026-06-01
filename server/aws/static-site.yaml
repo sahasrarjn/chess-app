@@ -76,6 +76,25 @@ Resources:
         - !Ref WwwDomainName
       ValidationMethod: DNS
 
+  StaticOriginCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub "${AWS::StackName}-origin-cache"
+        Comment: Honor S3 Cache-Control; default TTL 0 so HTML is not edge-cached by mistake
+        DefaultTTL: 0
+        MaxTTL: 31536000
+        MinTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          EnableAcceptEncodingGzip: true
+          EnableAcceptEncodingBrotli: true
+          HeadersConfig:
+            HeaderBehavior: none
+          CookiesConfig:
+            CookieBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: none
+
   StaticUrlRewriteFunction:
     Type: AWS::CloudFront::Function
     Properties:
@@ -183,11 +202,41 @@ Resources:
           AllowedMethods: [GET, HEAD, OPTIONS]
           CachedMethods: [GET, HEAD, OPTIONS]
           Compress: true
-          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          CachePolicyId: !Ref StaticOriginCachePolicy
           FunctionAssociations:
             - EventType: viewer-request
               FunctionARN: !GetAtt StaticUrlRewriteFunction.FunctionMetadata.FunctionARN
         CacheBehaviors:
+          - PathPattern: /index.html
+            TargetOriginId: S3Static
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD, OPTIONS]
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt StaticUrlRewriteFunction.FunctionMetadata.FunctionARN
+          - PathPattern: /play/index.html
+            TargetOriginId: S3Static
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD, OPTIONS]
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt StaticUrlRewriteFunction.FunctionMetadata.FunctionARN
+          - PathPattern: /privacy/index.html
+            TargetOriginId: S3Static
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD, OPTIONS]
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt StaticUrlRewriteFunction.FunctionMetadata.FunctionARN
           - PathPattern: /v1/move
             TargetOriginId: WorkerApi
             ViewerProtocolPolicy: https-only
@@ -210,14 +259,14 @@ Resources:
             AllowedMethods: [GET, HEAD, OPTIONS]
             CachedMethods: [GET, HEAD, OPTIONS]
             Compress: true
-            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+            CachePolicyId: !Ref StaticOriginCachePolicy
           - PathPattern: /play/assets/*
             TargetOriginId: S3Static
             ViewerProtocolPolicy: redirect-to-https
             AllowedMethods: [GET, HEAD, OPTIONS]
             CachedMethods: [GET, HEAD, OPTIONS]
             Compress: true
-            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+            CachePolicyId: !Ref StaticOriginCachePolicy
 
 Outputs:
   StaticBucketName:

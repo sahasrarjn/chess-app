@@ -9,7 +9,40 @@
     <link rel="icon" type="image/png" href="/play/logo_v2.png" />
   </head>
   <body>
-    <div id="app"></div>
+    <noscript>
+      <p style="margin: 24px; font-family: system-ui, sans-serif; color: #f0f0f0; background: #1e1e24">
+        Border Chess needs JavaScript enabled.
+      </p>
+    </noscript>
+    <div id="app">
+      <p id="boot-loading">Loading Border Chess…</p>
+    </div>
+    <script>
+      (function () {
+        var RELOAD_KEY = "chessborder.scriptReload";
+        function showBootFailure() {
+          var app = document.getElementById("app");
+          if (!app || app.querySelector(".home, .game-screen, .boot-error")) return;
+          app.innerHTML =
+            '<div class="boot-error"><p>Could not load Border Chess.</p><button type="button" onclick="location.reload()">Reload</button></div>';
+        }
+        window.addEventListener(
+          "error",
+          function (event) {
+            var el = event.target;
+            if (!el || el.tagName !== "SCRIPT") return;
+            if (sessionStorage.getItem(RELOAD_KEY)) {
+              showBootFailure();
+              return;
+            }
+            sessionStorage.setItem(RELOAD_KEY, "1");
+            location.reload();
+          },
+          true
+        );
+        window.setTimeout(showBootFailure, 10000);
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

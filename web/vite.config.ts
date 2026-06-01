@@ -5,6 +5,17 @@ const engineProxy = process.env.VITE_ENGINE_PROXY ?? "https://borderchess.org";
 
 export default defineConfig({
   base: "/play/",
+  build: {
+    modulePreload: false,
+  },
+  plugins: [
+    {
+      name: "strip-crossorigin",
+      transformIndexHtml(html) {
+        return html.replace(/ crossorigin/g, "");
+      },
+    },
+  ],
   server: {
     port: 5173,
     proxy: {

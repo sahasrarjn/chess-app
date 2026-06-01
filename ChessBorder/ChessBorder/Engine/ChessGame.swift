@@ -291,14 +291,6 @@ final class ChessGame {
                 if twoForward.isValid, twoForward.isPlayable, board[twoForward.row][twoForward.col] == nil {
                     moves.append(Move(from: square, to: twoForward))
                 }
-            } else if square.row == pawnStartRow(for: color) + dir {
-                let twoForward = Square(row: square.row + 2 * dir, col: square.col)
-                let oneForward = Square(row: square.row + dir, col: square.col)
-                if twoForward.isValid, twoForward.isPlayable,
-                   board[twoForward.row][twoForward.col] == nil,
-                   board[oneForward.row][oneForward.col] == nil {
-                    moves.append(Move(from: square, to: twoForward))
-                }
             }
         }
 

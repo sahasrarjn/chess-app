@@ -41,7 +41,7 @@ export function renderHome(
       el(
         "p",
         "tagline",
-        "10×10 border chess. Play vs bot or pass-and-play with a friend. Same rules as the iOS app."
+        "10×10 border chess. Play vs bot or pass-and-play with a friend."
       )
     );
 

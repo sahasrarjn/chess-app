@@ -457,18 +457,6 @@ export class ChessGame {
         ) {
           moves.push({ from, to: twoForward });
         }
-      } else if (from.row === this.pawnStartRow(color) + dir) {
-        // Fairy-Stockfish chessborder: a pawn on engine rank 7 (one step from start)
-        // may still advance two squares (e.g. d7d5 in engine UCI).
-        const twoForward = sq(from.row + 2 * dir, from.col);
-        if (
-          squareIsValid(twoForward) &&
-          isPlayable(twoForward.row, twoForward.col) &&
-          !this.board[twoForward.row][twoForward.col] &&
-          !this.board[from.row + dir][from.col]
-        ) {
-          moves.push({ from, to: twoForward });
-        }
       }
     }
 

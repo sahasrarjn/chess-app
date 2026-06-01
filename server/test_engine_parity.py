@@ -15,11 +15,6 @@ CORPUS_FENS = [
         "1R8/2nbqkb3/1pppppppp1/........../........../7n2/8P1/1PPPPPPP2/1RNBQKBN2/.......... b Q - 0 5",
         "c9a10",
     ),
-    (
-        "d7d5 midgame",
-        "........../1rn2kb2r/2p3pp2/1p1p1p2p1/........../q3PP4/2B1N1N1P1/1PPP2PP1b/4QK3R/9R b q - 5 14",
-        "d7d5",
-    ),
 ]
 
 

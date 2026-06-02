@@ -83,6 +83,17 @@ jobs:
           if command -v xcodegen >/dev/null; then
             xcodegen generate
           fi
+      - name: Provide Fairy-Stockfish placeholders
+        working-directory: ChessBorder
+        # The engine binaries are gitignored (built via scripts/setup-engine.sh).
+        # The app's Copy Files phase needs them to exist to build. Empty,
+        # non-executable placeholders satisfy the copy; the engine-backed unit
+        # tests XCTSkip when no executable engine is bundled.
+        run: |
+          mkdir -p ChessBorder/Resources/Engine
+          for bin in fairy-stockfish fairy-stockfish-ios; do
+            [[ -e "ChessBorder/Resources/Engine/$bin" ]] || : > "ChessBorder/Resources/Engine/$bin"
+          done
       - name: Run ChessBorder unit tests
         working-directory: ChessBorder
         run: |

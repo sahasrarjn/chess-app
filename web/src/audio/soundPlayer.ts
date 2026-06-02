@@ -44,7 +44,7 @@ export class SoundPlayer {
   private loadStarted = false;
   private readonly base: string;
 
-  constructor(base = "/sounds") {
+  constructor(base = `${import.meta.env.BASE_URL}sounds`) {
     this.base = base;
   }
 

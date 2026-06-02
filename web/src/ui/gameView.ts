@@ -20,6 +20,14 @@ import {
 import { bindTap } from "./tapActivation";
 
 
+const SPEAKER_ON_SVG =
+  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.8 5.2a9 9 0 0 1 0 13.6"/></svg>';
+
+const SPEAKER_OFF_SVG =
+  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M11 5 6 9H2v6h4l5 4V5z"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/></svg>';
+
 type SquareCell = {
   btn: HTMLButtonElement;
   pieceImg: HTMLImageElement | null;
@@ -114,8 +122,8 @@ class GameScreen {
     this.flipBtn.onclick = () => this.ctrl.toggleBoardFlip();
     header.appendChild(this.flipBtn);
 
-    this.muteBtn = el("button", "sound-toggle") as HTMLButtonElement;
-    this.muteBtn.setAttribute("aria-label", "Toggle sound");
+    this.muteBtn = el("button", "sound-toggle icon-btn") as HTMLButtonElement;
+    this.muteBtn.type = "button";
     this.muteBtn.onclick = () => {
       this.sound.unlock();
       this.sound.toggleMuted();
@@ -478,9 +486,11 @@ class GameScreen {
   private updateMuteButton(): void {
     if (!this.muteBtn) return;
     const muted = this.sound.isMuted;
-    this.muteBtn.textContent = muted ? "🔇" : "🔊";
+    this.muteBtn.innerHTML = muted ? SPEAKER_OFF_SVG : SPEAKER_ON_SVG;
     this.muteBtn.classList.toggle("muted", muted);
     this.muteBtn.setAttribute("aria-pressed", muted ? "true" : "false");
+    this.muteBtn.title = muted ? "Sound off" : "Sound on";
+    this.muteBtn.setAttribute("aria-label", muted ? "Turn sound on" : "Turn sound off");
   }
 
   private maybePersist(): void {

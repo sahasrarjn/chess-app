@@ -26,9 +26,12 @@ final class GameViewModel: ObservableObject {
     @Published var previewPly: Int?
     @Published var activeMoveAnimation: ActiveMoveAnimation?
     @Published private(set) var botEngineError: String?
+    @Published var soundMuted = ChessSoundPlayer.shared.isMuted
 
     let mode: GameMode
     let botDifficulty: BotDifficulty
+
+    private let sound = ChessSoundPlayer.shared
 
     private static let moveAnimationDuration: TimeInterval = 0.32
     private static let animationWaitTimeout: Duration = .seconds(2)
@@ -190,6 +193,7 @@ final class GameViewModel: ObservableObject {
             if let piece = game.piece(at: square), piece.color == game.activeColor {
                 select(square)
             } else {
+                sound.play(.illegal)
                 clearSelection()
             }
             return
@@ -258,6 +262,7 @@ final class GameViewModel: ObservableObject {
 
         guard game.applyMove(move) else { return false }
 
+        emitMoveSound(for: move)
         previewPly = nil
         clearSelection()
         beginMoveAnimation(move: move, piece: piece)
@@ -276,6 +281,7 @@ final class GameViewModel: ObservableObject {
         pendingPromotion = nil
         guard let move, let pawn = game.piece(at: move.from) else { return }
         guard game.applyMove(move) else { return }
+        emitMoveSound(for: move)
         previewPly = nil
         clearSelection()
         beginMoveAnimation(move: move, piece: Piece(kind: kind, color: pawn.color))
@@ -306,6 +312,7 @@ final class GameViewModel: ObservableObject {
 
     func resignGame() {
         game.resign(by: game.activeColor)
+        sound.play(.gameEnd)
         notifyChange()
     }
 
@@ -322,6 +329,7 @@ final class GameViewModel: ObservableObject {
         activeMoveAnimation = nil
         botEngineError = nil
         notifyChange()
+        sound.play(.gameStart)
     }
 
     func toggleBoardFlip() {
@@ -434,6 +442,7 @@ final class GameViewModel: ObservableObject {
                    let piece = self.game.piece(at: move.from),
                    self.game.applyMove(move) {
                     BotLogging.debug("maybePlayBotMove: applied \(move.uci)")
+                    self.emitMoveSound(for: move)
                     self.beginMoveAnimation(move: move, piece: piece)
                     applied = true
                 }
@@ -461,6 +470,7 @@ final class GameViewModel: ObservableObject {
             if let fallback = pickFallbackMove(in: self.game, difficulty: difficulty),
                let piece = self.game.piece(at: fallback.from),
                self.game.applyMove(fallback) {
+                self.emitMoveSound(for: fallback)
                 BotLogging.debug("maybePlayBotMove: applied fallback \(fallback.uci)")
                 if let lastError {
                     BotLogging.debug("maybePlayBotMove: engine unavailable (\(lastError))")
@@ -561,5 +571,17 @@ final class GameViewModel: ObservableObject {
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
         #endif
+    }
+
+    func toggleSound() {
+        soundMuted = sound.toggleMuted()
+    }
+
+    /// Classify a just-applied move and play its sound cue.
+    private func emitMoveSound(for move: Move) {
+        let result = game.result
+        let captured = game.recordedMoves.last?.captured != nil
+        let givesCheck = result == .ongoing && game.isInCheck(color: game.activeColor)
+        sound.play(classifyMoveSound(result: result, givesCheck: givesCheck, captured: captured, move: move))
     }
 }

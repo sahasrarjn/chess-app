@@ -10,6 +10,7 @@ import type {
   BotDifficulty,
   GameMode,
   GameResult,
+  Move,
   Piece,
   PieceColor,
   PieceKind,
@@ -21,8 +22,10 @@ import {
   moveUci,
 } from "../engine/types";
 import { toFEN } from "../engine/fen";
+import { classifyMoveSound, type SoundEvent } from "../audio/classifyMoveSound";
 
 export type GameUpdateListener = () => void;
+export type SoundListener = (event: SoundEvent) => void;
 
 const MAX_BOT_SILENT_RETRIES = 2;
 
@@ -46,7 +49,8 @@ export class GameController {
   constructor(
     readonly mode: GameMode,
     readonly botDifficulty: BotDifficulty = "medium",
-    private readonly onUpdate?: GameUpdateListener
+    private readonly onUpdate?: GameUpdateListener,
+    private readonly onSound?: SoundListener
   ) {
     if (mode === "vsBot") {
       void import("../bot/localBot").then(({ preloadLocalBotWorker }) => preloadLocalBotWorker());
@@ -139,6 +143,18 @@ export class GameController {
     this.onUpdate?.();
   }
 
+  /** Classify a just-applied move and emit its sound cue. */
+  private emitMoveSound(move: Move): void {
+    if (!this.onSound) return;
+    const result = this.game.result;
+    const captured = !!this.game.recordedMoves.at(-1)?.captured;
+    const givesCheck =
+      result.type === "ongoing" && this.game.isInCheck(this.game.activeColor);
+    this.onSound(
+      classifyMoveSound({ resultType: result.type, givesCheck, captured, move })
+    );
+  }
+
   handleSquareTap(square: Square): void {
     const hasPiece = this.game.piece(square)?.color === this.game.activeColor;
     const key = this.squareKey(square);
@@ -157,6 +173,7 @@ export class GameController {
       if (piece?.color === this.game.activeColor) {
         this.select(square);
       } else {
+        this.onSound?.("illegal");
         this.clearSelection();
       }
       return;
@@ -201,6 +218,7 @@ export class GameController {
     if (!move || !this.game.piece(from)) return false;
     if (!this.game.applyMove(move)) return false;
 
+    this.emitMoveSound(move);
     this.previewPly = null;
     this.clearSelection();
     this.notify();
@@ -221,6 +239,7 @@ export class GameController {
     if (!move) return;
     if (!this.game.applyMove(move)) return;
 
+    this.emitMoveSound(move);
     this.previewPly = null;
     this.clearSelection();
     this.notify();
@@ -556,6 +575,7 @@ export class GameController {
             fen: outcome.fen,
             usedLocalFallback: usedBuiltin && !!outcome.usedLocalFallback,
           });
+          this.emitMoveSound(move);
           this.notify();
           return;
         }

@@ -1,4 +1,5 @@
 import { pieceImgSrc } from "../assets/pieceImages";
+import { SoundPlayer } from "../audio/soundPlayer";
 import { GameController } from "../game/gameController";
 import {
   clearSavedGame,
@@ -65,6 +66,8 @@ class GameScreen {
   private lastPersistKey = "";
   private autoFlipBtn: HTMLButtonElement | null = null;
   private flipBtn!: HTMLButtonElement;
+  private muteBtn!: HTMLButtonElement;
+  private readonly sound = new SoundPlayer();
 
   constructor(
     private readonly root: HTMLElement,
@@ -73,10 +76,15 @@ class GameScreen {
     private readonly onBack: () => void,
     saved?: SavedGameSnapshot
   ) {
-    this.ctrl = new GameController(mode, difficulty, () => {
-      this.update();
-      this.maybePersist();
-    });
+    this.ctrl = new GameController(
+      mode,
+      difficulty,
+      () => {
+        this.update();
+        this.maybePersist();
+      },
+      (event) => this.sound.play(event)
+    );
     if (saved) {
       const game = restoreGameFromSnapshot(saved);
       if (game) {
@@ -105,6 +113,16 @@ class GameScreen {
     this.flipBtn = el("button", "", "Flip") as HTMLButtonElement;
     this.flipBtn.onclick = () => this.ctrl.toggleBoardFlip();
     header.appendChild(this.flipBtn);
+
+    this.muteBtn = el("button", "sound-toggle") as HTMLButtonElement;
+    this.muteBtn.setAttribute("aria-label", "Toggle sound");
+    this.muteBtn.onclick = () => {
+      this.sound.unlock();
+      this.sound.toggleMuted();
+      this.updateMuteButton();
+    };
+    this.updateMuteButton();
+    header.appendChild(this.muteBtn);
     top.appendChild(header);
 
     const capBar = el("div", "captured-bar");
@@ -204,7 +222,10 @@ class GameScreen {
         const isLight = (row + col) % 2 === 0;
         const btn = el("button", `square ${isLight ? "light" : "dark"}`) as HTMLButtonElement;
         const square: Square = { row, col };
-        bindTap(btn, () => this.ctrl.handleSquareTap(square));
+        bindTap(btn, () => {
+          this.sound.unlock();
+          this.ctrl.handleSquareTap(square);
+        });
 
         const cell: SquareCell = { btn, pieceImg: null, dot: null, ring: null };
 
@@ -450,6 +471,16 @@ class GameScreen {
     clearSavedGame();
     this.lastPersistKey = "";
     this.ctrl.newGame();
+    this.sound.unlock();
+    this.sound.play("game-start");
+  }
+
+  private updateMuteButton(): void {
+    if (!this.muteBtn) return;
+    const muted = this.sound.isMuted;
+    this.muteBtn.textContent = muted ? "🔇" : "🔊";
+    this.muteBtn.classList.toggle("muted", muted);
+    this.muteBtn.setAttribute("aria-pressed", muted ? "true" : "false");
   }
 
   private maybePersist(): void {

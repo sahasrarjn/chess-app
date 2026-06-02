@@ -45,6 +45,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install web deps (for engine-parity tsx scripts)
+        working-directory: web
+        run: npm ci
       - run: python -m unittest discover -s server -p "test_*.py"
       - run: docker compose -f server/docker-compose.yml up --build -d
       - run: |
@@ -88,4 +96,7 @@ jobs:
             -scheme ChessBorderMac \
             -destination 'platform=macOS' \
             -only-testing:ChessBorderTests \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
             test

@@ -79,6 +79,14 @@ if [[ -d dist/pieces ]]; then
     --cache-control "$ASSET_CACHE"
 fi
 
+if [[ -d dist/sounds ]]; then
+  echo "==> Uploading /play/sounds/ (move sound effects)"
+  aws s3 sync dist/sounds/ "s3://${BUCKET}/play/sounds/" \
+    --region "$REGION" \
+    --content-type "audio/mpeg" \
+    --cache-control "public, max-age=86400"
+fi
+
 echo "==> Uploading /play redirect (no trailing slash)"
 aws s3 cp static/play-redirect.html "s3://${BUCKET}/play" \
   --region "$REGION" \
@@ -119,7 +127,7 @@ if [[ -n "$DIST_ID" && "$DIST_ID" != "None" ]]; then
   echo "==> Invalidating CloudFront (${DIST_ID})"
   aws cloudfront create-invalidation \
     --distribution-id "$DIST_ID" \
-    --paths "/index.html" "/play" "/play/" "/play/index.html" "/privacy/index.html" "/play/assets/*" \
+    --paths "/index.html" "/play" "/play/" "/play/index.html" "/privacy/index.html" "/play/assets/*" "/play/sounds/*" \
     --query 'Invalidation.Id' \
     --output text >/dev/null
 else

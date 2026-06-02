@@ -14,6 +14,8 @@
 		072D1B151011DB14089AB3EF /* MoveNotation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 907A49B2C8531C4C828DD6AB /* MoveNotation.swift */; };
 		078370140F322523387533D8 /* SavedGameStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D14527393BDA64C94DADFFC6 /* SavedGameStore.swift */; };
 		08C89A0DAB61DD63B7A6FFA0 /* GameViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2898D2FF9EE958488B06A438 /* GameViewModel.swift */; };
+		A11D10000000000000010003 /* ChessSound.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11D10000000000000010002 /* ChessSound.swift */; };
+		A11D10000000000000010004 /* ChessSound.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11D10000000000000010002 /* ChessSound.swift */; };
 		10CFAFB9CA3E661C28D1AD37 /* Move.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84D1F5F5E3F0F306D945D5D7 /* Move.swift */; };
 		13507C7F16B3FDD7955D9BD4 /* UCIProcessClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACFF1ABE9D507EF35EBAD2A7 /* UCIProcessClient.swift */; };
 		1888864C52F396E42E817511 /* fairy-stockfish in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3D7693656EEDC87C59AD8C09 /* fairy-stockfish */; };
@@ -117,6 +119,7 @@
 		18447ED22F132F3581AA37D4 /* fairy-stockfish-ios */ = {isa = PBXFileReference; path = "fairy-stockfish-ios"; sourceTree = "<group>"; };
 		218437219F0F7123CABBE08B /* ChessBorder.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ChessBorder.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2898D2FF9EE958488B06A438 /* GameViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewModel.swift; sourceTree = "<group>"; };
+		A11D10000000000000010002 /* ChessSound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessSound.swift; sourceTree = "<group>"; };
 		2FF8E07D7F0DABF876CB2527 /* ChessBorderMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChessBorderMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		388F6D0DDEE3BDDD255524D4 /* ChessGame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessGame.swift; sourceTree = "<group>"; };
 		3D1A353C72F516AC4A79E174 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
@@ -255,6 +258,14 @@
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
+		A11D10000000000000010001 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				A11D10000000000000010002 /* ChessSound.swift */,
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
 		B0D7A275C6F1B9119163D8BF /* Bot */ = {
 			isa = PBXGroup;
 			children = (
@@ -290,6 +301,7 @@
 				67E4798FA9879BA230E5DA0D /* ChessBorderAppStore.entitlements */,
 				534C1FCB9C1C475282833070 /* Info-mac.plist */,
 				DAA256F81A7C116124306A68 /* Info.plist */,
+				A11D10000000000000010001 /* Audio */,
 				B0D7A275C6F1B9119163D8BF /* Bot */,
 				09AB826028FC349382F7520D /* Engine */,
 				8DB006FEE8759499DF88CC5E /* Game */,
@@ -453,6 +465,7 @@
 				CA3EF8C7995F898AB2C8A895 /* GameMode.swift in Sources */,
 				A99595C69E835DB8A9E8B199 /* GameView.swift in Sources */,
 				EF68489A71C589594AEBC8B5 /* GameViewModel.swift in Sources */,
+				A11D10000000000000010003 /* ChessSound.swift in Sources */,
 				5B768C97CD951E2DB0765704 /* HomeView.swift in Sources */,
 				B6CAFC8CB73FB8002A877FD3 /* HybridBotPlayer.swift in Sources */,
 				10CFAFB9CA3E661C28D1AD37 /* Move.swift in Sources */,
@@ -489,6 +502,7 @@
 				3FB0F20BCD71E588D3F3189A /* GameMode.swift in Sources */,
 				4DD2CBEC68C9365087349719 /* GameView.swift in Sources */,
 				08C89A0DAB61DD63B7A6FFA0 /* GameViewModel.swift in Sources */,
+				A11D10000000000000010004 /* ChessSound.swift in Sources */,
 				B015A229CDABB047C8FFB649 /* HomeView.swift in Sources */,
 				192759D25866D966AE529219 /* HybridBotPlayer.swift in Sources */,
 				DC76F68A7AE4F47D3A6EEE40 /* Move.swift in Sources */,

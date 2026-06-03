@@ -296,10 +296,16 @@ final class GameViewModel: ObservableObject {
 
     func undo() {
         cancelBotRequest()
-        let movesToUndo = mode == .vsBot ? 2 : 1
+        // Roll back to the player's turn. If the bot already replied that's two
+        // plies (your move + its reply); if it's still thinking it's just your
+        // move. Undoing a fixed 2 would overshoot into the bot's turn and leave
+        // the status stuck on "thinking", so stop as soon as it's white's turn.
+        let maxUndo = mode == .vsBot ? 2 : 1
         var undone = false
-        for _ in 0..<movesToUndo {
-            if game.undoLastMove() { undone = true } else { break }
+        for _ in 0..<maxUndo {
+            guard game.undoLastMove() else { break }
+            undone = true
+            if mode == .vsBot, game.activeColor == .white { break }
         }
         if undone {
             activeMoveAnimation = nil

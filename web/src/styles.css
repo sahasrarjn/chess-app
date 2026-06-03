@@ -508,15 +508,23 @@ select {
 .move-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 8px;
+  align-items: center;
+  gap: 4px 6px;
   padding: 10px 12px;
   font-size: 0.85rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .move-list .move-num {
+  display: inline-flex;
+  align-items: center;
   color: var(--muted);
-  margin-right: 2px;
+  margin-left: 4px;
+  margin-right: 0;
+}
+
+.move-list .move-num:first-child {
+  margin-left: 0;
 }
 
 .move-list button.move-entry {

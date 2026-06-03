@@ -254,11 +254,17 @@ export class GameController {
 
   undo(): void {
     this.cancelBotRequest();
-    const count = this.mode === "vsBot" ? 2 : 1;
+    // vs bot: roll back to the player's turn. If the bot already replied that
+    // is two plies (your move + its reply); if the bot is still thinking it is
+    // just your last move. Undoing a fixed 2 here would overshoot into the
+    // bot's turn and leave the UI stuck on "Bot is thinking…" with nothing
+    // running. So undo one ply at a time, stopping once it's the player's turn.
+    const maxCount = this.mode === "vsBot" ? 2 : 1;
     let undone = false;
-    for (let i = 0; i < count; i++) {
-      if (this.game.undoLastMove()) undone = true;
-      else break;
+    for (let i = 0; i < maxCount; i++) {
+      if (!this.game.undoLastMove()) break;
+      undone = true;
+      if (this.mode === "vsBot" && this.game.activeColor === "white") break;
     }
     if (undone) {
       this.previewPly = null;

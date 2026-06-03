@@ -160,8 +160,8 @@ struct GameView: View {
                     disabled: viewModel.mode == .localTwoPlayer && viewModel.autoFlipBoard,
                     action: { viewModel.toggleBoardFlip() }
                 )
-                GameNavTextAction(
-                    title: viewModel.soundMuted ? "🔇" : "🔊",
+                GameNavIconAction(
+                    systemName: viewModel.soundMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
                     action: { viewModel.toggleSound() }
                 )
             }

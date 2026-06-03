@@ -87,6 +87,30 @@ struct GameNavTextAction: View {
     }
 }
 
+struct GameNavIconAction: View {
+    let systemName: String
+    var active = false
+    var disabled = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(
+                    disabled
+                        ? BoardTheme.muted.opacity(0.35)
+                        : (active ? BoardTheme.accent : BoardTheme.muted)
+                )
+                .padding(.horizontal, 4)
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+    }
+}
+
 // MARK: - Bottom toolbars
 
 /// Connected control strip (navigation / history).

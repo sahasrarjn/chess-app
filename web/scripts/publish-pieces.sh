@@ -11,7 +11,7 @@ LOGO="$ROOT/web/public/logo_v2.png"
 source "$ROOT/ChessBorder/scripts/release-env.sh"
 chess_load_env "$ROOT/ChessBorder/scripts"
 
-BUCKET="${CHESS_DOWNLOAD_BUCKET:-${BRAIN_DOWNLOAD_BUCKET:-brain-downloads-731049002088}}"
+BUCKET="${CHESS_DOWNLOAD_BUCKET:-${BRAIN_DOWNLOAD_BUCKET:-brain-downloads-888900520466}}"
 CF_DIST_ID="${CHESS_CF_DISTRIBUTION_ID:-${BRAIN_CF_DISTRIBUTION_ID:-EC6D5X1HA219F}}"
 CF_BASE="${CHESS_DOWNLOAD_URL:-https://dkxinbm7riorm.cloudfront.net}"
 PREFIX="ChessBorder/pieces"

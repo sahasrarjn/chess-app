@@ -11,7 +11,7 @@ MANIFEST="$ROOT/build/manifest.plist"
 source "$SCRIPT_DIR/release-env.sh"
 chess_load_env "$SCRIPT_DIR"
 
-BUCKET="${CHESS_DOWNLOAD_BUCKET:-${BRAIN_DOWNLOAD_BUCKET:-brain-downloads-731049002088}}"
+BUCKET="${CHESS_DOWNLOAD_BUCKET:-${BRAIN_DOWNLOAD_BUCKET:-brain-downloads-888900520466}}"
 CF_DIST_ID="${CHESS_CF_DISTRIBUTION_ID:-${BRAIN_CF_DISTRIBUTION_ID:-EC6D5X1HA219F}}"
 CF_BASE="${CHESS_DOWNLOAD_URL:-https://dkxinbm7riorm.cloudfront.net}"
 IPA_URL="${CF_BASE}/ChessBorder.ipa"

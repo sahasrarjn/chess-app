@@ -3,7 +3,7 @@
 set -euo pipefail
 
 HOST="${1:-borderchess.org}"
-CF_DOMAIN="${CF_DOMAIN:-d3ujm85r5zro4r.cloudfront.net}"
+CF_DOMAIN="${CF_DOMAIN:-di1tio2w97i7r.cloudfront.net}"
 FAIL=0
 
 resolve_a() {

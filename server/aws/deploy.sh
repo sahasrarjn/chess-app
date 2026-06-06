@@ -33,7 +33,8 @@ if v and v not in ('None', 'null') and len(v) >= 32:
     print(v)
 " 2>/dev/null || true)"
 fi
-if [[ "${API_KEY:-}" == "None" || "${API_KEY:-}" == "null" || ${#API_KEY} -lt 32 ]]; then
+API_KEY="${API_KEY:-}"
+if [[ "$API_KEY" == "None" || "$API_KEY" == "null" || ${#API_KEY} -lt 32 ]]; then
   unset API_KEY
 fi
 

@@ -1,4 +1,4 @@
-import { ChessGame, squaresEqual } from "../engine/chessGame";
+import { ChessGame, squaresEqual, type GameSnapshot } from "../engine/chessGame";
 import { matchEngineMove } from "../engine/fen";
 import { moveUci, type Move, type PieceColor, type Piece, type Square } from "../engine/types";
 import { classifyMoveSound, type SoundEvent } from "../audio/classifyMoveSound";
@@ -17,8 +17,11 @@ export class MultiplayerController {
   selectedSquare: Square | null = null;
   legalTargets = new Set<string>();
   captureTargets = new Set<string>();
+  /** Ply being previewed while browsing history; null = live position. */
+  previewPly: number | null = null;
 
   private game = new ChessGame();
+  private previewSnap: GameSnapshot | null = null;
   private lastMove: Move | null = null;
   private firstState = true;
   /** True between an optimistic local move and the server's authoritative echo. */
@@ -84,8 +87,19 @@ export class MultiplayerController {
       this.state?.status === "active" &&
       this.yourTurn &&
       this.color !== null &&
-      !this.pendingMove
+      !this.pendingMove &&
+      !this.isBrowsingHistory
     );
+  }
+
+  get livePly(): number {
+    return this.state?.moves.length ?? 0;
+  }
+  get isBrowsingHistory(): boolean {
+    return this.previewPly != null && this.previewPly < this.livePly;
+  }
+  get recordedMoves() {
+    return this.game.recordedMoves;
   }
 
   isHintSquare(): boolean {
@@ -101,6 +115,9 @@ export class MultiplayerController {
     return `${s.row},${s.col}`;
   }
   piece(at: Square): Piece | null {
+    if (this.isBrowsingHistory && this.previewSnap) {
+      return this.previewSnap.board[at.row][at.col];
+    }
     return this.game.piece(at);
   }
   isSelected(s: Square): boolean {
@@ -113,12 +130,11 @@ export class MultiplayerController {
     return this.captureTargets.has(this.squareKey(s));
   }
   isLastMoveSquare(s: Square): boolean {
-    return (
-      this.lastMove != null &&
-      (squaresEqual(this.lastMove.from, s) || squaresEqual(this.lastMove.to, s))
-    );
+    const lm = this.isBrowsingHistory ? this.previewSnap?.lastMove ?? null : this.lastMove;
+    return lm != null && (squaresEqual(lm.from, s) || squaresEqual(lm.to, s));
   }
   isKingInCheck(s: Square): boolean {
+    if (this.isBrowsingHistory) return false;
     const p = this.game.piece(s);
     if (p?.kind !== "K") return false;
     return this.game.isInCheck(p.color) && this.game.activeColor === p.color;
@@ -172,6 +188,34 @@ export class MultiplayerController {
     this.ws.send({ type: "rematch" });
   }
 
+  // --- History browsing ---
+
+  goToMove(ply: number): void {
+    if (ply >= this.livePly) {
+      this.returnToLive();
+      return;
+    }
+    this.previewPly = ply;
+    this.previewSnap = this.game.snapshot(ply);
+    this.clearSelection();
+    this.onChange();
+  }
+  returnToLive(): void {
+    if (this.previewPly == null) return;
+    this.previewPly = null;
+    this.previewSnap = null;
+    this.clearSelection();
+    this.onChange();
+  }
+  stepBack(): void {
+    this.goToMove(Math.max((this.previewPly ?? this.livePly) - 1, 0));
+  }
+  stepForward(): void {
+    const cur = this.previewPly ?? this.livePly;
+    if (cur >= this.livePly) this.returnToLive();
+    else this.goToMove(cur + 1);
+  }
+
   shareUrl(): string {
     const base = `${location.origin}${location.pathname}`;
     return `${base}?room=${encodeURIComponent(this.roomId)}`;
@@ -196,6 +240,8 @@ export class MultiplayerController {
     const prevCount = this.firstState ? msg.moves.length : (this.state?.moves.length ?? 0);
     this.lastError = null;
     this.pendingMove = false;
+    this.previewPly = null;
+    this.previewSnap = null;
     this.state = msg;
     this.rebuild(prevCount);
     this.firstState = false;

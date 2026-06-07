@@ -1,10 +1,4 @@
-import { checkEngineHealth } from "../bot/remoteEngine";
-import {
-  getEngineUrl,
-  isEngineConfigured,
-  setEngineUrl,
-} from "../bot/engineConfig";
-import type { BotDifficulty } from "../engine/types";
+import { type BotDifficulty, difficultyElo } from "../engine/types";
 
 const LOGO_SRC =
   (import.meta.env.VITE_LOGO_CDN_URL as string | undefined) ??
@@ -23,7 +17,6 @@ export function renderHome(
   onPlayOnline: () => void
 ): void {
   let difficulty: BotDifficulty = "medium";
-  let settingsOpen = false;
 
   const render = () => {
     root.innerHTML = "";
@@ -57,6 +50,8 @@ export function renderHome(
     }
     home.appendChild(diff);
 
+    home.appendChild(el("p", "elo-note", `Bot strength ≈ ${difficultyElo(difficulty)} ELO`));
+
     const actions = el("div", "home-actions");
     const botBtn = el("button", "primary", "Play vs Bot");
     botBtn.onclick = () => onStart({ mode: "vsBot", difficulty });
@@ -72,77 +67,10 @@ export function renderHome(
 
     home.appendChild(actions);
 
-    const settingsBtn = el(
-      "button",
-      "settings-toggle",
-      settingsOpen ? "Hide engine settings" : "Engine settings (for bot)"
-    );
-    settingsBtn.onclick = () => {
-      settingsOpen = !settingsOpen;
-      render();
-    };
-    home.appendChild(settingsBtn);
-
-    if (settingsOpen) {
-      const panel = el("div", "settings-panel");
-      panel.appendChild(el("label", "", "Engine server URL (local dev only)"));
-      const urlInput = document.createElement("input");
-      urlInput.type = "url";
-      urlInput.placeholder = "Leave empty. Production uses this site automatically";
-      urlInput.value = getEngineUrl();
-      panel.appendChild(urlInput);
-
-      panel.appendChild(
-        el(
-          "p",
-          "engine-status",
-          "Production bot traffic goes through this site. No API key is needed in the browser."
-        )
-      );
-
-      const saveBtn = el("button", "", "Save");
-      saveBtn.onclick = () => {
-        setEngineUrl(urlInput.value);
-        updateEngineStatus(statusEl);
-      };
-      panel.appendChild(saveBtn);
-
-      const statusEl = el("p", "engine-status", "Checking engine…");
-      panel.appendChild(statusEl);
-      home.appendChild(panel);
-      updateEngineStatus(statusEl);
-    } else if (!isEngineConfigured()) {
-      home.appendChild(
-        el(
-          "p",
-          "engine-status",
-          "Bot uses this site’s /v1/move API. Leave engine URL empty on web."
-        )
-      );
-    }
-
     root.appendChild(home);
   };
 
   render();
-}
-
-async function updateEngineStatus(el: HTMLElement): Promise<void> {
-  el.textContent = "Checking engine…";
-  el.className = "engine-status";
-  try {
-    const ok = await checkEngineHealth();
-    if (ok) {
-      el.textContent = "Engine connected";
-      el.className = "engine-status ok";
-    } else {
-      el.textContent = "Engine not reachable. Start docker compose in server/";
-      el.className = "engine-status err";
-    }
-  } catch {
-    el.textContent = "Engine not reachable. Start docker compose in server/";
-    el.className = "engine-status err";
-  }
 }
 
 function el(tag: string, className: string, text?: string): HTMLElement {

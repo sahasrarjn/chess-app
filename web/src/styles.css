@@ -796,3 +796,10 @@ select {
   font-size: 0.9rem;
   align-self: center;
 }
+
+.elo-note {
+  margin: -8px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}

@@ -3,6 +3,7 @@ import type { GameResult, Square } from "../engine/types";
 import { getGuestName, getPlayerToken } from "../online/guestIdentity";
 import { MultiplayerController } from "../online/multiplayerController";
 import { BoardView } from "./boardView";
+import { MoveListView } from "./moveListView";
 import { MuteButton } from "./muteButton";
 
 const WS_URL = import.meta.env.VITE_MULTIPLAYER_WS_URL as string | undefined;
@@ -40,6 +41,8 @@ class OnlineGameScreen {
   private sharePanel!: HTMLElement;
   private shareInput!: HTMLInputElement;
   private statusEl!: HTMLElement;
+  private moveWrap!: HTMLElement;
+  private moveList!: MoveListView;
   private controlsEl!: HTMLElement;
 
   constructor(
@@ -111,6 +114,10 @@ class OnlineGameScreen {
     screen.appendChild(boardSlot);
 
     const bottom = el("div", "game-bottom");
+    this.moveWrap = el("div", "move-list-wrap");
+    this.moveList = new MoveListView((ply) => this.ctrl.goToMove(ply));
+    this.moveWrap.appendChild(this.moveList.el);
+    bottom.appendChild(this.moveWrap);
     this.controlsEl = el("div", "game-controls");
     bottom.appendChild(this.controlsEl);
     screen.appendChild(bottom);
@@ -136,6 +143,11 @@ class OnlineGameScreen {
 
     this.statusEl.textContent = this.statusText();
     this.board.update();
+
+    const hasMoves = this.ctrl.livePly > 0;
+    this.moveWrap.style.display = hasMoves ? "" : "none";
+    if (hasMoves) this.moveList.update(this.ctrl.recordedMoves, this.ctrl.previewPly);
+
     this.updateControls();
   }
 
@@ -143,6 +155,24 @@ class OnlineGameScreen {
     this.controlsEl.replaceChildren();
     const status = this.ctrl.status;
     const role = this.ctrl.role;
+
+    if (this.ctrl.livePly > 0) {
+      const viewPly = this.ctrl.previewPly ?? this.ctrl.livePly;
+      const back = el("button", "", "◀") as HTMLButtonElement;
+      back.disabled = viewPly <= 0;
+      back.onclick = () => this.ctrl.stepBack();
+      this.controlsEl.appendChild(back);
+
+      const fwd = el("button", "", "▶") as HTMLButtonElement;
+      fwd.disabled = viewPly >= this.ctrl.livePly;
+      fwd.onclick = () => this.ctrl.stepForward();
+      this.controlsEl.appendChild(fwd);
+
+      const live = el("button", "", "Live") as HTMLButtonElement;
+      live.disabled = this.ctrl.previewPly == null;
+      live.onclick = () => this.ctrl.returnToLive();
+      this.controlsEl.appendChild(live);
+    }
 
     if (status === "finished" && role && role !== "spectator") {
       const offered = this.ctrl.state?.rematchOfferedBy ?? null;
@@ -178,6 +208,9 @@ class OnlineGameScreen {
     if (this.ctrl.connection === "closed") return "Disconnected.";
     const s = this.ctrl.state;
     if (!s) return "Connecting…";
+    if (this.ctrl.isBrowsingHistory) {
+      return `Reviewing move ${this.ctrl.previewPly} of ${this.ctrl.livePly}`;
+    }
     if (s.status === "waiting") {
       return this.ctrl.role === "spectator" ? "Waiting for players…" : "Waiting for opponent…";
     }

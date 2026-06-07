@@ -13,6 +13,7 @@ import {
   type GameMode,
 } from "../engine/types";
 import { BoardView } from "./boardView";
+import { MoveListView } from "./moveListView";
 import { MuteButton } from "./muteButton";
 
 
@@ -39,7 +40,7 @@ class GameScreen {
   private statusSpinnerEl!: HTMLSpanElement;
   private capBlackEl!: HTMLElement;
   private capWhiteEl!: HTMLElement;
-  private moveListEl!: HTMLDivElement;
+  private moveList!: MoveListView;
   private undoBtn!: HTMLButtonElement;
   private retryBtn!: HTMLButtonElement;
   private backBtn!: HTMLButtonElement;
@@ -51,7 +52,6 @@ class GameScreen {
   private gameOverDismissed = false;
 
   private board!: BoardView;
-  private lastMoveListLen = 0;
   private lastCapturedPly = -1;
   private lastPersistKey = "";
   private autoFlipBtn: HTMLButtonElement | null = null;
@@ -145,8 +145,8 @@ class GameScreen {
 
     const bottom = el("div", "game-bottom");
     const moveWrap = el("div", "move-list-wrap");
-    this.moveListEl = el("div", "move-list") as HTMLDivElement;
-    moveWrap.appendChild(this.moveListEl);
+    this.moveList = new MoveListView((ply) => this.ctrl.goToMove(ply));
+    moveWrap.appendChild(this.moveList.el);
     bottom.appendChild(moveWrap);
 
     const controls = el("div", "game-controls");
@@ -205,7 +205,7 @@ class GameScreen {
     this.updateStatus();
     this.updateCaptured();
     this.board.update();
-    this.updateMoveList();
+    this.moveList.update(this.ctrl.game.recordedMoves, this.ctrl.previewPly);
     this.updateControls();
     this.updateHintButton();
     this.updatePromotion();
@@ -252,55 +252,6 @@ class GameScreen {
     return row;
   }
 
-  private updateMoveList(): void {
-    const moves = this.ctrl.game.recordedMoves;
-    const preview = this.ctrl.previewPly;
-
-    if (moves.length < this.lastMoveListLen) {
-      this.moveListEl.replaceChildren();
-      this.lastMoveListLen = 0;
-    }
-
-    if (moves.length === 0 && this.lastMoveListLen === 0) {
-      this.moveListEl.replaceChildren(el("span", "", "No moves yet"));
-      return;
-    }
-
-    if (this.lastMoveListLen === 0 && moves.length > 0) {
-      this.moveListEl.replaceChildren();
-    }
-
-    let moveNum = Math.floor(this.lastMoveListLen / 2) + 1;
-    if (this.lastMoveListLen === 0) moveNum = 1;
-
-    for (let i = this.lastMoveListLen; i < moves.length; i++) {
-      const rec = moves[i];
-      if (rec.color === "white") {
-        this.moveListEl.appendChild(el("span", "move-num", `${moveNum}.`));
-        moveNum++;
-      }
-      const entry = el("button", "move-entry", rec.san) as HTMLButtonElement;
-      const ply = rec.ply + 1;
-      entry.onclick = () => this.ctrl.goToMove(ply);
-      this.moveListEl.appendChild(entry);
-    }
-
-    this.lastMoveListLen = moves.length;
-    this.moveListEl.scrollTop = this.moveListEl.scrollHeight;
-
-    const entries = this.moveListEl.querySelectorAll<HTMLButtonElement>("button.move-entry");
-    entries.forEach((btn, idx) => {
-      const rec = moves[idx];
-      const active =
-        preview === rec.ply + 1 || (preview == null && rec.ply === moves.length - 1);
-      btn.classList.toggle("active", active);
-    });
-
-    const empty = this.moveListEl.querySelector("span:not(.move-num)");
-    if (empty && moves.length > 0 && empty.textContent === "No moves yet") {
-      empty.remove();
-    }
-  }
 
   private updateControls(): void {
     const gameOver = this.ctrl.game.result.type !== "ongoing";

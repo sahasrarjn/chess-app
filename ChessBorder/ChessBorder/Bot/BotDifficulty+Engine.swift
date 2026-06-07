@@ -3,9 +3,9 @@ import Foundation
 extension BotDifficulty {
     var targetElo: Int {
         switch self {
-        case .easy: 600
-        case .medium: 1400
-        case .hard: 2000
+        case .easy: 800
+        case .medium: 1200
+        case .hard: 1600
         }
     }
 

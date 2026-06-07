@@ -3,6 +3,7 @@ import type { GameResult, Square } from "../engine/types";
 import { getGuestName, getPlayerToken } from "../online/guestIdentity";
 import { MultiplayerController } from "../online/multiplayerController";
 import { BoardView } from "./boardView";
+import { MuteButton } from "./muteButton";
 
 const WS_URL = import.meta.env.VITE_MULTIPLAYER_WS_URL as string | undefined;
 
@@ -34,7 +35,7 @@ class OnlineGameScreen {
   private readonly board: BoardView;
 
   private titleEl!: HTMLElement;
-  private muteBtn!: HTMLButtonElement;
+  private muteBtn!: MuteButton;
   private playersEl!: HTMLElement;
   private sharePanel!: HTMLElement;
   private shareInput!: HTMLInputElement;
@@ -70,14 +71,8 @@ class OnlineGameScreen {
     header.appendChild(back);
     this.titleEl = el("h2", "", "Online");
     header.appendChild(this.titleEl);
-    this.muteBtn = el("button", "sound-toggle") as HTMLButtonElement;
-    this.muteBtn.type = "button";
-    this.muteBtn.onclick = () => {
-      this.sound.unlock();
-      this.sound.toggleMuted();
-      this.update();
-    };
-    header.appendChild(this.muteBtn);
+    this.muteBtn = new MuteButton(this.sound);
+    header.appendChild(this.muteBtn.el);
     top.appendChild(header);
 
     this.playersEl = el("div", "online-players");
@@ -133,8 +128,6 @@ class OnlineGameScreen {
 
   private update(): void {
     this.titleEl.textContent = this.ctrl.role === "spectator" ? "Online (spectating)" : "Online";
-    this.muteBtn.textContent = this.sound.isMuted ? "🔇" : "🔊";
-    this.muteBtn.title = this.sound.isMuted ? "Sound off" : "Sound on";
     this.playersEl.textContent = this.playersText();
 
     const showShare = this.ctrl.status === "waiting" && this.ctrl.role !== "spectator";

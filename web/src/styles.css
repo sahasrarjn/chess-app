@@ -10,6 +10,8 @@
   --last-move: rgba(217, 184, 46, 0.35);
   --legal-dot: rgba(30, 30, 30, 0.28);
   --capture-ring: rgba(217, 51, 38, 0.55);
+  --hint: rgba(56, 189, 248, 0.42);
+  --hint-ring: rgba(56, 189, 248, 0.95);
   --check: rgba(220, 40, 40, 0.45);
   --frame: rgba(250, 203, 46, 0.25);
   --board-edge-inset: 12px;
@@ -281,6 +283,49 @@ select {
   border-color: color-mix(in srgb, var(--muted) 22%, transparent);
 }
 
+.game-header .hint-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--muted) 30%, transparent);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.game-header .hint-toggle svg {
+  display: block;
+}
+
+.game-header .hint-toggle:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
+}
+
+.game-header .hint-toggle:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.game-header .hint-toggle:disabled {
+  color: var(--muted);
+  border-color: color-mix(in srgb, var(--muted) 22%, transparent);
+  opacity: 0.5;
+  cursor: default;
+}
+
+.game-header .hint-toggle.computing {
+  animation: hint-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes hint-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
 .status-wrap {
   margin-bottom: 6px;
 }
@@ -444,6 +489,18 @@ select {
 
 .square.in-check {
   background-color: var(--check) !important;
+}
+
+.square.hint {
+  background-color: var(--hint) !important;
+}
+
+.square.hint::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 3px var(--hint-ring);
+  pointer-events: none;
 }
 
 .square .piece-img {

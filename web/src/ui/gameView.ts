@@ -28,6 +28,11 @@ const SPEAKER_OFF_SVG =
   '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
   '<path d="M11 5 6 9H2v6h4l5 4V5z"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/></svg>';
 
+const HINT_SVG =
+  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M9 18h6"/><path d="M10 22h4"/>' +
+  '<path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"/></svg>';
+
 type SquareCell = {
   btn: HTMLButtonElement;
   pieceImg: HTMLImageElement | null;
@@ -75,6 +80,7 @@ class GameScreen {
   private autoFlipBtn: HTMLButtonElement | null = null;
   private flipBtn!: HTMLButtonElement;
   private muteBtn!: HTMLButtonElement;
+  private hintBtn!: HTMLButtonElement;
   private readonly sound = new SoundPlayer();
 
   constructor(
@@ -131,6 +137,16 @@ class GameScreen {
     };
     this.updateMuteButton();
     header.appendChild(this.muteBtn);
+
+    this.hintBtn = el("button", "hint-toggle icon-btn") as HTMLButtonElement;
+    this.hintBtn.type = "button";
+    this.hintBtn.innerHTML = HINT_SVG;
+    this.hintBtn.title = "Hint";
+    this.hintBtn.setAttribute("aria-label", "Show a suggested move");
+    this.hintBtn.onclick = () => {
+      void this.ctrl.requestHint();
+    };
+    header.appendChild(this.hintBtn);
     top.appendChild(header);
 
     const capBar = el("div", "captured-bar");
@@ -269,8 +285,15 @@ class GameScreen {
     this.updateBoard();
     this.updateMoveList();
     this.updateControls();
+    this.updateHintButton();
     this.updatePromotion();
     this.updateGameOver();
+  }
+
+  private updateHintButton(): void {
+    const computing = this.ctrl.isComputingHint;
+    this.hintBtn.disabled = computing || !this.ctrl.canRequestHint;
+    this.hintBtn.classList.toggle("computing", computing);
   }
 
   private updateStatus(): void {
@@ -323,6 +346,10 @@ class GameScreen {
         classes.push("last-move");
       }
       if (this.ctrl.isKingInCheck(square)) classes.push("in-check");
+      const hint = this.ctrl.hintMove;
+      if (hint && (squaresEqual(hint.from, square) || squaresEqual(hint.to, square))) {
+        classes.push("hint");
+      }
 
       if (cell.btn.className !== classes.join(" ")) {
         cell.btn.className = classes.join(" ");

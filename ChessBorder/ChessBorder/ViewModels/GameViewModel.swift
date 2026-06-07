@@ -27,9 +27,16 @@ final class GameViewModel: ObservableObject {
     @Published var activeMoveAnimation: ActiveMoveAnimation?
     @Published private(set) var botEngineError: String?
     @Published var soundMuted = ChessSoundPlayer.shared.isMuted
+    /// Suggested move highlighted by the Hint button (cleared on the next move).
+    @Published private(set) var hintMove: Move?
+    @Published private(set) var isComputingHint = false
 
     let mode: GameMode
     let botDifficulty: BotDifficulty
+
+    /// Hints are always computed at full strength so the suggestion is genuinely good.
+    private static let hintDifficulty: BotDifficulty = .hard
+    private var hintToken = 0
 
     private let sound = ChessSoundPlayer.shared
 
@@ -100,6 +107,45 @@ final class GameViewModel: ObservableObject {
 
     var canInteract: Bool {
         game.result == .ongoing && !isThinking && !isBotTurn && !isBrowsingHistory && activeMoveAnimation == nil
+    }
+
+    var canRequestHint: Bool {
+        canInteract && pendingPromotion == nil
+    }
+
+    func isHintSquare(_ square: Square) -> Bool {
+        guard let hintMove else { return false }
+        return hintMove.from == square || hintMove.to == square
+    }
+
+    /// Compute a strong suggested move for the side to move and highlight it.
+    func requestHint() {
+        guard !isComputingHint, canRequestHint else { return }
+
+        let token = hintToken + 1
+        hintToken = token
+        hintMove = nil
+        isComputingHint = true
+        objectWillChange.send()
+
+        let plyAtRequest = game.recordedMoves.count
+        let snapshot = game.copy()
+        Task { @MainActor in
+            let move = await HybridBotPlayer().chooseMove(in: snapshot, difficulty: Self.hintDifficulty)
+            guard token == self.hintToken else { return }
+            self.isComputingHint = false
+            if self.game.recordedMoves.count == plyAtRequest {
+                self.hintMove = move
+            }
+            self.objectWillChange.send()
+        }
+    }
+
+    /// Drop any active hint highlight and cancel a pending hint computation.
+    private func clearHint() {
+        hintToken += 1
+        hintMove = nil
+        isComputingHint = false
     }
 
     func piece(at square: Square) -> Piece? {
@@ -208,6 +254,7 @@ final class GameViewModel: ObservableObject {
         if ply >= livePly {
             returnToLivePosition()
         } else {
+            clearHint()
             previewPly = ply
         }
         clearSelection()
@@ -264,6 +311,7 @@ final class GameViewModel: ObservableObject {
 
         emitMoveSound(for: move)
         previewPly = nil
+        clearHint()
         clearSelection()
         beginMoveAnimation(move: move, piece: piece)
         notifyChange()
@@ -283,6 +331,7 @@ final class GameViewModel: ObservableObject {
         guard game.applyMove(move) else { return }
         emitMoveSound(for: move)
         previewPly = nil
+        clearHint()
         clearSelection()
         beginMoveAnimation(move: move, piece: Piece(kind: kind, color: pawn.color))
         notifyChange()
@@ -311,6 +360,7 @@ final class GameViewModel: ObservableObject {
             activeMoveAnimation = nil
             returnToLivePosition()
             botEngineError = nil
+            clearHint()
             notifyChange()
         }
         clearSelection()
@@ -319,6 +369,7 @@ final class GameViewModel: ObservableObject {
     func resignGame() {
         game.resign(by: game.activeColor)
         sound.play(.gameEnd)
+        clearHint()
         notifyChange()
     }
 
@@ -334,6 +385,7 @@ final class GameViewModel: ObservableObject {
         previewPly = nil
         activeMoveAnimation = nil
         botEngineError = nil
+        clearHint()
         notifyChange()
         sound.play(.gameStart)
     }

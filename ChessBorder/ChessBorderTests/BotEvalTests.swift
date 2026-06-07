@@ -179,4 +179,29 @@ final class BotEvalTests: XCTestCase {
         let move = game.legalMoves().first { $0.from == knightSquare && $0.to == inward }
         XCTAssertNotNil(move, "Knight on h1 should jump to f3")
     }
+
+    // MARK: - App update version comparison
+
+    func testCompareVersionsNumericNotLexicographic() {
+        XCTAssertEqual(compareVersions("1.0.10", "1.0.2"), .orderedDescending)
+        XCTAssertEqual(compareVersions("1.0.2", "1.0.10"), .orderedAscending)
+    }
+
+    func testCompareVersionsEqualAndShortForms() {
+        XCTAssertEqual(compareVersions("1.0.1", "1.0.1"), .orderedSame)
+        XCTAssertEqual(compareVersions("1.1", "1.0.9"), .orderedDescending)
+        XCTAssertEqual(compareVersions("1.0", "1.0.0"), .orderedSame)
+        XCTAssertEqual(compareVersions("2.0", "1.9.9"), .orderedDescending)
+    }
+
+    // MARK: - Easy difficulty
+
+    func testEasyIsVeryWeak() {
+        // Shallow search + frequent random moves make Easy beatable by a true beginner.
+        XCTAssertEqual(BotDifficulty.easy.searchDepth, 1)
+        XCTAssertGreaterThanOrEqual(BotDifficulty.easy.randomness, 0.5)
+        XCTAssertLessThanOrEqual(BotDifficulty.easy.targetElo, 800)
+        XCTAssertLessThan(BotDifficulty.easy.searchDepth, BotDifficulty.medium.searchDepth)
+        XCTAssertGreaterThan(BotDifficulty.easy.randomness, BotDifficulty.medium.randomness)
+    }
 }

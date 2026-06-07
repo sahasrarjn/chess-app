@@ -62,6 +62,13 @@ struct SquareView: View {
                     .padding(1)
             }
 
+            if viewModel.isHintSquare(square) {
+                Rectangle().fill(BoardTheme.hint)
+                RoundedRectangle(cornerRadius: 2)
+                    .stroke(BoardTheme.hintRing, lineWidth: 2.5)
+                    .padding(1)
+            }
+
             if viewModel.isLegalTarget(square) {
                 if isCaptureHint {
                     Circle()

@@ -3,7 +3,7 @@ import Foundation
 extension BotDifficulty {
     var targetElo: Int {
         switch self {
-        case .easy: 1000
+        case .easy: 600
         case .medium: 1400
         case .hard: 2000
         }
@@ -11,7 +11,7 @@ extension BotDifficulty {
 
     var searchMovetimeMs: Int {
         switch self {
-        case .easy: 300
+        case .easy: 200
         case .medium: 500
         case .hard: 900
         }
@@ -19,7 +19,7 @@ extension BotDifficulty {
 
     var minimumThinkingDuration: Duration {
         switch self {
-        case .easy: .milliseconds(150)
+        case .easy: .milliseconds(120)
         case .medium: .milliseconds(200)
         case .hard: .milliseconds(300)
         }

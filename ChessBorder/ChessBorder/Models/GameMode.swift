@@ -16,7 +16,7 @@ enum BotDifficulty: String, CaseIterable, Identifiable {
 
     var searchDepth: Int {
         switch self {
-        case .easy: 2
+        case .easy: 1
         case .medium: 3
         case .hard: 4
         }
@@ -24,7 +24,7 @@ enum BotDifficulty: String, CaseIterable, Identifiable {
 
     var randomness: Double {
         switch self {
-        case .easy: 0.35
+        case .easy: 0.6
         case .medium: 0.12
         case .hard: 0.0
         }

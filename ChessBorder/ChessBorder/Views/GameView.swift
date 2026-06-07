@@ -161,6 +161,12 @@ struct GameView: View {
                     action: { viewModel.toggleBoardFlip() }
                 )
                 GameNavIconAction(
+                    systemName: viewModel.isComputingHint ? "lightbulb.fill" : "lightbulb",
+                    active: viewModel.hintMove != nil || viewModel.isComputingHint,
+                    disabled: viewModel.isComputingHint || !viewModel.canRequestHint,
+                    action: { viewModel.requestHint() }
+                )
+                GameNavIconAction(
                     systemName: viewModel.soundMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
                     action: { viewModel.toggleSound() }
                 )

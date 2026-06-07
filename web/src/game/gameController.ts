@@ -29,6 +29,9 @@ export type SoundListener = (event: SoundEvent) => void;
 
 const MAX_BOT_SILENT_RETRIES = 2;
 
+/** Hints are always computed at full strength so the suggested move is genuinely good. */
+const HINT_DIFFICULTY: BotDifficulty = "hard";
+
 export class GameController {
   game = new ChessGame();
   selectedSquare: Square | null = null;
@@ -42,9 +45,13 @@ export class GameController {
   autoFlipBoard = true;
   previewPly: number | null = null;
   botEngineError: string | null = null;
+  /** Suggested move highlighted by the Hint button (cleared on the next move). */
+  hintMove: Move | null = null;
+  isComputingHint = false;
   revision = 0;
   private botMoveToken = 0;
   private botAbort: AbortController | null = null;
+  private hintAbort: AbortController | null = null;
 
   constructor(
     readonly mode: GameMode,
@@ -220,6 +227,7 @@ export class GameController {
 
     this.emitMoveSound(move);
     this.previewPly = null;
+    this.clearHint();
     this.clearSelection();
     this.notify();
     if (triggerBot) void this.maybePlayBotMove();
@@ -241,6 +249,7 @@ export class GameController {
 
     this.emitMoveSound(move);
     this.previewPly = null;
+    this.clearHint();
     this.clearSelection();
     this.notify();
     void this.maybePlayBotMove();
@@ -269,6 +278,7 @@ export class GameController {
     if (undone) {
       this.previewPly = null;
       this.botEngineError = null;
+      this.clearHint();
       this.notify();
     }
     this.clearSelection();
@@ -276,6 +286,7 @@ export class GameController {
 
   resignGame(): void {
     this.game.resign(this.game.activeColor);
+    this.clearHint();
     this.notify();
   }
 
@@ -294,6 +305,7 @@ export class GameController {
     this.autoFlipBoard = true;
     this.previewPly = null;
     this.botEngineError = null;
+    this.clearHint();
     this.notify();
   }
 
@@ -312,6 +324,7 @@ export class GameController {
     this.autoFlipBoard = autoFlipBoard;
     this.previewPly = null;
     this.botEngineError = null;
+    this.clearHint();
     this.notify();
     if (this.isBotTurn) void this.maybePlayBotMove();
   }
@@ -347,6 +360,54 @@ export class GameController {
     void this.maybePlayBotMove();
   }
 
+  get canRequestHint(): boolean {
+    return (
+      this.game.result.type === "ongoing" &&
+      !this.isBrowsingHistory &&
+      !this.isThinking &&
+      !this.isBotTurn &&
+      !this.pendingPromotion
+    );
+  }
+
+  /** Compute a strong suggested move for the side to move and highlight it. */
+  async requestHint(): Promise<void> {
+    if (this.isComputingHint || !this.canRequestHint) return;
+
+    this.hintAbort?.abort();
+    const abort = new AbortController();
+    this.hintAbort = abort;
+    this.hintMove = null;
+    this.isComputingHint = true;
+    this.notify();
+
+    const plyAtRequest = this.game.recordedMoves.length;
+    const snapshot = this.game.copy();
+    try {
+      const outcome = await chooseBotMove(snapshot, HINT_DIFFICULTY, abort.signal);
+      if (abort.signal.aborted) return;
+      if (this.game.recordedMoves.length !== plyAtRequest) return;
+      this.hintMove = outcome.move;
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      // Hints are best-effort; a failed lookup just shows no suggestion.
+    } finally {
+      if (this.hintAbort === abort) {
+        this.hintAbort = null;
+        this.isComputingHint = false;
+        this.notify();
+      }
+    }
+  }
+
+  /** Drop any active hint highlight (does not notify; callers already do). */
+  private clearHint(): void {
+    this.hintAbort?.abort();
+    this.hintAbort = null;
+    this.hintMove = null;
+    this.isComputingHint = false;
+  }
+
   goToMove(ply: number): void {
     const before = this.previewPly;
     if (ply >= this.livePly) {
@@ -354,6 +415,7 @@ export class GameController {
     } else {
       this.previewPly = ply;
     }
+    if (this.previewPly != null) this.clearHint();
     if (this.previewPly !== before) {
       this.clearSelection();
     } else {

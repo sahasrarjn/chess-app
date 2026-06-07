@@ -203,7 +203,7 @@ export type BotDifficulty = "easy" | "medium" | "hard";
 export function difficultyElo(d: BotDifficulty): number {
   switch (d) {
     case "easy":
-      return 1000;
+      return 600;
     case "medium":
       return 1400;
     case "hard":
@@ -214,7 +214,7 @@ export function difficultyElo(d: BotDifficulty): number {
 export function difficultyMovetime(d: BotDifficulty): number {
   switch (d) {
     case "easy":
-      return 300;
+      return 200;
     case "medium":
       return 500;
     case "hard":
@@ -225,7 +225,7 @@ export function difficultyMovetime(d: BotDifficulty): number {
 export function difficultyMinThinkMs(d: BotDifficulty): number {
   switch (d) {
     case "easy":
-      return 150;
+      return 120;
     case "medium":
       return 200;
     case "hard":
@@ -237,7 +237,7 @@ export function difficultyMinThinkMs(d: BotDifficulty): number {
 export function difficultySearchDepth(d: BotDifficulty): number {
   switch (d) {
     case "easy":
-      return 2;
+      return 1;
     case "medium":
       return 3;
     case "hard":
@@ -249,7 +249,7 @@ export function difficultySearchDepth(d: BotDifficulty): number {
 export function difficultyRandomness(d: BotDifficulty): number {
   switch (d) {
     case "easy":
-      return 0.35;
+      return 0.6;
     case "medium":
       return 0.12;
     case "hard":

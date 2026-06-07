@@ -22,6 +22,8 @@
 	<string>1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>MultiplayerServerURL</key>
+	<string>wss://rt7ozwivr6.execute-api.us-east-1.amazonaws.com/prod</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.board-games</string>
 	<key>LSMinimumSystemVersion</key>

@@ -22,6 +22,8 @@
 	<string>9</string>
 	<key>EngineServerURL</key>
 	<string>https://borderchess.org</string>
+	<key>MultiplayerServerURL</key>
+	<string>wss://rt7ozwivr6.execute-api.us-east-1.amazonaws.com/prod</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>UILaunchScreen</key>

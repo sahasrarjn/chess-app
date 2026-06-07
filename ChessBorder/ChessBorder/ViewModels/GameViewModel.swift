@@ -10,7 +10,7 @@ struct ActiveMoveAnimation: Equatable {
 }
 
 @MainActor
-final class GameViewModel: ObservableObject {
+final class GameViewModel: ObservableObject, BoardModel {
     var livePly: Int { game.recordedMoves.count }
 
     @Published private(set) var game = ChessGame()

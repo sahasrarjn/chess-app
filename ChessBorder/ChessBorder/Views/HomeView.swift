@@ -6,6 +6,12 @@ struct HomeView: View {
     @State private var showHomeDespiteSave = false
     @StateObject private var updateChecker = AppUpdateChecker()
     @Environment(\.openURL) private var openURL
+    @State private var joinCode = ""
+    @State private var onlineRoom: OnlineRoom?
+
+    private struct OnlineRoom: Identifiable, Hashable {
+        let id: String
+    }
 
     var body: some View {
         Group {
@@ -74,6 +80,10 @@ struct HomeView: View {
                                 }
                             }
                         }
+
+                        if MultiplayerConfig.isConfigured {
+                            onlineSection
+                        }
                     }
                     .padding(.horizontal, 24)
 
@@ -91,9 +101,39 @@ struct HomeView: View {
                 }
             }
             .chessAppNavigationChromeHidden()
+            .navigationDestination(item: $onlineRoom) { room in
+                OnlineGameView(roomId: room.id)
+            }
         }
         .task {
             await updateChecker.checkForUpdate()
+        }
+    }
+
+    private var onlineSection: some View {
+        VStack(spacing: 10) {
+            Button {
+                onlineRoom = OnlineRoom(id: OnlineIdentity.newRoomCode())
+            } label: {
+                ModeButtonLabel(title: "Play Online", subtitle: "Invite a friend with a link")
+            }
+            .buttonStyle(.plain)
+
+            HStack(spacing: 8) {
+                TextField("Room code", text: $joinCode)
+                    .textFieldStyle(.roundedBorder)
+                    .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                    #endif
+                Button("Join") {
+                    if let code = OnlineIdentity.roomId(fromInput: joinCode) {
+                        joinCode = ""
+                        onlineRoom = OnlineRoom(id: code)
+                    }
+                }
+                .buttonStyle(GameChromeButtonStyle(variant: .secondary))
+            }
         }
     }
 

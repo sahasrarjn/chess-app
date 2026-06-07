@@ -1,5 +1,25 @@
 import SwiftUI
 
+/// Read surface the board renderer needs. Both GameViewModel (offline) and
+/// OnlineGameViewModel conform, so SquareView/BoardView are shared.
+@MainActor
+protocol BoardModel: ObservableObject {
+    var boardFlipped: Bool { get }
+    var previewPly: Int? { get }
+    var activeMoveAnimation: ActiveMoveAnimation? { get }
+    func piece(at square: Square) -> Piece?
+    func isSelected(_ square: Square) -> Bool
+    func isLegalTarget(_ square: Square) -> Bool
+    func isCaptureTarget(_ square: Square) -> Bool
+    func isLastMoveSquare(_ square: Square) -> Bool
+    func isKingInCheck(_ square: Square) -> Bool
+    func isHintSquare(_ square: Square) -> Bool
+    func squareBackgroundColor(_ square: Square) -> Color
+    func isAnimatingMove(from square: Square) -> Bool
+    func isAnimatingMove(to square: Square) -> Bool
+    func handleSquareTap(_ square: Square)
+}
+
 struct PieceView: View {
     let piece: Piece
     var elevated = false
@@ -22,9 +42,9 @@ struct PieceView: View {
     }
 }
 
-struct SquareView: View {
+struct SquareView<VM: BoardModel>: View {
     let square: Square
-    @ObservedObject var viewModel: GameViewModel
+    @ObservedObject var viewModel: VM
     let squareSize: CGFloat
 
     private var isPlayable: Bool { square.isPlayable }
@@ -208,8 +228,8 @@ enum GameBoardLayout {
     }
 }
 
-struct BoardView: View {
-    @ObservedObject var viewModel: GameViewModel
+struct BoardView<VM: BoardModel>: View {
+    @ObservedObject var viewModel: VM
     var boardSide: CGFloat
 
     private var displayRows: [Int] {

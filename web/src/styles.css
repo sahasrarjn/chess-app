@@ -803,3 +803,14 @@ select {
   color: var(--muted);
   text-align: center;
 }
+
+.join-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.join-input {
+  flex: 1;
+  min-width: 0;
+}

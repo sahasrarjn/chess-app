@@ -37,6 +37,20 @@ export function getGuestName(): string {
   return name;
 }
 
+/** Extract a room id from a pasted share link or a bare code. */
+export function roomIdFromInput(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  try {
+    const room = new URL(trimmed, location.origin).searchParams.get("room");
+    if (room) return room;
+  } catch {
+    // not a URL — fall through to bare-code handling
+  }
+  const code = trimmed.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return code || null;
+}
+
 /** Unguessable room id for share links. */
 export function newRoomId(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(9));

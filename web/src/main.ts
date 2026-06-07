@@ -69,7 +69,7 @@ try {
       url.searchParams.delete("room");
       history.replaceState(null, "", url.toString());
     }
-    renderHome(app, startGame, () => startOnline(newRoomId()));
+    renderHome(app, startGame, (roomId) => startOnline(roomId ?? newRoomId()));
   }
 
   const roomParam = new URLSearchParams(location.search).get("room");

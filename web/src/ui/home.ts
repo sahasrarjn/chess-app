@@ -1,4 +1,5 @@
 import { type BotDifficulty, difficultyElo } from "../engine/types";
+import { roomIdFromInput } from "../online/guestIdentity";
 
 const LOGO_SRC =
   (import.meta.env.VITE_LOGO_CDN_URL as string | undefined) ??
@@ -14,7 +15,7 @@ export type HomeStart = {
 export function renderHome(
   root: HTMLElement,
   onStart: (opts: HomeStart) => void,
-  onPlayOnline: () => void
+  onPlayOnline: (roomId?: string) => void
 ): void {
   let difficulty: BotDifficulty = "medium";
 
@@ -64,6 +65,26 @@ export function renderHome(
     const onlineBtn = el("button", "", "Play Online");
     onlineBtn.onclick = () => onPlayOnline();
     actions.appendChild(onlineBtn);
+
+    const joinRow = el("div", "join-row");
+    const joinInput = document.createElement("input");
+    joinInput.type = "text";
+    joinInput.className = "join-input";
+    joinInput.placeholder = "Enter room code or link";
+    joinInput.autocapitalize = "none";
+    joinInput.autocomplete = "off";
+    const joinBtn = el("button", "", "Join") as HTMLButtonElement;
+    const doJoin = () => {
+      const code = roomIdFromInput(joinInput.value);
+      if (code) onPlayOnline(code);
+    };
+    joinBtn.onclick = doJoin;
+    joinInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") doJoin();
+    });
+    joinRow.appendChild(joinInput);
+    joinRow.appendChild(joinBtn);
+    actions.appendChild(joinRow);
 
     home.appendChild(actions);
 

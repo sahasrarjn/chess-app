@@ -320,7 +320,7 @@ export class ChessGame {
     const piece = this.board[move.to.row][move.to.col]!;
 
     this.board[move.from.row][move.from.col] = {
-      kind: piece.kind === "P" && move.promotion ? "P" : piece.kind,
+      kind: move.promotion ? "P" : piece.kind,
       color: piece.color,
     };
     this.board[move.to.row][move.to.col] = record.captured;

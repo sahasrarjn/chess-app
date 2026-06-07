@@ -680,7 +680,7 @@ final class ChessGame {
         let move = record.move
         let piece = board[move.to.row][move.to.col]!
 
-        board[move.from.row][move.from.col] = Piece(kind: piece.kind == .pawn && move.promotion != nil ? .pawn : piece.kind, color: piece.color)
+        board[move.from.row][move.from.col] = Piece(kind: move.promotion != nil ? .pawn : piece.kind, color: piece.color)
         board[move.to.row][move.to.col] = record.captured
 
         if move.isEnPassant, let ep = record.enPassantCaptured {

@@ -19,7 +19,8 @@ export type HomeStart = {
 
 export function renderHome(
   root: HTMLElement,
-  onStart: (opts: HomeStart) => void
+  onStart: (opts: HomeStart) => void,
+  onPlayOnline: () => void
 ): void {
   let difficulty: BotDifficulty = "medium";
   let settingsOpen = false;
@@ -64,6 +65,10 @@ export function renderHome(
     const friendBtn = el("button", "", "Play with Friend");
     friendBtn.onclick = () => onStart({ mode: "localTwoPlayer", difficulty });
     actions.appendChild(friendBtn);
+
+    const onlineBtn = el("button", "", "Play Online");
+    onlineBtn.onclick = () => onPlayOnline();
+    actions.appendChild(onlineBtn);
 
     home.appendChild(actions);
 

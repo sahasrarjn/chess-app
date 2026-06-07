@@ -1,6 +1,7 @@
 import "./styles.css";
 import { loadSavedGame } from "./game/savedGame";
 import { renderHome, type HomeStart } from "./ui/home";
+import { newRoomId } from "./online/guestIdentity";
 
 void import("./analytics/posthog").then(({ initAnalytics }) => initAnalytics());
 
@@ -45,24 +46,49 @@ try {
       });
   }
 
-  function showHome(): void {
-    teardownGame?.();
-    teardownGame = undefined;
-    renderHome(app, startGame);
-  }
-
-  const saved = loadSavedGame();
-  if (saved) {
-    void import("./ui/gameView")
-      .then(({ renderGame }) => {
-        teardownGame = renderGame(app, saved.mode, saved.botDifficulty, showHome, saved);
+  function startOnline(roomId: string): void {
+    const url = new URL(location.href);
+    url.searchParams.set("room", roomId);
+    history.replaceState(null, "", url.toString());
+    void import("./ui/onlineGameView")
+      .then(({ renderOnlineGame }) => {
+        teardownGame?.();
+        teardownGame = renderOnlineGame(app, roomId, showHome);
       })
       .catch((err: unknown) => {
         console.error(err);
-        showHome();
+        showBootError("Could not start the online game. Try reloading the page.");
       });
+  }
+
+  function showHome(): void {
+    teardownGame?.();
+    teardownGame = undefined;
+    const url = new URL(location.href);
+    if (url.searchParams.has("room")) {
+      url.searchParams.delete("room");
+      history.replaceState(null, "", url.toString());
+    }
+    renderHome(app, startGame, () => startOnline(newRoomId()));
+  }
+
+  const roomParam = new URLSearchParams(location.search).get("room");
+  if (roomParam) {
+    startOnline(roomParam);
   } else {
-    showHome();
+    const saved = loadSavedGame();
+    if (saved) {
+      void import("./ui/gameView")
+        .then(({ renderGame }) => {
+          teardownGame = renderGame(app, saved.mode, saved.botDifficulty, showHome, saved);
+        })
+        .catch((err: unknown) => {
+          console.error(err);
+          showHome();
+        });
+    } else {
+      showHome();
+    }
   }
 } catch (err: unknown) {
   console.error(err);

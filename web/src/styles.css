@@ -748,3 +748,51 @@ select {
     font-size: 0.8rem;
   }
 }
+
+/* ---- Online multiplayer ---- */
+.online-players {
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.share-panel {
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.share-label {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.share-row {
+  display: flex;
+  gap: 8px;
+}
+
+.share-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--muted) 30%, transparent);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.8rem;
+}
+
+.share-copy {
+  white-space: nowrap;
+}
+
+.rematch-pending {
+  color: var(--muted);
+  font-size: 0.9rem;
+  align-self: center;
+}

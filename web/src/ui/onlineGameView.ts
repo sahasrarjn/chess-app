@@ -1,15 +1,8 @@
-import { pieceImgSrc } from "../assets/pieceImages";
 import { SoundPlayer } from "../audio/soundPlayer";
-import {
-  BOARD_SIZE,
-  engineFileLabel,
-  engineRankLabel,
-  type GameResult,
-  type Square,
-} from "../engine/types";
+import type { GameResult, Square } from "../engine/types";
 import { getGuestName, getPlayerToken } from "../online/guestIdentity";
 import { MultiplayerController } from "../online/multiplayerController";
-import { bindTap } from "./tapActivation";
+import { BoardView } from "./boardView";
 
 const WS_URL = import.meta.env.VITE_MULTIPLAYER_WS_URL as string | undefined;
 
@@ -38,6 +31,15 @@ export function renderOnlineGame(
 class OnlineGameScreen {
   private readonly ctrl: MultiplayerController;
   private readonly sound = new SoundPlayer();
+  private readonly board: BoardView;
+
+  private titleEl!: HTMLElement;
+  private muteBtn!: HTMLButtonElement;
+  private playersEl!: HTMLElement;
+  private sharePanel!: HTMLElement;
+  private shareInput!: HTMLInputElement;
+  private statusEl!: HTMLElement;
+  private controlsEl!: HTMLElement;
 
   constructor(
     private readonly root: HTMLElement,
@@ -48,22 +50,16 @@ class OnlineGameScreen {
       roomId,
       { token: getPlayerToken(), name: getGuestName() },
       WS_URL as string,
-      () => this.render(),
+      () => this.update(),
       (event) => this.sound.play(event)
     );
+    this.board = new BoardView(this.ctrl, (square: Square) => {
+      this.sound.unlock();
+      this.ctrl.handleSquareTap(square);
+    });
   }
 
   mount(): void {
-    this.ctrl.start();
-    this.render();
-  }
-
-  destroy(): void {
-    this.ctrl.dispose();
-    this.root.innerHTML = "";
-  }
-
-  private render(): void {
     this.root.innerHTML = "";
     const screen = el("div", "game-screen");
 
@@ -72,103 +68,30 @@ class OnlineGameScreen {
     const back = el("button", "back", "← Leave");
     back.onclick = () => this.onBack();
     header.appendChild(back);
-    header.appendChild(el("h2", "", this.titleText()));
-    const mute = el("button", "sound-toggle", this.sound.isMuted ? "🔇" : "🔊") as HTMLButtonElement;
-    mute.type = "button";
-    mute.title = this.sound.isMuted ? "Sound off" : "Sound on";
-    mute.onclick = () => {
+    this.titleEl = el("h2", "", "Online");
+    header.appendChild(this.titleEl);
+    this.muteBtn = el("button", "sound-toggle") as HTMLButtonElement;
+    this.muteBtn.type = "button";
+    this.muteBtn.onclick = () => {
       this.sound.unlock();
       this.sound.toggleMuted();
-      this.render();
+      this.update();
     };
-    header.appendChild(mute);
+    header.appendChild(this.muteBtn);
     top.appendChild(header);
 
-    top.appendChild(el("div", "online-players", this.playersText()));
+    this.playersEl = el("div", "online-players");
+    top.appendChild(this.playersEl);
 
-    if (this.ctrl.status === "waiting" && this.ctrl.role !== "spectator") {
-      top.appendChild(this.sharePanel());
-    }
-
-    top.appendChild(el("div", "status-bar", this.statusText()));
-    screen.appendChild(top);
-
-    const boardSlot = el("div", "game-board-slot");
-    const wrap = el("div", "board-wrap");
-    wrap.appendChild(el("div", "board-frame"));
-    const grid = el("div", "board-grid");
-    this.buildBoard(grid);
-    wrap.appendChild(grid);
-    boardSlot.appendChild(wrap);
-    screen.appendChild(boardSlot);
-
-    const bottom = el("div", "game-bottom");
-    bottom.appendChild(this.controls());
-    screen.appendChild(bottom);
-
-    this.root.appendChild(screen);
-  }
-
-  private buildBoard(grid: HTMLElement): void {
-    const flip = this.ctrl.boardFlipped;
-    const indices = [...Array(BOARD_SIZE).keys()];
-    const rows = flip ? [...indices].reverse() : indices;
-    const cols = flip ? [...indices].reverse() : indices;
-
-    for (const row of rows) {
-      for (const col of cols) {
-        const square: Square = { row, col };
-        const isLight = (row + col) % 2 === 0;
-        const classes = ["square", isLight ? "light" : "dark"];
-        if (this.ctrl.isSelected(square)) classes.push("selected");
-        if (this.ctrl.isLastMoveSquare(square)) classes.push("last-move");
-        if (this.ctrl.isKingInCheck(square)) classes.push("in-check");
-
-        const btn = el("button", classes.join(" ")) as HTMLButtonElement;
-        btn.type = "button";
-        bindTap(btn, () => {
-          this.sound.unlock();
-          this.ctrl.handleSquareTap(square);
-        });
-
-        const fileLabel = engineFileLabel(col);
-        const rankLabel = engineRankLabel(row);
-        if (fileLabel && row === (flip ? 0 : BOARD_SIZE - 1)) {
-          btn.appendChild(el("span", "coord file", fileLabel));
-        }
-        if (rankLabel && col === (flip ? BOARD_SIZE - 1 : 0)) {
-          btn.appendChild(el("span", "coord rank", rankLabel));
-        }
-
-        if (this.ctrl.isLegalTarget(square)) {
-          btn.appendChild(el("span", this.ctrl.isCaptureTarget(square) ? "capture-ring" : "legal-dot"));
-        }
-
-        const piece = this.ctrl.piece(square);
-        if (piece) {
-          const img = document.createElement("img");
-          img.className = "piece-img";
-          img.src = pieceImgSrc(piece);
-          img.alt = piece.kind;
-          btn.appendChild(img);
-        }
-
-        grid.appendChild(btn);
-      }
-    }
-  }
-
-  private sharePanel(): HTMLElement {
-    const panel = el("div", "share-panel");
-    panel.appendChild(el("p", "share-label", "Share this link with a friend to play:"));
-    const row = el("div", "share-row");
-    const input = document.createElement("input");
-    input.type = "text";
-    input.readOnly = true;
-    input.className = "share-input";
-    input.value = this.ctrl.shareUrl();
-    input.onclick = () => input.select();
-    row.appendChild(input);
+    this.sharePanel = el("div", "share-panel");
+    this.sharePanel.appendChild(el("p", "share-label", "Share this link with a friend to play:"));
+    const shareRow = el("div", "share-row");
+    this.shareInput = document.createElement("input");
+    this.shareInput.type = "text";
+    this.shareInput.readOnly = true;
+    this.shareInput.className = "share-input";
+    this.shareInput.onclick = () => this.shareInput.select();
+    shareRow.appendChild(this.shareInput);
     const copy = el("button", "share-copy", "Copy") as HTMLButtonElement;
     copy.type = "button";
     copy.onclick = async () => {
@@ -177,16 +100,54 @@ class OnlineGameScreen {
         copy.textContent = "Copied!";
         setTimeout(() => (copy.textContent = "Copy"), 1500);
       } catch {
-        input.select();
+        this.shareInput.select();
       }
     };
-    row.appendChild(copy);
-    panel.appendChild(row);
-    return panel;
+    shareRow.appendChild(copy);
+    this.sharePanel.appendChild(shareRow);
+    top.appendChild(this.sharePanel);
+
+    this.statusEl = el("div", "status-bar");
+    top.appendChild(this.statusEl);
+    screen.appendChild(top);
+
+    const boardSlot = el("div", "game-board-slot");
+    boardSlot.appendChild(this.board.el);
+    screen.appendChild(boardSlot);
+
+    const bottom = el("div", "game-bottom");
+    this.controlsEl = el("div", "game-controls");
+    bottom.appendChild(this.controlsEl);
+    screen.appendChild(bottom);
+
+    this.root.appendChild(screen);
+
+    this.ctrl.start();
+    this.update();
   }
 
-  private controls(): HTMLElement {
-    const controls = el("div", "game-controls");
+  destroy(): void {
+    this.ctrl.dispose();
+    this.root.innerHTML = "";
+  }
+
+  private update(): void {
+    this.titleEl.textContent = this.ctrl.role === "spectator" ? "Online (spectating)" : "Online";
+    this.muteBtn.textContent = this.sound.isMuted ? "🔇" : "🔊";
+    this.muteBtn.title = this.sound.isMuted ? "Sound off" : "Sound on";
+    this.playersEl.textContent = this.playersText();
+
+    const showShare = this.ctrl.status === "waiting" && this.ctrl.role !== "spectator";
+    this.sharePanel.style.display = showShare ? "" : "none";
+    if (showShare) this.shareInput.value = this.ctrl.shareUrl();
+
+    this.statusEl.textContent = this.statusText();
+    this.board.update();
+    this.updateControls();
+  }
+
+  private updateControls(): void {
+    this.controlsEl.replaceChildren();
     const status = this.ctrl.status;
     const role = this.ctrl.role;
 
@@ -196,25 +157,19 @@ class OnlineGameScreen {
       if (offered && offered !== my) {
         const accept = el("button", "primary", "Accept rematch");
         accept.onclick = () => this.ctrl.offerRematch();
-        controls.appendChild(accept);
+        this.controlsEl.appendChild(accept);
       } else if (offered && offered === my) {
-        controls.appendChild(el("span", "rematch-pending", "Rematch requested…"));
+        this.controlsEl.appendChild(el("span", "rematch-pending", "Rematch requested…"));
       } else {
         const rematch = el("button", "primary", "Rematch");
         rematch.onclick = () => this.ctrl.offerRematch();
-        controls.appendChild(rematch);
+        this.controlsEl.appendChild(rematch);
       }
     }
 
     const leave = el("button", "", "Back to home");
     leave.onclick = () => this.onBack();
-    controls.appendChild(leave);
-    return controls;
-  }
-
-  private titleText(): string {
-    if (this.ctrl.role === "spectator") return "Online (spectating)";
-    return "Online";
+    this.controlsEl.appendChild(leave);
   }
 
   private playersText(): string {
@@ -234,13 +189,12 @@ class OnlineGameScreen {
       return this.ctrl.role === "spectator" ? "Waiting for players…" : "Waiting for opponent…";
     }
     if (s.status === "finished") return this.resultText(s.result);
-    // active
     const opp = s.players[s.color === "white" ? "black" : "white"];
     if (opp && !opp.connected) return "Opponent disconnected — waiting to reconnect…";
     if (this.ctrl.role === "spectator") {
-      return s.yourTurn ? "" : `${activeColorText(s)} to move`;
+      return `${s.moves.length % 2 === 0 ? "White" : "Black"} to move`;
     }
-    return this.ctrl.yourTurn ? "Your move" : "Opponent's move";
+    return this.ctrl.yourTurn && !this.ctrl.awaitingMove ? "Your move" : "Opponent's move";
   }
 
   private resultText(result: GameResult): string {
@@ -260,10 +214,6 @@ class OnlineGameScreen {
         return "";
     }
   }
-}
-
-function activeColorText(s: { moves: string[] }): string {
-  return s.moves.length % 2 === 0 ? "White" : "Black";
 }
 
 function el(tag: string, className: string, text?: string): HTMLElement {

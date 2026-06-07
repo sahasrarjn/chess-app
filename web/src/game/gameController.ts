@@ -448,6 +448,33 @@ export class GameController {
     );
   }
 
+  // --- BoardModel surface (shared with BoardView) ---
+
+  isSelected(square: Square): boolean {
+    return this.selectedSquare != null && squaresEqual(this.selectedSquare, square);
+  }
+  isLegalTarget(square: Square): boolean {
+    return this.legalTargets.has(this.squareKey(square));
+  }
+  isCaptureTarget(square: Square): boolean {
+    return this.captureTargets.has(this.squareKey(square));
+  }
+  isHintSquare(square: Square): boolean {
+    return (
+      this.hintMove != null &&
+      (squaresEqual(this.hintMove.from, square) || squaresEqual(this.hintMove.to, square))
+    );
+  }
+
+  private lmCache: { rev: number; ply: number | null; move: Move | null } | null = null;
+  isLastMoveSquare(square: Square): boolean {
+    if (!this.lmCache || this.lmCache.rev !== this.revision || this.lmCache.ply !== this.previewPly) {
+      this.lmCache = { rev: this.revision, ply: this.previewPly, move: this.displaySnapshot.lastMove };
+    }
+    const lm = this.lmCache.move;
+    return lm != null && (squaresEqual(lm.from, square) || squaresEqual(lm.to, square));
+  }
+
   /** Modal headline when the game has ended (player is always white in vs bot). */
   gameOverTitle(): string {
     if (this.mode === "vsBot") {

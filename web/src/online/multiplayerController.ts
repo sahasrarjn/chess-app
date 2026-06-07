@@ -21,6 +21,8 @@ export class MultiplayerController {
   private game = new ChessGame();
   private lastMove: Move | null = null;
   private firstState = true;
+  /** True between an optimistic local move and the server's authoritative echo. */
+  private pendingMove = false;
   private readonly ws: WsClient;
 
   constructor(
@@ -42,7 +44,10 @@ export class MultiplayerController {
         this.ws.send({ type: "join", roomId, token: identity.token, name: identity.name }),
       onMessage: (m) => {
         if (m.type === "error") {
+          // An optimistic move was rejected (rare) — revert to authoritative state.
           this.lastError = m.message;
+          this.pendingMove = false;
+          this.rebuild(this.state?.moves.length ?? 0);
           this.onChange();
           return;
         }
@@ -75,7 +80,21 @@ export class MultiplayerController {
     return !!this.state?.yourTurn;
   }
   get canMove(): boolean {
-    return this.state?.status === "active" && this.yourTurn && this.color !== null;
+    return (
+      this.state?.status === "active" &&
+      this.yourTurn &&
+      this.color !== null &&
+      !this.pendingMove
+    );
+  }
+
+  isHintSquare(): boolean {
+    return false; // no hints in online play
+  }
+
+  /** True while a local optimistic move awaits the server's authoritative echo. */
+  get awaitingMove(): boolean {
+    return this.pendingMove;
   }
 
   squareKey(s: Square): string {
@@ -124,6 +143,12 @@ export class MultiplayerController {
         const move = candidates.find((m) => m.promotion === "Q") ?? candidates[0];
         if (move) {
           this.ws.send({ type: "move", uci: moveUci(move) });
+          // Optimistic: apply locally for instant feedback; the authoritative
+          // server echo replaces it (or `error` reverts via rebuild()).
+          if (this.game.applyMove(move)) {
+            this.lastMove = move;
+            this.pendingMove = true;
+          }
           this.clearSelection();
           this.onChange();
           return;
@@ -170,6 +195,7 @@ export class MultiplayerController {
   private applyState(msg: StateMessage): void {
     const prevCount = this.firstState ? msg.moves.length : (this.state?.moves.length ?? 0);
     this.lastError = null;
+    this.pendingMove = false;
     this.state = msg;
     this.rebuild(prevCount);
     this.firstState = false;

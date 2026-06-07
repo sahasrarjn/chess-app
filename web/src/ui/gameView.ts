@@ -7,17 +7,12 @@ import {
   saveGameFromController,
   type SavedGameSnapshot,
 } from "../game/savedGame";
-import { squaresEqual } from "../engine/chessGame";
 import {
-  BOARD_SIZE,
   type Piece,
-  engineFileLabel,
-  engineRankLabel,
   type BotDifficulty,
   type GameMode,
-  type Square,
 } from "../engine/types";
-import { bindTap } from "./tapActivation";
+import { BoardView } from "./boardView";
 
 
 const SPEAKER_ON_SVG =
@@ -32,13 +27,6 @@ const HINT_SVG =
   '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
   '<path d="M9 18h6"/><path d="M10 22h4"/>' +
   '<path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"/></svg>';
-
-type SquareCell = {
-  btn: HTMLButtonElement;
-  pieceImg: HTMLImageElement | null;
-  dot: HTMLSpanElement | null;
-  ring: HTMLSpanElement | null;
-};
 
 export function renderGame(
   root: HTMLElement,
@@ -58,7 +46,6 @@ class GameScreen {
   private statusSpinnerEl!: HTMLSpanElement;
   private capBlackEl!: HTMLElement;
   private capWhiteEl!: HTMLElement;
-  private gridEl!: HTMLDivElement;
   private moveListEl!: HTMLDivElement;
   private undoBtn!: HTMLButtonElement;
   private retryBtn!: HTMLButtonElement;
@@ -70,12 +57,9 @@ class GameScreen {
   private gameOverEl: HTMLElement | null = null;
   private gameOverDismissed = false;
 
-  private squareCells = new Map<string, SquareCell>();
-  private displayedRows: number[] = [];
-  private displayedCols: number[] = [];
+  private board!: BoardView;
   private lastMoveListLen = 0;
   private lastCapturedPly = -1;
-  private lastFlip = false;
   private lastPersistKey = "";
   private autoFlipBtn: HTMLButtonElement | null = null;
   private flipBtn!: HTMLButtonElement;
@@ -105,6 +89,10 @@ class GameScreen {
         this.ctrl.restoreGame(game, saved.boardFlipped, saved.autoFlipBoard);
       }
     }
+    this.board = new BoardView(this.ctrl, (square) => {
+      this.sound.unlock();
+      this.ctrl.handleSquareTap(square);
+    });
   }
 
   mount(): void {
@@ -166,11 +154,7 @@ class GameScreen {
     screen.appendChild(top);
 
     const boardSlot = el("div", "game-board-slot");
-    const boardWrap = el("div", "board-wrap");
-    boardWrap.appendChild(el("div", "board-frame"));
-    this.gridEl = el("div", "board-grid") as HTMLDivElement;
-    boardWrap.appendChild(this.gridEl);
-    boardSlot.appendChild(boardWrap);
+    boardSlot.appendChild(this.board.el);
     screen.appendChild(boardSlot);
 
     const bottom = el("div", "game-bottom");
@@ -215,7 +199,6 @@ class GameScreen {
     screen.appendChild(bottom);
     this.root.appendChild(screen);
 
-    this.rebuildBoardGrid();
     this.update();
   }
 
@@ -226,54 +209,7 @@ class GameScreen {
     this.root.innerHTML = "";
   }
 
-  private squareKey(row: number, col: number): string {
-    return `${row},${col}`;
-  }
-
-  private rebuildBoardGrid(): void {
-    this.squareCells.clear();
-    this.gridEl.replaceChildren();
-
-    this.displayedRows = this.ctrl.boardFlipped
-      ? [...Array(BOARD_SIZE).keys()].reverse()
-      : [...Array(BOARD_SIZE).keys()];
-    this.displayedCols = this.ctrl.boardFlipped
-      ? [...Array(BOARD_SIZE).keys()].reverse()
-      : [...Array(BOARD_SIZE).keys()];
-
-    for (const row of this.displayedRows) {
-      for (const col of this.displayedCols) {
-        const isLight = (row + col) % 2 === 0;
-        const btn = el("button", `square ${isLight ? "light" : "dark"}`) as HTMLButtonElement;
-        const square: Square = { row, col };
-        bindTap(btn, () => {
-          this.sound.unlock();
-          this.ctrl.handleSquareTap(square);
-        });
-
-        const cell: SquareCell = { btn, pieceImg: null, dot: null, ring: null };
-
-        const fileLabel = engineFileLabel(col);
-        const rankLabel = engineRankLabel(row);
-        if (fileLabel && row === (this.ctrl.boardFlipped ? 0 : BOARD_SIZE - 1)) {
-          btn.appendChild(el("span", "coord file", fileLabel));
-        }
-        if (rankLabel && col === (this.ctrl.boardFlipped ? BOARD_SIZE - 1 : 0)) {
-          btn.appendChild(el("span", "coord rank", rankLabel));
-        }
-
-        this.squareCells.set(this.squareKey(row, col), cell);
-        this.gridEl.appendChild(btn);
-      }
-    }
-    this.lastFlip = this.ctrl.boardFlipped;
-  }
-
   private update(): void {
-    if (this.ctrl.boardFlipped !== this.lastFlip) {
-      this.rebuildBoardGrid();
-    }
-
     if (this.autoFlipBtn) {
       this.autoFlipBtn.classList.toggle("active", this.ctrl.autoFlipBoard);
     }
@@ -282,7 +218,7 @@ class GameScreen {
 
     this.updateStatus();
     this.updateCaptured();
-    this.updateBoard();
+    this.board.update();
     this.updateMoveList();
     this.updateControls();
     this.updateHintButton();
@@ -328,78 +264,6 @@ class GameScreen {
       row.appendChild(img);
     }
     return row;
-  }
-
-  private updateBoard(): void {
-    const snap = this.ctrl.displaySnapshot;
-    const lastMove = snap.lastMove;
-    const sel = this.ctrl.selectedSquare;
-
-    for (const [key, cell] of this.squareCells) {
-      const [row, col] = key.split(",").map(Number);
-      const square: Square = { row, col };
-      const isLight = (row + col) % 2 === 0;
-
-      const classes = ["square", isLight ? "light" : "dark"];
-      if (sel && squaresEqual(sel, square)) classes.push("selected");
-      if (lastMove && (squaresEqual(lastMove.from, square) || squaresEqual(lastMove.to, square))) {
-        classes.push("last-move");
-      }
-      if (this.ctrl.isKingInCheck(square)) classes.push("in-check");
-      const hint = this.ctrl.hintMove;
-      if (hint && (squaresEqual(hint.from, square) || squaresEqual(hint.to, square))) {
-        classes.push("hint");
-      }
-
-      if (cell.btn.className !== classes.join(" ")) {
-        cell.btn.className = classes.join(" ");
-      }
-
-      const sk = this.ctrl.squareKey(square);
-      const showDot = this.ctrl.legalTargets.has(sk) && !this.ctrl.captureTargets.has(sk);
-      const showRing = this.ctrl.captureTargets.has(sk);
-
-      if (showDot && !cell.dot) {
-        cell.dot = el("span", "legal-dot");
-        cell.btn.appendChild(cell.dot);
-      } else if (!showDot && cell.dot) {
-        cell.dot.remove();
-        cell.dot = null;
-      }
-
-      if (showRing && !cell.ring) {
-        cell.ring = el("span", "capture-ring");
-        cell.btn.appendChild(cell.ring);
-      } else if (!showRing && cell.ring) {
-        cell.ring.remove();
-        cell.ring = null;
-      }
-
-      const piece = this.ctrl.piece(square);
-      const asset = piece ? pieceImgSrc(piece) : null;
-
-      if (!piece) {
-        if (cell.pieceImg) {
-          cell.pieceImg.remove();
-          cell.pieceImg = null;
-        }
-      } else if (!cell.pieceImg) {
-        const existing = cell.btn.querySelector<HTMLImageElement>(".piece-img");
-        cell.pieceImg =
-          existing ??
-          (() => {
-            const img = document.createElement("img");
-            img.className = "piece-img";
-            cell.btn.appendChild(img);
-            return img;
-          })();
-        cell.pieceImg.alt = piece.kind;
-        cell.pieceImg.src = asset!;
-      } else if (cell.pieceImg.src !== asset) {
-        cell.pieceImg.src = asset!;
-        cell.pieceImg.alt = piece.kind;
-      }
-    }
   }
 
   private updateMoveList(): void {

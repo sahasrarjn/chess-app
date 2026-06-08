@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import { ChessGame } from "./chessGame";
 import { fromFEN, matchEngineMove } from "./fen";
 import { resolveUciInterpretations } from "./uci";
-import { engineNotation, standardNotation } from "./types";
+import { engineNotation, moveUci, sq, standardNotation } from "./types";
 
 describe("resolveUciInterpretations", () => {
   it("includes both engine and standard mappings for inner-board squares", () => {
@@ -77,6 +77,52 @@ describe("matchEngineMove production acceptances", () => {
       assert.ok(game.applyMove(move));
     });
   }
+});
+
+describe("moveUci round-trip for border-crossing moves", () => {
+  it("produces a consistently parseable UCI when moving from playable to border square", () => {
+    // Rook on b6 (engine) = row 4, col 1; moves north to b10 (border) = row 0, col 1.
+    const game = new ChessGame();
+    for (let r = 0; r < 10; r++) for (let c = 0; c < 10; c++) game.board[r][c] = null;
+    game.board[4][1] = { kind: "R", color: "white" };
+    game.board[9][0] = { kind: "K", color: "white" };
+    game.board[0][9] = { kind: "K", color: "black" };
+
+    const rookMoves = game.legalMoves("white").filter(
+      (m) => m.from.row === 4 && m.from.col === 1 && m.to.row === 0 && m.to.col === 1
+    );
+    assert.ok(rookMoves.length > 0, "expected a legal rook move to border row 0");
+
+    const uci = moveUci(rookMoves[0]);
+    assert.equal(uci, "b6b10", "expected all-engine UCI for border move");
+
+    const matched = matchEngineMove(game, uci);
+    assert.ok(matched, `moveUci "${uci}" should round-trip through matchEngineMove`);
+    assert.deepEqual(matched!.from, sq(4, 1));
+    assert.deepEqual(matched!.to, sq(0, 1));
+  });
+
+  it("produces a consistently parseable UCI when moving from border to playable square", () => {
+    // Rook on b10 (border) = row 0, col 1; moves south to b6 = row 4, col 1.
+    const game = new ChessGame();
+    for (let r = 0; r < 10; r++) for (let c = 0; c < 10; c++) game.board[r][c] = null;
+    game.board[0][1] = { kind: "R", color: "white" };
+    game.board[9][0] = { kind: "K", color: "white" };
+    game.board[0][9] = { kind: "K", color: "black" };
+
+    const rookMoves = game.legalMoves("white").filter(
+      (m) => m.from.row === 0 && m.from.col === 1 && m.to.row === 4 && m.to.col === 1
+    );
+    assert.ok(rookMoves.length > 0, "expected a legal rook move from border to playable");
+
+    const uci = moveUci(rookMoves[0]);
+    assert.equal(uci, "b10b6", "expected all-engine UCI for border move");
+
+    const matched = matchEngineMove(game, uci);
+    assert.ok(matched, `moveUci "${uci}" should round-trip through matchEngineMove`);
+    assert.deepEqual(matched!.from, sq(0, 1));
+    assert.deepEqual(matched!.to, sq(4, 1));
+  });
 });
 
 describe("matchEngineMove illegal double pushes", () => {

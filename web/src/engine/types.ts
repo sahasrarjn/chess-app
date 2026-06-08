@@ -139,7 +139,14 @@ export interface Move {
 }
 
 export function moveUci(move: Move): string {
-  let text = `${standardNotation(move.from)}${standardNotation(move.to)}`;
+  // Use engine notation for both squares when either touches the border ring.
+  // Mixed notation (standard from + engine to) produces strings like "e4f10"
+  // that resolveUciInterpretations cannot correctly round-trip.
+  const encode =
+    !squareIsPlayable(move.from) || !squareIsPlayable(move.to)
+      ? engineNotation
+      : standardNotation;
+  let text = `${encode(move.from)}${encode(move.to)}`;
   if (move.promotion) text += move.promotion.toLowerCase();
   return text;
 }

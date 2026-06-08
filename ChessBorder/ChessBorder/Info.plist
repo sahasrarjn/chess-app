@@ -17,15 +17,15 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.1.0</string>
+	<string>1.2.0</string>
 	<key>CFBundleVersion</key>
-	<string>10</string>
+	<string>11</string>
 	<key>EngineServerURL</key>
 	<string>https://borderchess.org</string>
-	<key>MultiplayerServerURL</key>
-	<string>wss://rt7ozwivr6.execute-api.us-east-1.amazonaws.com/prod</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>MultiplayerServerURL</key>
+	<string>wss://rt7ozwivr6.execute-api.us-east-1.amazonaws.com/prod</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

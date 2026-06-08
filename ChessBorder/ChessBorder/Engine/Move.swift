@@ -16,7 +16,13 @@ struct Move: Equatable, Hashable {
     }
 
     var uci: String {
-        var text = "\(from.notation)\(to.notation)"
+        // Use engine notation for both squares when either touches the border ring.
+        // Mixed notation (standard from + engine to) produces strings like "e4f10"
+        // that the server cannot correctly round-trip.
+        let encode: (Square) -> String = (!from.isPlayable || !to.isPlayable)
+            ? { $0.engineNotation }
+            : { $0.notation }
+        var text = "\(encode(from))\(encode(to))"
         if let promotion {
             text += String(promotion.rawValue).lowercased()
         }

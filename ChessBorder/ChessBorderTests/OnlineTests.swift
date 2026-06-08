@@ -85,6 +85,22 @@ final class OnlineTests: XCTestCase {
         XCTAssertFalse(vm.canMove, "blocked until the server echo")
     }
 
+    func testMoveUciUsesPureEngineNotationForBorderMoves() throws {
+        // Rook on b6 (engine) = row 4, col 1; moves north to b10 (border) = row 0, col 1.
+        // FEN: 10 rows; row 0 = border rank 10, row 4 = engine rank 6.
+        // Row 0 (rank 10): K at col 9 (j) → "9K" (9 empty + black king)
+        // Row 4 (rank 6):  R at col 1 (b) → ".R8" (1 empty + white rook + 8 empty)
+        // Row 9 (rank 1):  K at col 0 (a) → "K9" (white king + 9 empty)
+        let fen = "9k/10/10/10/1R8/10/10/10/10/K9 w - - 0 1"
+        let game = try ChessGame.fromFEN(fen)
+
+        let rookMove = game.legalMoves(for: .white).first {
+            $0.from == Square(row: 4, col: 1) && $0.to == Square(row: 0, col: 1)
+        }
+        XCTAssertNotNil(rookMove, "expected a legal rook move to the border")
+        XCTAssertEqual(rookMove!.uci, "b6b10", "border move UCI must use engine notation for both squares")
+    }
+
     func testHistoryPreview() {
         let vm = OnlineGameViewModel(roomId: "r")
         let uci = ChessGame().legalMoves().first!.uci

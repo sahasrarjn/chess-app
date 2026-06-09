@@ -2,7 +2,6 @@ import { sanFor } from "./moveNotation";
 import {
   ALL_CASTLING,
   BOARD_SIZE,
-  PLAYABLE_RANGE,
   type CastlingRights,
   type GameResult,
   isBorder,
@@ -420,15 +419,14 @@ export class ChessGame {
     return color === "white" ? 0 : BOARD_SIZE - 1;
   }
 
-  /** Playable square or inner-file border rank reached only when promoting. */
-  private isPawnDestination(s: Square, color: PieceColor): boolean {
-    if (!squareIsValid(s)) return false;
-    if (isPlayable(s.row, s.col)) return true;
-    return (
-      s.row === this.promotionRow(color) &&
-      s.col >= PLAYABLE_RANGE.min &&
-      s.col <= PLAYABLE_RANGE.max
-    );
+  /**
+   * A pawn's straight push may land on any on-board square, including the outer
+   * border ring: a pawn can advance up a border file (a/j) and promote on the
+   * corner, matching Fairy-Stockfish. Diagonal capture targets are handled
+   * separately in pawnMoves.
+   */
+  private isPawnDestination(s: Square): boolean {
+    return squareIsValid(s);
   }
 
   private pawnMoves(from: Square, color: PieceColor): Move[] {
@@ -437,7 +435,7 @@ export class ChessGame {
     const oneForward = sq(from.row + dir, from.col);
 
     if (
-      this.isPawnDestination(oneForward, color) &&
+      this.isPawnDestination(oneForward) &&
       !this.board[oneForward.row][oneForward.col]
     ) {
       if (oneForward.row === this.promotionRow(color)) {
@@ -452,7 +450,6 @@ export class ChessGame {
         const twoForward = sq(from.row + 2 * dir, from.col);
         if (
           squareIsValid(twoForward) &&
-          isPlayable(twoForward.row, twoForward.col) &&
           !this.board[twoForward.row][twoForward.col]
         ) {
           moves.push({ from, to: twoForward });

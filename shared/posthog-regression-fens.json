@@ -46,5 +46,9 @@
   {
     "name": "PostHog left border white rook",
     "fen": "R........./........../........../........../........../........../........../........../........../.......... w - - 0 1"
+  },
+  {
+    "name": "no false stalemate: trapped king but border-file pawn can advance",
+    "fen": "9k/........../8R1/8N1/9p/........../........../........../8K1/.......... b - - 0 1"
   }
 ]

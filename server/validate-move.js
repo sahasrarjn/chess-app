@@ -63,7 +63,8 @@ function fromEngineNotation(text) {
   return squareIsValid(s) ? s : null;
 }
 function moveUci(move) {
-  let text = `${standardNotation(move.from)}${standardNotation(move.to)}`;
+  const encode = !squareIsPlayable(move.from) || !squareIsPlayable(move.to) ? engineNotation : standardNotation;
+  let text = `${encode(move.from)}${encode(move.to)}`;
   if (move.promotion) text += move.promotion.toLowerCase();
   return text;
 }
@@ -367,7 +368,7 @@ var ChessGame = class _ChessGame {
     const move = record.move;
     const piece = this.board[move.to.row][move.to.col];
     this.board[move.from.row][move.from.col] = {
-      kind: piece.kind === "P" && move.promotion ? "P" : piece.kind,
+      kind: move.promotion ? "P" : piece.kind,
       color: piece.color
     };
     this.board[move.to.row][move.to.col] = record.captured;
@@ -454,17 +455,20 @@ var ChessGame = class _ChessGame {
   promotionRow(color) {
     return color === "white" ? 0 : BOARD_SIZE - 1;
   }
-  /** Playable square or inner-file border rank reached only when promoting. */
-  isPawnDestination(s, color) {
-    if (!squareIsValid(s)) return false;
-    if (isPlayable(s.row, s.col)) return true;
-    return s.row === this.promotionRow(color) && s.col >= PLAYABLE_RANGE.min && s.col <= PLAYABLE_RANGE.max;
+  /**
+   * A pawn's straight push may land on any on-board square, including the outer
+   * border ring: a pawn can advance up a border file (a/j) and promote on the
+   * corner, matching Fairy-Stockfish. Diagonal capture targets are handled
+   * separately in pawnMoves.
+   */
+  isPawnDestination(s) {
+    return squareIsValid(s);
   }
   pawnMoves(from, color) {
     const moves = [];
     const dir = this.forwardDelta(color);
     const oneForward = sq(from.row + dir, from.col);
-    if (this.isPawnDestination(oneForward, color) && !this.board[oneForward.row][oneForward.col]) {
+    if (this.isPawnDestination(oneForward) && !this.board[oneForward.row][oneForward.col]) {
       if (oneForward.row === this.promotionRow(color)) {
         for (const kind of PROMO_KINDS) {
           moves.push({ from, to: oneForward, promotion: kind });
@@ -474,7 +478,7 @@ var ChessGame = class _ChessGame {
       }
       if (from.row === this.pawnStartRow(color)) {
         const twoForward = sq(from.row + 2 * dir, from.col);
-        if (squareIsValid(twoForward) && isPlayable(twoForward.row, twoForward.col) && !this.board[twoForward.row][twoForward.col]) {
+        if (squareIsValid(twoForward) && !this.board[twoForward.row][twoForward.col]) {
           moves.push({ from, to: twoForward });
         }
       }

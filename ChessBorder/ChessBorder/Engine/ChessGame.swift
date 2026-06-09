@@ -265,11 +265,12 @@ final class ChessGame {
         color == .white ? 0 : BoardConstants.size - 1
     }
 
-    private func isPawnDestination(_ square: Square, color: PieceColor) -> Bool {
-        guard square.isValid else { return false }
-        if square.isPlayable { return true }
-        return square.row == promotionRow(for: color)
-            && BoardConstants.playableRange.contains(square.col)
+    /// A pawn's straight push may land on any on-board square, including the outer
+    /// border ring: a pawn can advance up a border file (a/j) and promote on the
+    /// corner, matching Fairy-Stockfish. Diagonal capture targets are handled
+    /// separately in pawnMoves.
+    private func isPawnDestination(_ square: Square) -> Bool {
+        square.isValid
     }
 
     private func pawnMoves(from square: Square, color: PieceColor) -> [Move] {
@@ -277,7 +278,7 @@ final class ChessGame {
         let dir = forwardDelta(for: color)
         let oneForward = Square(row: square.row + dir, col: square.col)
 
-        if isPawnDestination(oneForward, color: color), board[oneForward.row][oneForward.col] == nil {
+        if isPawnDestination(oneForward), board[oneForward.row][oneForward.col] == nil {
             if oneForward.row == promotionRow(for: color) {
                 for kind in [PieceKind.queen, .rook, .bishop, .knight] {
                     moves.append(Move(from: square, to: oneForward, promotion: kind))
@@ -288,7 +289,7 @@ final class ChessGame {
 
             if square.row == pawnStartRow(for: color) {
                 let twoForward = Square(row: square.row + 2 * dir, col: square.col)
-                if twoForward.isValid, twoForward.isPlayable, board[twoForward.row][twoForward.col] == nil {
+                if twoForward.isValid, board[twoForward.row][twoForward.col] == nil {
                     moves.append(Move(from: square, to: twoForward))
                 }
             }

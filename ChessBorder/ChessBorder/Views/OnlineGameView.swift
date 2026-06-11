@@ -3,6 +3,7 @@ import SwiftUI
 struct OnlineGameView: View {
     @StateObject private var viewModel: OnlineGameViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var showSettings = false
 
     init(roomId: String) {
         _viewModel = StateObject(wrappedValue: OnlineGameViewModel(roomId: roomId))
@@ -45,6 +46,10 @@ struct OnlineGameView: View {
         .chessAppNavigationChromeHidden()
         .onAppear { viewModel.start() }
         .onDisappear { viewModel.dispose() }
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
+                .presentationDetents([.medium, .large])
+        }
     }
 
     // MARK: - Header
@@ -59,6 +64,10 @@ struct OnlineGameView: View {
             GameNavIconAction(
                 systemName: viewModel.soundMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
                 action: { viewModel.toggleSound() }
+            )
+            GameNavIconAction(
+                systemName: "gearshape",
+                action: { showSettings = true }
             )
         }
     }

@@ -18,12 +18,27 @@ fi
 npm run build
 ( cd dist && zip -q -j lambda.zip index.js )
 
+echo "==> Resolving session JWT secret from SSM"
+SECRET_PARAM="${ACCOUNTS_JWT_SECRET_PARAM:-/chess-border/accounts/jwt-secret}"
+PARAMS=()
+JWT_SECRET="$(aws ssm get-parameter \
+  --name "$SECRET_PARAM" --with-decryption --region "$REGION" \
+  --query 'Parameter.Value' --output text 2>/dev/null || true)"
+if [[ -n "$JWT_SECRET" && "$JWT_SECRET" != "None" && ${#JWT_SECRET} -ge 32 ]]; then
+  PARAMS+=(SessionJwtSecret="$JWT_SECRET")
+else
+  echo "WARN: $SECRET_PARAM not found in SSM - online game recording will stay disabled"
+  echo "      (run server/aws/deploy-accounts.sh first to create it)"
+fi
+
 echo "==> Deploying CloudFormation stack ($STACK)"
 aws cloudformation deploy \
   --template-file "$ROOT/server/aws/multiplayer.yaml" \
   --stack-name "$STACK" \
+  ${PARAMS[@]+--parameter-overrides "${PARAMS[@]}"} \
   --capabilities CAPABILITY_IAM \
-  --region "$REGION"
+  --region "$REGION" \
+  --no-fail-on-empty-changeset
 
 FUNCTION_NAME="$(aws cloudformation describe-stacks \
   --stack-name "$STACK" --region "$REGION" \

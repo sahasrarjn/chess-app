@@ -15,10 +15,15 @@ export function createAuthWidget(): HTMLElement | null {
   if (!isAuthConfigured) return null;
 
   const container = el("div", "home-auth");
+  let cleanupMenuListener: (() => void) | null = null;
   render();
   return container;
 
   function render(): void {
+    if (cleanupMenuListener) {
+      cleanupMenuListener();
+      cleanupMenuListener = null;
+    }
     container.innerHTML = "";
 
     const profile = getCachedProfile();
@@ -91,26 +96,27 @@ export function createAuthWidget(): HTMLElement | null {
     };
     menu.appendChild(signOutBtn);
 
-    trigger.onclick = () => {
-      menuOpen = !menuOpen;
-      menu.hidden = !menuOpen;
-    };
-
     // Close menu on outside click
     const onDocClick = (e: MouseEvent) => {
       if (!container.contains(e.target as Node)) {
         menuOpen = false;
         menu.hidden = true;
         document.removeEventListener("click", onDocClick);
+        cleanupMenuListener = null;
       }
     };
-    trigger.addEventListener("click", () => {
+
+    trigger.onclick = () => {
+      menuOpen = !menuOpen;
+      menu.hidden = !menuOpen;
       if (menuOpen) {
         document.addEventListener("click", onDocClick);
+        cleanupMenuListener = () => document.removeEventListener("click", onDocClick);
       } else {
         document.removeEventListener("click", onDocClick);
+        cleanupMenuListener = null;
       }
-    });
+    };
 
     container.appendChild(trigger);
     container.appendChild(menu);
@@ -150,6 +156,7 @@ export function createAuthWidget(): HTMLElement | null {
       errorEl.hidden = true;
 
       try {
+        gisContainer.innerHTML = "";
         await renderGoogleButton(gisContainer, GOOGLE_CLIENT_ID!, async (idToken) => {
           errorEl.hidden = true;
           try {

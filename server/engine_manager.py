@@ -38,6 +38,17 @@ class EngineManager:
                 assert self._engine is not None
                 return self._engine.best_move(fen, elo, movetime_ms)
 
+    def analyse(self, fen: str | None, moves: list[str] | None, movetime_ms: int) -> dict:
+        with self._lock:
+            try:
+                assert self._engine is not None
+                return self._engine.analyse(fen, moves, movetime_ms)
+            except RuntimeError:
+                logger.warning("Engine failed during analysis; restarting process")
+                self._start()
+                assert self._engine is not None
+                return self._engine.analyse(fen, moves, movetime_ms)
+
     def is_ready(self) -> bool:
         with self._lock:
             if self._engine is None:

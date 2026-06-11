@@ -113,9 +113,11 @@ struct HomeView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .padding(.top, updateChecker.updateAvailable ? 88 : 0)
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
+                    .presentationDetents([.medium, .large])
             }
             .navigationDestination(item: $onlineRoom) { room in
                 OnlineGameView(roomId: room.id)

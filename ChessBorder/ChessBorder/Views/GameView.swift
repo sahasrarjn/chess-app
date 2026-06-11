@@ -136,6 +136,7 @@ struct GameView: View {
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
+                .presentationDetents([.medium, .large])
         }
         .onAppear {
             viewModel.finishRestoringSavedGameIfNeeded()

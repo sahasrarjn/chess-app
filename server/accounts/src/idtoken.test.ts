@@ -4,11 +4,11 @@ import { SignJWT, exportJWK, generateKeyPair, createLocalJWKSet } from "jose";
 import { verifyIdToken, type ProviderKeys } from "./idtoken.ts";
 
 let keys: ProviderKeys;
-let privateKey: CryptoKey;
+let privateKey: Awaited<ReturnType<typeof generateKeyPair>>["privateKey"];
 
 before(async () => {
   const pair = await generateKeyPair("RS256");
-  privateKey = pair.privateKey as CryptoKey;
+  privateKey = pair.privateKey;
   const jwk = await exportJWK(pair.publicKey);
   jwk.kid = "test-key";
   jwk.alg = "RS256";

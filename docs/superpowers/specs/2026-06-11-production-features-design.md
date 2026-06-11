@@ -24,7 +24,7 @@
 ## Phase 1 — Board color themes
 
 **Web**
-- New `web/src/theme/boardThemes.ts`: registry of ~6 presets (Classic Green = current colors, Walnut, Ocean, Slate, Tournament Brown, High Contrast). Each preset defines the existing CSS variables: `--light-square`, `--dark-square`, plus highlight/hint tints where a palette needs them.
+- New `web/src/theme/boardThemes.ts`: registry of ~8 presets (Classic Green = current colors, Walnut, Ocean, Slate, Tournament Brown, High Contrast, plus two pink palettes: Rosewood = dusty pink + warm brown, Blossom = soft pink + cream). Each preset defines the existing CSS variables: `--light-square`, `--dark-square`, plus highlight/hint tints where a palette needs them.
 - Applying a theme sets the variables on `document.documentElement`; selection persists to `localStorage` (`chessborder.boardTheme`).
 - UI: settings popover opened from a gear icon on the home screen and in-game header, showing tappable mini board swatches. The `.settings-panel` / `.settings-toggle` CSS stubs in `web/src/styles.css` are the starting point.
 
@@ -44,6 +44,10 @@
   - `USER#<userId>` / `META` — email, displayName (editable), avatarUrl, createdAt, stats counters (online W/L/D; bot W/L/D per difficulty).
   - `IDP#<provider>:<sub>` / `META` — provider identity → `userId` mapping.
 - JWT signing secret in SSM Parameter Store (SecureString), same handling pattern as the engine `API_KEY`.
+
+**Code reuse from personal-brain** (`~/Personal/work/personal-brain/brain-server`)
+- Adapt `src/auth/google.ts` (Google ID-token verification via `jose` + remote JWKS) and `src/auth/session.ts` (HS256 session JWT issuance/verification) into the accounts Lambda — same architecture, proven code.
+- Do **not** reuse the Brain GCP OAuth client: its consent screen shows Brain branding. Create a Border Chess OAuth client (own GCP project/consent screen) with web origin `https://borderchess.org` and the iOS bundle ID; client IDs are public and live in client config, not secrets.
 
 **Auth flow**
 1. Client obtains an ID token natively: Google Identity Services (web), Google Sign-In SDK (iOS), Sign in with Apple (native `ASAuthorization` on iOS, Apple JS on web).

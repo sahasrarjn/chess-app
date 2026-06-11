@@ -98,6 +98,17 @@ struct HomeView: View {
                                 .padding(.top, 4)
                         }
                         .buttonStyle(.plain)
+
+                        NavigationLink {
+                            LeaderboardView()
+                        } label: {
+                            Text("Leaderboard")
+                                .font(.subheadline)
+                                .foregroundStyle(.white.opacity(0.7))
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 4)
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal, 24)
 

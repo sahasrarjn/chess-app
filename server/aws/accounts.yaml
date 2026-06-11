@@ -1,0 +1,165 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Border Chess accounts - HTTP API Gateway + Lambda + DynamoDB users table
+
+Parameters:
+  TableName:
+    Type: String
+    Default: chess-border-users
+  FunctionName:
+    Type: String
+    Default: chess-border-accounts
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Description: HS256 session-JWT secret (sourced from SSM by deploy-accounts.sh)
+  GoogleClientIds:
+    Type: String
+    Default: ""
+    Description: Comma-separated Google OAuth client IDs (web + iOS)
+  AppleClientIds:
+    Type: String
+    Default: ""
+    Description: Comma-separated Apple audiences (iOS bundle ID; later web Services ID)
+
+Resources:
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: logs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "arn:aws:logs:*:*:*"
+        - PolicyName: dynamodb
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                Resource: !GetAtt UsersTable.Arn
+
+  AccountsFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref FunctionName
+      Runtime: nodejs20.x
+      Handler: index.handler
+      Role: !GetAtt LambdaRole.Arn
+      Timeout: 10
+      MemorySize: 256
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TableName
+          JWT_SECRET: !Ref JwtSecret
+          GOOGLE_CLIENT_IDS: !Ref GoogleClientIds
+          APPLE_CLIENT_IDS: !Ref AppleClientIds
+      Code:
+        ZipFile: |
+          exports.handler = async () => ({ statusCode: 200, body: "stub - run deploy-accounts.sh" });
+
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: chess-border-accounts
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins:
+          - https://borderchess.org
+          - http://localhost:5173
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - authorization
+          - content-type
+        MaxAge: 86400
+
+  Integration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AccountsFunction.Arn}/invocations"
+      PayloadFormatVersion: "2.0"
+
+  LoginRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: "POST /v1/auth/login"
+      Target: !Sub "integrations/${Integration}"
+
+  GetMeRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: "GET /v1/me"
+      Target: !Sub "integrations/${Integration}"
+
+  PostMeRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: "POST /v1/me"
+      Target: !Sub "integrations/${Integration}"
+
+  Stage:
+    Type: AWS::ApiGatewayV2::Stage
+    DependsOn:
+      - LoginRoute
+      - GetMeRoute
+      - PostMeRoute
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: "$default"
+      AutoDeploy: true
+
+  InvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref AccountsFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*"
+
+Outputs:
+  ApiUrl:
+    Description: HTTPS endpoint for clients (VITE_ACCOUNTS_API_URL / AccountsServerURL)
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+  FunctionName:
+    Value: !Ref AccountsFunction
+  TableName:
+    Value: !Ref TableName

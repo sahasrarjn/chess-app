@@ -3,6 +3,7 @@ import { applyBoardTheme, boardThemeById, loadBoardThemeId } from "./theme/board
 import { loadSavedGame } from "./game/savedGame";
 import { renderHome, type HomeStart } from "./ui/home";
 import { newRoomId } from "./online/guestIdentity";
+import type { CompletedGameRecord } from "./game/gameHistory";
 
 applyBoardTheme(boardThemeById(loadBoardThemeId()));
 
@@ -65,6 +66,30 @@ try {
       });
   }
 
+  function showPastGames(): void {
+    void import("./ui/pastGamesView")
+      .then(({ renderPastGames }) => {
+        teardownGame?.();
+        teardownGame = renderPastGames(app, showHome, showReplay);
+      })
+      .catch((err: unknown) => {
+        console.error(err);
+        showBootError("Could not load Past Games. Try reloading the page.");
+      });
+  }
+
+  function showReplay(record: CompletedGameRecord): void {
+    void import("./ui/gameView")
+      .then(({ renderReplay }) => {
+        teardownGame?.();
+        teardownGame = renderReplay(app, record, showPastGames);
+      })
+      .catch((err: unknown) => {
+        console.error(err);
+        showBootError("Could not open the replay. Try reloading the page.");
+      });
+  }
+
   function showHome(): void {
     teardownGame?.();
     teardownGame = undefined;
@@ -73,7 +98,7 @@ try {
       url.searchParams.delete("room");
       history.replaceState(null, "", url.toString());
     }
-    renderHome(app, startGame, (roomId) => startOnline(roomId ?? newRoomId()));
+    renderHome(app, startGame, (roomId) => startOnline(roomId ?? newRoomId()), showPastGames);
   }
 
   const roomParam = new URLSearchParams(location.search).get("room");

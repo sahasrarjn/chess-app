@@ -145,6 +145,12 @@ final class ChessGame {
         return board[square.row][square.col]
     }
 
+    /// For coach analysis only: temporarily set a board cell.
+    func setPieceForCoachAnalysis(_ piece: Piece?, at square: Square) {
+        guard square.isValid else { return }
+        board[square.row][square.col] = piece
+    }
+
     // MARK: - Game state
 
     var result: GameResult {

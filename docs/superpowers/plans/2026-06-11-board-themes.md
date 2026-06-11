@@ -43,7 +43,7 @@
 | `ocean` | Ocean | `#e3ecf2` | `#6e98b5` |
 | `slate` | Slate | `#e4e6e9` | `#7d848d` |
 | `tournament` | Tournament | `#ffce9e` | `#d18b47` |
-| `contrast` | High Contrast | `#ffffff` | `#444444` |
+| `high-contrast` | High Contrast | `#ffffff` | `#444444` |
 | `rosewood` | Rosewood | `#f1dcd6` | `#a8716e` |
 | `blossom` | Blossom | `#fbeef2` | `#d98ea4` |
 
@@ -601,7 +601,7 @@ struct BoardPalette: Equatable, Identifiable {
                      lightSquare: Color(srgbHex: 0xE4E6E9), darkSquare: Color(srgbHex: 0x7D848D)),
         BoardPalette(id: "tournament", name: "Tournament",
                      lightSquare: Color(srgbHex: 0xFFCE9E), darkSquare: Color(srgbHex: 0xD18B47)),
-        BoardPalette(id: "contrast", name: "High Contrast",
+        BoardPalette(id: "high-contrast", name: "High Contrast",
                      lightSquare: Color(srgbHex: 0xFFFFFF), darkSquare: Color(srgbHex: 0x444444)),
         BoardPalette(id: "rosewood", name: "Rosewood",
                      lightSquare: Color(srgbHex: 0xF1DCD6), darkSquare: Color(srgbHex: 0xA8716E)),

@@ -9,11 +9,18 @@ import { handleRequest, type HandlerDeps, type HttpEvent } from "./handler";
 
 const JWT_SECRET = "test-secret-that-is-long-enough";
 
-function ev(routeKey: string, body?: unknown, headers: Record<string, string> = {}): HttpEvent {
+function ev(
+  routeKey: string,
+  body?: unknown,
+  headers: Record<string, string> = {},
+  opts: { queryStringParameters?: Record<string, string>; pathParameters?: Record<string, string> } = {}
+): HttpEvent {
   return {
     routeKey,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    queryStringParameters: opts.queryStringParameters,
+    pathParameters: opts.pathParameters,
   };
 }
 
@@ -445,5 +452,286 @@ describe("routing and content-type", () => {
     for (const res of responses) {
       assert.equal(res.headers["content-type"], "application/json");
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Games routes helpers
+// ---------------------------------------------------------------------------
+
+async function loginAndGetToken(deps: HandlerDeps): Promise<string> {
+  const res = await handleRequest(
+    ev("POST /v1/auth/login", { provider: "google", idToken: "tok" }),
+    deps,
+    NOW
+  );
+  assert.equal(res.statusCode, 200);
+  return (JSON.parse(res.body) as { token: string }).token;
+}
+
+function validGameBody(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    mode: "vsBot",
+    difficulty: "medium",
+    playerColor: "white",
+    opponent: "Bot (Medium)",
+    moves: ["e2e4", "e7e5", "d1h5"],
+    resultType: "checkmate",
+    winner: "white",
+    endedAt: "2025-01-01T10:00:00Z",
+    ...overrides,
+  };
+}
+
+describe("POST /v1/games — auth", () => {
+  it("without Bearer → 401", async () => {
+    const deps = makeDeps();
+    const res = await handleRequest(ev("POST /v1/games", validGameBody()), deps, NOW);
+    assert.equal(res.statusCode, 401);
+  });
+});
+
+describe("GET /v1/games — auth", () => {
+  it("without Bearer → 401", async () => {
+    const deps = makeDeps();
+    const res = await handleRequest(ev("GET /v1/games"), deps, NOW);
+    assert.equal(res.statusCode, 401);
+  });
+});
+
+describe("GET /v1/games/{gameId} — auth", () => {
+  it("without Bearer → 401", async () => {
+    const deps = makeDeps();
+    const res = await handleRequest(
+      ev("GET /v1/games/{gameId}", undefined, {}, { pathParameters: { gameId: "x" } }),
+      deps,
+      NOW
+    );
+    assert.equal(res.statusCode, 401);
+  });
+});
+
+describe("POST /v1/games", () => {
+  it("valid vsBot body → 200, server-assigned gameId, all input fields echoed", async () => {
+    const deps = makeDeps();
+    const token = await loginAndGetToken(deps);
+    const body = validGameBody();
+
+    const res = await handleRequest(
+      ev("POST /v1/games", body, authHeader(token)),
+      deps,
+      NOW
+    );
+    assert.equal(res.statusCode, 200);
+    const r = JSON.parse(res.body) as { game: Record<string, unknown> };
+    assert.ok(typeof r.game.gameId === "string" && r.game.gameId.length > 0);
+    // client-sent gameId (absent here) must not appear as-sent; server assigns it
+    assert.equal(r.game.mode, "vsBot");
+    assert.equal(r.game.difficulty, "medium");
+    assert.equal(r.game.playerColor, "white");
+    assert.equal(r.game.opponent, "Bot (Medium)");
+    assert.deepEqual(r.game.moves, ["e2e4", "e7e5", "d1h5"]);
+    assert.equal(r.game.resultType, "checkmate");
+    assert.equal(r.game.winner, "white");
+  });
+
+  it('mode "online" → 400', async () => {
+    const deps = makeDeps();
+    const token = await loginAndGetToken(deps);
+    const res = await handleRequest(
+      ev("POST /v1/games", validGameBody({ mode: "online" }), authHeader(token)),
+      deps,
+      NOW
+    );
+    assert.equal(res.statusCode, 400);
+  });
+
+  it("malformed body → 400", async () => {
+    const deps = makeDeps();
+    const token = await loginAndGetToken(deps);
+    const res = await handleRequest(
+      { routeKey: "POST /v1/games", headers: authHeader(token), body: "NOT_JSON" },
+      deps,
+      NOW
+    );
+    assert.equal(res.statusCode, 400);
+  });
+
+  it("endedAt in the future → stored game's endedAt is clamped to now", async () => {
+    const deps = makeDeps();
+    const token = await loginAndGetToken(deps);
+    const futureDate = "2099-12-31T23:59:59Z";
+    const res = await handleRequest(
+      ev("POST /v1/games", validGameBody({ endedAt: futureDate }), authHeader(token)),
+      deps,
+      NOW
+    );
+    assert.equal(res.statusCode, 200);
+    const r = JSON.parse(res.body) as { game: { endedAt: string } };
+    assert.equal(r.game.endedAt, NOW.toISOString());
+  });
+
+  it("won vsBot medium → stats.bot_medium_w === 1; localTwoPlayer changes no stats", async () => {
+    const store = new InMemoryUserStore();
+    const deps = makeDeps({ store });
+    const loginRes = await handleRequest(
+      ev("POST /v1/auth/login", { provider: "google", idToken: "tok" }),
+      deps,
+      NOW
+    );
+    const { token, profile } = JSON.parse(loginRes.body) as {
+      token: string;
+      profile: { userId: string };
+    };
+
+    // Post a won vsBot game
+    await handleRequest(
+      ev("POST /v1/games", validGameBody({ resultType: "checkmate", winner: "white" }), authHeader(token)),
+      deps,
+      NOW
+    );
+
+    // Post a localTwoPlayer game
+    await handleRequest(
+      ev(
+        "POST /v1/games",
+        validGameBody({
+          mode: "localTwoPlayer",
+          difficulty: null,
+          playerColor: null,
+          resultType: "stalemate",
+          winner: null,
+        }),
+        authHeader(token)
+      ),
+      deps,
+      NOW
+    );
+
+    const user = await store.getUser(profile.userId);
+    assert.ok(user !== null);
+    assert.equal(user.stats["bot_medium_w"], 1);
+    // localTwoPlayer should not have incremented any stats
+    assert.equal(user.stats["bot_easy_w"], undefined);
+    assert.equal(user.stats["bot_medium_d"], undefined);
+  });
+
+  it("throwing addStat still returns 200 (stats are best-effort)", async () => {
+    // Wrap the store so addStat always throws
+    class ThrowingStatStore extends InMemoryUserStore {
+      async addStat(_userId: string, _key: string): Promise<void> {
+        throw new Error("DynamoDB error");
+      }
+    }
+    const store = new ThrowingStatStore();
+    const deps = makeDeps({ store });
+    const token = await loginAndGetToken(deps);
+
+    const res = await handleRequest(
+      ev("POST /v1/games", validGameBody(), authHeader(token)),
+      deps,
+      NOW
+    );
+    assert.equal(res.statusCode, 200);
+  });
+});
+
+describe("GET /v1/games", () => {
+  it("25 games → 20 newest-first + nextCursor; follow cursor → 5 + nextCursor null", async () => {
+    const deps = makeDeps();
+    const token = await loginAndGetToken(deps);
+
+    // Post 25 games with different endedAt
+    for (let i = 1; i <= 25; i++) {
+      const pad = String(i).padStart(2, "0");
+      await handleRequest(
+        ev(
+          "POST /v1/games",
+          validGameBody({ endedAt: `2025-01-${pad}T10:00:00Z` }),
+          authHeader(token)
+        ),
+        deps,
+        new Date(`2025-01-${pad}T12:00:00Z`) // now >= endedAt
+      );
+    }
+
+    const page1Res = await handleRequest(ev("GET /v1/games", undefined, authHeader(token)), deps, NOW);
+    assert.equal(page1Res.statusCode, 200);
+    const page1 = JSON.parse(page1Res.body) as { games: unknown[]; nextCursor: string | null };
+    assert.equal(page1.games.length, 20);
+    assert.ok(page1.nextCursor !== null);
+
+    const page2Res = await handleRequest(
+      ev("GET /v1/games", undefined, authHeader(token), {
+        queryStringParameters: { cursor: page1.nextCursor! },
+      }),
+      deps,
+      NOW
+    );
+    assert.equal(page2Res.statusCode, 200);
+    const page2 = JSON.parse(page2Res.body) as { games: unknown[]; nextCursor: string | null };
+    assert.equal(page2.games.length, 5);
+    assert.equal(page2.nextCursor, null);
+  });
+
+  it("cursor=garbage → first page", async () => {
+    const deps = makeDeps();
+    const token = await loginAndGetToken(deps);
+
+    await handleRequest(
+      ev("POST /v1/games", validGameBody(), authHeader(token)),
+      deps,
+      NOW
+    );
+
+    const res = await handleRequest(
+      ev("GET /v1/games", undefined, authHeader(token), {
+        queryStringParameters: { cursor: "garbage" },
+      }),
+      deps,
+      NOW
+    );
+    assert.equal(res.statusCode, 200);
+    const body = JSON.parse(res.body) as { games: unknown[] };
+    assert.equal(body.games.length, 1);
+  });
+});
+
+describe("GET /v1/games/{gameId}", () => {
+  it("owned game → 200", async () => {
+    const deps = makeDeps();
+    const token = await loginAndGetToken(deps);
+
+    const postRes = await handleRequest(
+      ev("POST /v1/games", validGameBody(), authHeader(token)),
+      deps,
+      NOW
+    );
+    const { game } = JSON.parse(postRes.body) as { game: { gameId: string } };
+
+    const getRes = await handleRequest(
+      ev("GET /v1/games/{gameId}", undefined, authHeader(token), {
+        pathParameters: { gameId: game.gameId },
+      }),
+      deps,
+      NOW
+    );
+    assert.equal(getRes.statusCode, 200);
+    const body = JSON.parse(getRes.body) as { game: { gameId: string } };
+    assert.equal(body.game.gameId, game.gameId);
+  });
+
+  it("unknown gameId → 404", async () => {
+    const deps = makeDeps();
+    const token = await loginAndGetToken(deps);
+
+    const res = await handleRequest(
+      ev("GET /v1/games/{gameId}", undefined, authHeader(token), {
+        pathParameters: { gameId: "no-such-id" },
+      }),
+      deps,
+      NOW
+    );
+    assert.equal(res.statusCode, 404);
   });
 });

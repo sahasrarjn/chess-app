@@ -74,3 +74,97 @@ function parseObject(raw: string | undefined | null): Record<string, unknown> | 
   if (!data || typeof data !== "object") return null;
   return data as Record<string, unknown>;
 }
+
+export type RecordableMode = "vsBot" | "localTwoPlayer";
+export type GameResultType = "checkmate" | "stalemate" | "resignation" | "draw";
+export type RecordColor = "white" | "black";
+
+export interface GameRecordInput {
+  mode: RecordableMode;
+  difficulty: "easy" | "medium" | "hard" | null;
+  playerColor: RecordColor | null;
+  opponent: string;
+  moves: string[];
+  resultType: GameResultType;
+  winner: RecordColor | null;
+  endedAt: string; // ISO 8601
+}
+
+export interface GameRecord extends GameRecordInput {
+  gameId: string;
+}
+
+export interface GamesPage {
+  games: GameRecord[];
+  nextCursor: string | null;
+}
+
+const MAX_MOVES = 1024;
+const MAX_OPPONENT = 40;
+
+/** Light validation per spec: shape + bounds, no server-side move replay. */
+export function parseGameRecordInput(raw: string | undefined | null): GameRecordInput | null {
+  const m = parseObject(raw);
+  if (!m) return null;
+  if (m.mode !== "vsBot" && m.mode !== "localTwoPlayer") return null;
+
+  const difficulty =
+    m.difficulty === "easy" || m.difficulty === "medium" || m.difficulty === "hard"
+      ? m.difficulty
+      : null;
+  if (m.mode === "vsBot" && difficulty === null) return null;
+  if (m.mode === "localTwoPlayer" && m.difficulty != null) return null;
+
+  const playerColor = m.playerColor === "white" || m.playerColor === "black" ? m.playerColor : null;
+  if (m.mode === "vsBot" && playerColor === null) return null;
+
+  if (typeof m.opponent !== "string") return null;
+  const opponent = m.opponent.replace(/\s+/g, " ").trim();
+  if (opponent.length < 1 || opponent.length > MAX_OPPONENT) return null;
+
+  if (!Array.isArray(m.moves) || m.moves.length < 1 || m.moves.length > MAX_MOVES) return null;
+  if (!m.moves.every((mv) => typeof mv === "string" && mv.length >= 2 && mv.length <= 8)) {
+    return null;
+  }
+
+  const resultType = m.resultType;
+  if (
+    resultType !== "checkmate" &&
+    resultType !== "stalemate" &&
+    resultType !== "resignation" &&
+    resultType !== "draw"
+  ) {
+    return null;
+  }
+  const winner = m.winner === "white" || m.winner === "black" ? m.winner : null;
+  const needsWinner = resultType === "checkmate" || resultType === "resignation";
+  if (needsWinner && winner === null) return null;
+  if (!needsWinner && winner !== null) return null;
+
+  if (typeof m.endedAt !== "string" || Number.isNaN(Date.parse(m.endedAt))) return null;
+
+  return {
+    mode: m.mode,
+    difficulty,
+    playerColor,
+    opponent,
+    moves: m.moves as string[],
+    resultType,
+    winner,
+    endedAt: m.endedAt,
+  };
+}
+
+/** Flat stats counter key for a recorded game, or null when the game
+ *  doesn't attribute a result to the user (pass-and-play). */
+export function statsKeyFor(record: {
+  mode: string;
+  difficulty: string | null;
+  playerColor: string | null;
+  winner: string | null;
+}): string | null {
+  if (record.mode !== "vsBot" || !record.playerColor || !record.difficulty) return null;
+  const outcome =
+    record.winner == null ? "d" : record.winner === record.playerColor ? "w" : "l";
+  return `bot_${record.difficulty}_${outcome}`;
+}

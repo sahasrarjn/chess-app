@@ -50,6 +50,40 @@ final class GameViewModel: ObservableObject, BoardModel {
         objectWillChange.send()
     }
 
+    // Review state
+    @Published private(set) var review: ReviewResult?
+    @Published private(set) var reviewProgress: (done: Int, total: Int)?
+    private var reviewTask: Task<Void, Never>?
+
+    var canStartReview: Bool {
+        game.result != .ongoing && review == nil && reviewProgress == nil
+    }
+
+    func startReview() {
+        guard canStartReview else { return }
+        let movesUci = game.recordedMoves.map { $0.move.uci }
+        reviewTask = Task { @MainActor in
+            self.reviewProgress = (done: 0, total: movesUci.count)
+            self.objectWillChange.send()
+            let result = await analyzeGameReview(moves: movesUci, onProgress: { done, total in
+                Task { @MainActor in
+                    self.reviewProgress = (done: done, total: total)
+                    self.objectWillChange.send()
+                }
+            })
+            self.review = result
+            self.reviewProgress = nil
+            self.objectWillChange.send()
+        }
+    }
+
+    func cancelReview() {
+        reviewTask?.cancel()
+        reviewTask = nil
+        reviewProgress = nil
+        objectWillChange.send()
+    }
+
     let mode: GameMode
     let botDifficulty: BotDifficulty
     /// True when this view model is browsing a completed record (no bot, no persistence).
@@ -460,6 +494,10 @@ final class GameViewModel: ObservableObject, BoardModel {
         coachToken += 1
         coachEvalByPly = [:]
         coachBestByPly = [:]
+        review = nil
+        reviewProgress = nil
+        reviewTask?.cancel()
+        reviewTask = nil
         notifyChange()
         sound.play(.gameStart)
     }

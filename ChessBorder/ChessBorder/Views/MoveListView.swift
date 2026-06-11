@@ -5,6 +5,7 @@ struct MoveListView: View {
     let selectedPly: Int
     let livePly: Int
     let onSelect: (Int) -> Void
+    var classifications: [Int: MoveClassification]? = nil
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -47,10 +48,18 @@ struct MoveListView: View {
     }
 
     private func moveButton(_ san: String, ply: Int) -> some View {
-        Button {
+        let badge: String = {
+            switch classifications?[ply] {
+            case .inaccuracy: return " ?!"
+            case .mistake: return " ?"
+            case .blunder: return " ??"
+            default: return ""
+            }
+        }()
+        return Button {
             onSelect(ply)
         } label: {
-            Text(san)
+            Text(san + badge)
                 .font(.caption.weight(.semibold).monospaced())
                 .foregroundStyle(ply == selectedPly ? .black.opacity(0.9) : .white.opacity(0.9))
                 .padding(.horizontal, 9)

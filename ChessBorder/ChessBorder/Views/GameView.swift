@@ -241,11 +241,58 @@ struct GameView: View {
 
     // MARK: - Bottom panel
 
+    private var reviewClassifications: [Int: MoveClassification]? {
+        guard let review = viewModel.review else { return nil }
+        var dict: [Int: MoveClassification] = [:]
+        for m in review.moves {
+            dict[m.ply] = m.classification
+        }
+        return dict
+    }
+
     private var bottomPanel: some View {
         VStack(spacing: 10) {
             if !isReplay, viewModel.canRetryBot {
                 Button("Retry bot move") { viewModel.retryBotMove() }
                     .buttonStyle(GameChromeButtonStyle(variant: .primary))
+            }
+
+            // Review controls
+            if !isReplay, viewModel.result != .ongoing || viewModel.review != nil || viewModel.reviewProgress != nil {
+                if viewModel.canStartReview {
+                    Button("Analyze game") { viewModel.startReview() }
+                        .buttonStyle(GameChromeButtonStyle(variant: .secondary))
+                } else if let progress = viewModel.reviewProgress {
+                    HStack(spacing: 8) {
+                        ProgressView(value: Double(progress.done), total: Double(max(progress.total, 1)))
+                            .frame(maxWidth: .infinity)
+                        Text("\(progress.done)/\(progress.total)")
+                            .font(.caption)
+                            .foregroundStyle(BoardTheme.muted)
+                        Button("Cancel") { viewModel.cancelReview() }
+                            .font(.caption)
+                            .foregroundStyle(BoardTheme.accent)
+                    }
+                } else if let review = viewModel.review {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("White \(review.accuracy.white)% · Black \(review.accuracy.black)%")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(BoardTheme.accent)
+                        if !review.keyMoments.isEmpty {
+                            Text("Key moments:")
+                                .font(.caption2)
+                                .foregroundStyle(BoardTheme.muted)
+                            ForEach(Array(review.keyMoments.enumerated()), id: \.offset) { _, m in
+                                Button("Move \(m.ply): \(m.uci) \(m.classification == .blunder ? "??" : "?")") {
+                                    viewModel.goToMove(ply: m.ply)
+                                }
+                                .font(.caption2)
+                                .foregroundStyle(BoardTheme.accent)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
 
             if !viewModel.recordedMoves.isEmpty {
@@ -254,7 +301,8 @@ struct GameView: View {
                         moves: viewModel.recordedMoves,
                         selectedPly: displayedPly,
                         livePly: viewModel.livePly,
-                        onSelect: { viewModel.goToMove(ply: $0) }
+                        onSelect: { viewModel.goToMove(ply: $0) },
+                        classifications: reviewClassifications
                     )
                     .padding(.vertical, 6)
                 }
@@ -387,6 +435,14 @@ struct GameView: View {
                     viewModel.newGame()
                 }
                 .buttonStyle(GameChromeButtonStyle(variant: .primary))
+
+                if viewModel.canStartReview {
+                    Button("Review") {
+                        gameOverDismissed = true
+                        viewModel.startReview()
+                    }
+                    .buttonStyle(GameChromeButtonStyle(variant: .secondary))
+                }
 
                 HStack(spacing: 10) {
                     Button("Dismiss") { gameOverDismissed = true }

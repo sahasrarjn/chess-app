@@ -6,6 +6,7 @@ import {
   validateDisplayName,
   parseGameRecordInput,
   statsKeyFor,
+  onlineTotals,
 } from "./protocol.ts";
 
 describe("parseLoginRequest", () => {
@@ -354,6 +355,21 @@ describe("parseGameRecordInput", () => {
 
   it("non-JSON input → null", () => {
     assert.equal(parseGameRecordInput("not-json"), null);
+  });
+});
+
+describe("onlineTotals", () => {
+  it("full online stats map → wins and games, bot keys ignored", () => {
+    const result = onlineTotals({ online_w: 3, online_l: 2, online_d: 1, bot_easy_w: 9 });
+    assert.deepEqual(result, { wins: 3, games: 6 });
+  });
+
+  it("empty map → {wins: 0, games: 0}", () => {
+    assert.deepEqual(onlineTotals({}), { wins: 0, games: 0 });
+  });
+
+  it("partial map with only online_l → {wins: 0, games: 4}", () => {
+    assert.deepEqual(onlineTotals({ online_l: 4 }), { wins: 0, games: 4 });
   });
 });
 

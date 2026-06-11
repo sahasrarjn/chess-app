@@ -182,7 +182,9 @@ final class AccountsTests: XCTestCase {
         _ = try await api.me(token: "my-bearer-token")
 
         let req = try XCTUnwrap(CapturingURLProtocol.lastRequest)
-        XCTAssertEqual(req.httpMethod, nil) // GET (nil means GET in URLRequest)
+        // URLRequest.httpMethod defaults to "GET" when not explicitly set
+        let method = req.httpMethod ?? "GET"
+        XCTAssertEqual(method, "GET")
         XCTAssertTrue(req.url?.path == "/v1/me")
         XCTAssertEqual(req.value(forHTTPHeaderField: "Authorization"), "Bearer my-bearer-token")
     }
@@ -195,7 +197,7 @@ final class AccountsTests: XCTestCase {
             return config
         }())
         let api = AccountsAPI(baseURL: baseURL, session: session)
-        CapturingURLProtocol.responseData = Data("""{"error":"unauthorized"}""".utf8)
+        CapturingURLProtocol.responseData = Data("{\"error\":\"unauthorized\"}".utf8)
         CapturingURLProtocol.statusCode = 401
 
         do {

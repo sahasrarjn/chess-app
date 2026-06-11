@@ -32,7 +32,8 @@ final class AuthStore: NSObject, ObservableObject {
         } catch AccountsAPIError.http(401) {
             KeychainStore.delete(Self.tokenAccount)
         } catch {
-            // Network error: keep token, leave profile nil (degrades to signed-out UI without destroying session)
+            // Network error: keep token, leave profile nil (degrades to signed-out UI without destroying session).
+            _ = error
         }
     }
 
@@ -51,8 +52,9 @@ final class AuthStore: NSObject, ObservableObject {
 
     // MARK: - Sign in with Google
 
+    #if os(iOS)
     func signInWithGoogle(presenting: UIViewController?) {
-        #if canImport(GoogleSignIn) && os(iOS)
+        #if canImport(GoogleSignIn)
         guard AccountsConfig.isGoogleConfigured,
               let clientID = AccountsConfig.googleClientID else { return }
 
@@ -64,6 +66,7 @@ final class AuthStore: NSObject, ObservableObject {
             Task { @MainActor in
                 defer { self?.isSigningIn = false }
                 if let error {
+                    _ = error
                     self?.lastError = "Sign-in failed. You can keep playing as a guest."
                     return
                 }
@@ -76,6 +79,7 @@ final class AuthStore: NSObject, ObservableObject {
         }
         #endif
     }
+    #endif
 
     // MARK: - Sign out
 
@@ -155,11 +159,26 @@ extension AuthStore: ASAuthorizationControllerDelegate {
 extension AuthStore: ASAuthorizationControllerPresentationContextProviding {
     nonisolated func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
         #if os(iOS)
-        return UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first { $0.isKeyWindow }
-            ?? ASPresentationAnchor()
+        // ASAuthorizationControllerPresentationContextProviding requires a synchronous
+        // nonisolated method. We dispatch to the main thread synchronously to satisfy
+        // the requirement while accessing UIApplication on the main actor.
+        var anchor: ASPresentationAnchor = ASPresentationAnchor()
+        if Thread.isMainThread {
+            anchor = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap { $0.windows }
+                .first { $0.isKeyWindow }
+                ?? ASPresentationAnchor()
+        } else {
+            DispatchQueue.main.sync {
+                anchor = UIApplication.shared.connectedScenes
+                    .compactMap { $0 as? UIWindowScene }
+                    .flatMap { $0.windows }
+                    .first { $0.isKeyWindow }
+                    ?? ASPresentationAnchor()
+            }
+        }
+        return anchor
         #else
         return ASPresentationAnchor()
         #endif

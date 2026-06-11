@@ -29,6 +29,8 @@ struct HomeView: View {
         }
     }
 
+    @StateObject private var auth = AuthStore.shared
+
     private var homeContent: some View {
         NavigationStack {
             ZStack {
@@ -91,6 +93,11 @@ struct HomeView: View {
                     Spacer()
 
                     VStack(spacing: 4) {
+                        if AccountsConfig.isConfigured, let profile = auth.profile {
+                            Text("Signed in as \(profile.displayName)")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.45))
+                        }
                         Text("Bot: \(BotProvider.engineName)")
                             .font(.caption2)
                             .foregroundStyle(.white.opacity(0.45))

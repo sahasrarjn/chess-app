@@ -1298,3 +1298,261 @@ select {
   font-size: 0.85rem;
   color: var(--muted);
 }
+
+/* ---- Coach UI ---- */
+
+/* Eval bar: slim vertical track beside the board */
+.game-board-slot--coach {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.eval-bar {
+  width: 12px;
+  border-radius: 6px;
+  background: #3a3a45;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  min-height: 60px;
+  flex-shrink: 0;
+}
+
+.eval-bar.hidden {
+  display: none;
+}
+
+.eval-bar-fill {
+  width: 100%;
+  background: #e8e8e8;
+  border-radius: 0 0 6px 6px;
+  transition: height 0.25s ease;
+  flex-shrink: 0;
+}
+
+.eval-bar-label {
+  position: absolute;
+  bottom: 2px;
+  font-size: 9px;
+  font-family: monospace;
+  color: rgba(0, 0, 0, 0.65);
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Coach banner: dismissible toast below status bar */
+.coach-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-top: 4px;
+  font-size: 0.85rem;
+  pointer-events: auto;
+}
+
+.coach-banner--mistake {
+  background: color-mix(in srgb, #b85c00 25%, var(--surface));
+  border: 1px solid #b85c00;
+  color: #ffcf88;
+}
+
+.coach-banner--blunder {
+  background: color-mix(in srgb, #b82020 25%, var(--surface));
+  border: 1px solid #b82020;
+  color: #ffaaaa;
+}
+
+.coach-banner-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.coach-banner--mistake .coach-banner-dot {
+  background: #e07800;
+}
+
+.coach-banner--blunder .coach-banner-dot {
+  background: #dc2020;
+}
+
+.coach-banner-text {
+  flex: 1;
+}
+
+.coach-banner-dismiss {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0 2px;
+  line-height: 1;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.coach-banner-dismiss:hover {
+  opacity: 1;
+  background: rgba(255,255,255,0.1);
+}
+
+/* Hint why: small caption under hint button area */
+.hint-why {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 2px;
+  padding: 0 4px;
+  text-align: center;
+}
+
+/* Settings coach toggle */
+.coach-setting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* Coach move-list classification badges */
+.coach-badge {
+  display: inline-block;
+  font-size: 0.7em;
+  font-weight: 700;
+  border-radius: 4px;
+  padding: 0 3px;
+  margin-left: 2px;
+  vertical-align: middle;
+}
+
+.coach-badge--inaccuracy {
+  background: #7a5c00;
+  color: #ffe090;
+}
+
+.coach-badge--mistake {
+  background: #7a3000;
+  color: #ffb060;
+}
+
+.coach-badge--blunder {
+  background: #7a0000;
+  color: #ffaaaa;
+}
+
+/* Review progress bar */
+.coach-progress {
+  margin: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.coach-progress-track {
+  width: 100%;
+  height: 6px;
+  background: var(--surface);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.coach-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.15s ease;
+}
+
+.coach-progress-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.coach-progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Review accuracy strip */
+.coach-accuracy {
+  font-size: 0.85rem;
+  color: var(--text);
+  padding: 6px 0;
+  text-align: center;
+}
+
+/* Review key moments list */
+.coach-moments {
+  margin-top: 8px;
+}
+
+.coach-moments h4 {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 6px;
+}
+
+.coach-moment-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.coach-moment-row:hover {
+  background: var(--surface);
+}
+
+.coach-moment-row:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.coach-moment-ply {
+  color: var(--muted);
+  min-width: 28px;
+  flex-shrink: 0;
+}
+
+.coach-moment-move {
+  font-weight: 500;
+  min-width: 52px;
+}
+
+.coach-moment-swing {
+  color: var(--muted);
+  flex: 1;
+}
+
+.coach-moment-best {
+  font-size: 0.75em;
+  color: var(--muted);
+}
+
+/* Review unavailable message */
+.coach-unavailable {
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-align: center;
+  padding: 8px 0;
+}

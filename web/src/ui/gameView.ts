@@ -12,6 +12,7 @@ import {
   completedGameRecord,
   type CompletedGameRecord,
 } from "../game/gameHistory";
+import { uploadCompletedGame } from "../game/gameUploads";
 import {
   type Piece,
   type BotDifficulty,
@@ -426,9 +427,8 @@ class GameScreen {
       playerColor: this.mode === "vsBot" ? "white" : null,
       opponent: this.mode === "vsBot" ? `Bot (${this.difficulty})` : "Friend (local)",
     });
-    if (record) {
-      appendGameToHistory(record);
-      // uploadCompletedGame called in Task 10
+    if (record && appendGameToHistory(record)) {
+      void uploadCompletedGame(record); // fire-and-forget, never throws
     }
   }
 

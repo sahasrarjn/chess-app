@@ -7,6 +7,7 @@ import { newRoomId } from "./online/guestIdentity";
 applyBoardTheme(boardThemeById(loadBoardThemeId()));
 
 void import("./analytics/posthog").then(({ initAnalytics }) => initAnalytics());
+void import("./game/gameUploads").then(({ flushPendingUploads }) => flushPendingUploads());
 
 function showBootError(message: string): void {
   const app = document.getElementById("app");

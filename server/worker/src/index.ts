@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { clampPublicMovetime, parseMovePayload } from "./validation";
+import { ANALYZE_MAX_MOVETIME_MS, clampPublicMovetime, parseAnalyzePayload, parseMovePayload } from "./validation";
 
 export type Env = {
   ENGINE_ORIGIN: string;
@@ -99,6 +99,46 @@ app.post("/v1/move", async (c) => {
 
   try {
     const res = await fetchEngine(`${origin}/v1/move`, {
+      method: "POST",
+      headers,
+      body: payload,
+    });
+    const text = await res.text();
+    return new Response(text, {
+      status: res.status,
+      headers: { "Content-Type": res.headers.get("Content-Type") ?? "application/json" },
+    });
+  } catch {
+    return c.json({ error: "Engine origin unreachable" }, 502);
+  }
+});
+
+app.options("/v1/analyze", (c) => c.body(null, 204));
+
+app.post("/v1/analyze", async (c) => {
+  const origin = c.env.ENGINE_ORIGIN?.replace(/\/$/, "");
+  if (!origin) {
+    return c.json({ error: "Engine not configured" }, 503);
+  }
+
+  const raw = await c.req.text();
+  const parsed = parseAnalyzePayload(raw);
+  if ("error" in parsed) {
+    return c.json({ error: parsed.error }, 400);
+  }
+
+  const maxMovetime = Math.min(
+    parseInt(c.env.PUBLIC_MAX_MOVETIME_MS ?? "5000", 10),
+    ANALYZE_MAX_MOVETIME_MS
+  );
+  const movetimeMs = clampPublicMovetime(parsed.movetime_ms, maxMovetime);
+  const payload = JSON.stringify({ ...parsed, movetime_ms: movetimeMs });
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (c.env.API_KEY) headers["X-API-Key"] = c.env.API_KEY;
+
+  try {
+    const res = await fetchEngine(`${origin}/v1/analyze`, {
       method: "POST",
       headers,
       body: payload,

@@ -153,7 +153,9 @@ Resources:
                   FieldToMatch:
                     UriPath: {}
                   PositionalConstraint: STARTS_WITH
-                  SearchString: /v1/move
+                  SearchString: /v1/
+                  # A full post-game review is ~80 sequential requests over ~20s —
+                  # well under the default WafRateLimit per IP per 5 minutes.
                   TextTransformations:
                     - Priority: 0
                       Type: LOWERCASE
@@ -238,6 +240,14 @@ Resources:
               - EventType: viewer-request
                 FunctionARN: !GetAtt StaticUrlRewriteFunction.FunctionMetadata.FunctionARN
           - PathPattern: /v1/move
+            TargetOriginId: WorkerApi
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+          - PathPattern: /v1/analyze
             TargetOriginId: WorkerApi
             ViewerProtocolPolicy: https-only
             AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]

@@ -18,10 +18,17 @@ import {
   type BotDifficulty,
   type GameMode,
 } from "../engine/types";
+import { toFEN } from "../engine/fen";
 import { BoardView } from "./boardView";
 import { MoveListView } from "./moveListView";
 import { MuteButton } from "./muteButton";
 import { createSettingsButton, closeSettingsPanel } from "./settingsPanel";
+import { EvalBar } from "./evalBar";
+import { LiveCoach } from "../coach/liveCoach";
+import { loadCoachEnabled } from "../coach/coachSettings";
+import { analyzeGameReview, type ReviewResult } from "../coach/review";
+import type { MoveClassification } from "../coach/classify";
+import { moveUci } from "../engine/types";
 
 
 const HINT_SVG =
@@ -44,9 +51,10 @@ export function renderGame(
 export function renderReplay(
   root: HTMLElement,
   record: CompletedGameRecord,
-  onBack: () => void
+  onBack: () => void,
+  opts?: { review?: boolean }
 ): () => void {
-  const screen = new GameScreen(root, "localTwoPlayer", "medium", onBack, undefined, record);
+  const screen = new GameScreen(root, "localTwoPlayer", "medium", onBack, undefined, record, opts);
   screen.mount();
   return () => screen.destroy();
 }
@@ -79,13 +87,28 @@ class GameScreen {
   private hintBtn!: HTMLButtonElement;
   private readonly sound = new SoundPlayer();
 
+  // Coach fields
+  private readonly coach = new LiveCoach(() => this.updateCoach());
+  private readonly evalBar = new EvalBar();
+  private coachBannerEl: HTMLElement | null = null;
+  private hintWhyEl: HTMLElement | null = null;
+  private lastCoachPly = -1;
+  private lastFen = "";
+
+  // Review fields
+  private reviewResult: ReviewResult | null = null;
+  private reviewProgress: { done: number; total: number } | null = null;
+  private reviewAbort: AbortController | null = null;
+  private reviewContainerEl: HTMLElement | null = null;
+
   constructor(
     private readonly root: HTMLElement,
     private readonly mode: GameMode,
     private readonly difficulty: BotDifficulty,
     private readonly onBack: () => void,
     saved?: SavedGameSnapshot,
-    private readonly replay?: CompletedGameRecord
+    private readonly replay?: CompletedGameRecord,
+    readonly replayOpts?: { review?: boolean }
   ) {
     this.ctrl = new GameController(
       mode,
@@ -186,11 +209,19 @@ class GameScreen {
     this.statusSpinnerEl.setAttribute("aria-hidden", "true");
     this.statusEl.appendChild(this.statusSpinnerEl);
     statusWrap.appendChild(this.statusEl);
+    // Coach banner container (hidden initially)
+    this.coachBannerEl = el("div", "");
+    statusWrap.appendChild(this.coachBannerEl);
+    // Hint-why line
+    this.hintWhyEl = el("div", "hint-why");
+    this.hintWhyEl.hidden = true;
+    statusWrap.appendChild(this.hintWhyEl);
     top.appendChild(statusWrap);
     screen.appendChild(top);
 
-    const boardSlot = el("div", "game-board-slot");
+    const boardSlot = el("div", "game-board-slot game-board-slot--coach");
     boardSlot.appendChild(this.board.el);
+    boardSlot.appendChild(this.evalBar.el);
     screen.appendChild(boardSlot);
 
     const bottom = el("div", "game-bottom");
@@ -198,6 +229,10 @@ class GameScreen {
     this.moveList = new MoveListView((ply) => this.ctrl.goToMove(ply));
     moveWrap.appendChild(this.moveList.el);
     bottom.appendChild(moveWrap);
+
+    // Review container (hidden until review starts/completes)
+    this.reviewContainerEl = el("div", "coach-review-container");
+    bottom.appendChild(this.reviewContainerEl);
 
     const controls = el("div", "game-controls");
 
@@ -218,6 +253,13 @@ class GameScreen {
       this.liveBtn = el("button", "", "Last") as HTMLButtonElement;
       this.liveBtn.onclick = () => this.ctrl.returnToLive();
       controls.appendChild(this.liveBtn);
+
+      // Analyze game button (only in replay with review enabled)
+      if (this.replayOpts?.review) {
+        const analyzeBtn = el("button", "", "Analyze game") as HTMLButtonElement;
+        analyzeBtn.onclick = () => this.startReview();
+        controls.appendChild(analyzeBtn);
+      }
 
       // Stubs for updateControls()
       this.retryBtn = el("button", "primary retry-emphasis", "Retry Bot") as HTMLButtonElement;
@@ -271,6 +313,8 @@ class GameScreen {
 
   destroy(): void {
     this.ctrl.dispose();
+    this.coach.dispose();
+    this.reviewAbort?.abort();
     this.promotionEl?.remove();
     this.gameOverEl?.remove();
     closeSettingsPanel();
@@ -288,11 +332,85 @@ class GameScreen {
     this.updateStatus();
     this.updateCaptured();
     this.board.update();
-    this.moveList.update(this.ctrl.game.recordedMoves, this.ctrl.previewPly);
+    const classifications = this.reviewResult?.moves.map((m) => m.classification as MoveClassification | undefined);
+    this.moveList.update(this.ctrl.game.recordedMoves, this.ctrl.previewPly, classifications);
     this.updateControls();
     this.updateHintButton();
     this.updatePromotion();
     this.updateGameOver();
+    this.updateLiveCoach();
+    this.updateCoach();
+  }
+
+  private updateLiveCoach(): void {
+    if (this.replay) return; // No live coach in replay mode
+
+    // Enable coach only in offline modes, when not in replay
+    const coachEnabled = loadCoachEnabled() && !this.replay;
+    this.coach.enabled = coachEnabled;
+
+    const livePly = this.ctrl.livePly;
+    // Only trigger analysis when live ply changed and not browsing history
+    if (livePly !== this.lastCoachPly && this.ctrl.previewPly == null) {
+      const recordedMoves = this.ctrl.game.recordedMoves;
+      const lastRecord = livePly > 0 ? recordedMoves[livePly - 1] : undefined;
+      const lastMove = lastRecord?.move ?? null;
+      const mover = lastRecord?.color ?? null;
+
+      // shouldClassify: localTwoPlayer always, vsBot only for white (player)
+      const shouldClassify =
+        this.mode === "localTwoPlayer" ? true : mover === "white";
+
+      this.coach.onPositionChanged(
+        this.ctrl.game,
+        livePly,
+        lastMove,
+        this.lastFen || null,
+        mover,
+        shouldClassify
+      );
+
+      this.lastFen = toFEN(this.ctrl.game);
+      this.lastCoachPly = livePly;
+    }
+  }
+
+  private updateCoach(): void {
+    if (!this.coachBannerEl || !this.hintWhyEl) return;
+
+    // Update eval bar
+    this.evalBar.update(this.coach.enabled ? this.coach.evalForBar : null);
+
+    // Update coach banner
+    const banner = this.coach.banner;
+    if (banner && this.coach.enabled) {
+      const bannerEl = el("div", `coach-banner coach-banner--${banner.classification}`);
+      const dot = el("span", "coach-banner-dot");
+      const text = el("span", "coach-banner-text", banner.text);
+      const dismiss = el("button", "coach-banner-dismiss", "×");
+      (dismiss as HTMLButtonElement).type = "button";
+      dismiss.addEventListener("click", () => this.coach.dismissBanner());
+      bannerEl.appendChild(dot);
+      bannerEl.appendChild(text);
+      bannerEl.appendChild(dismiss);
+      this.coachBannerEl.replaceChildren(bannerEl);
+    } else {
+      this.coachBannerEl.replaceChildren();
+    }
+
+    // Update hint-why line
+    const hintMove = this.ctrl.hintMove;
+    if (hintMove && this.coach.enabled && !this.replay) {
+      const why = this.coach.hintWhyText(this.ctrl.game, hintMove);
+      if (why) {
+        this.hintWhyEl.textContent = why;
+        this.hintWhyEl.hidden = false;
+      } else {
+        this.hintWhyEl.hidden = true;
+      }
+    } else {
+      this.hintWhyEl.hidden = true;
+    }
   }
 
   private updateHintButton(): void {
@@ -397,6 +515,9 @@ class GameScreen {
     this.removeGameOverOverlay();
     clearSavedGame();
     this.lastPersistKey = "";
+    this.coach.reset();
+    this.lastCoachPly = -1;
+    this.lastFen = "";
     this.ctrl.newGame();
     this.sound.unlock();
     this.sound.play("game-start");
@@ -442,6 +563,124 @@ class GameScreen {
     this.gameOverEl = null;
   }
 
+  private startReview(): void {
+    if (this.reviewAbort) return; // already running
+    this.reviewResult = null;
+    this.reviewProgress = { done: 0, total: 0 };
+    this.reviewAbort = new AbortController();
+    const signal = this.reviewAbort.signal;
+
+    const moves = this.ctrl.game.recordedMoves.map((r) => moveUci(r.move));
+    this.updateReview();
+
+    void analyzeGameReview(
+      moves,
+      (done, total) => {
+        this.reviewProgress = { done, total };
+        this.updateReview();
+        this.update(); // update move list badges mid-run? only after complete
+      },
+      signal
+    ).then((result) => {
+      this.reviewResult = result;
+      this.reviewProgress = null;
+      this.reviewAbort = null;
+      this.updateReview();
+      this.update(); // re-render move list with badges
+    }).catch((err) => {
+      this.reviewAbort = null;
+      this.reviewProgress = null;
+      if (err instanceof DOMException && err.name === "AbortError") {
+        // cancelled — show nothing
+      } else {
+        // show error
+        this.reviewResult = null;
+      }
+      this.updateReview();
+    });
+  }
+
+  private cancelReview(): void {
+    this.reviewAbort?.abort();
+    this.reviewAbort = null;
+    this.reviewProgress = null;
+    this.updateReview();
+  }
+
+  private updateReview(): void {
+    if (!this.reviewContainerEl) return;
+    const container = this.reviewContainerEl;
+    container.replaceChildren();
+
+    if (this.reviewProgress) {
+      // Show progress bar
+      const { done, total } = this.reviewProgress;
+      const pct = total > 0 ? (done / total) * 100 : 0;
+
+      const progressEl = el("div", "coach-progress");
+      const track = el("div", "coach-progress-track");
+      const fill = el("div", "coach-progress-fill");
+      fill.style.width = `${pct.toFixed(1)}%`;
+      track.appendChild(fill);
+
+      const row = el("div", "coach-progress-row");
+      const label = el("span", "coach-progress-label", `Analyzing… ${done}/${total}`);
+      const cancelBtn = el("button", "", "Cancel") as HTMLButtonElement;
+      cancelBtn.onclick = () => this.cancelReview();
+      row.appendChild(label);
+      row.appendChild(cancelBtn);
+
+      progressEl.appendChild(track);
+      progressEl.appendChild(row);
+      container.appendChild(progressEl);
+      return;
+    }
+
+    if (!this.reviewResult) return;
+
+    const { accuracy, keyMoments } = this.reviewResult;
+
+    // Accuracy strip
+    const accEl = el("div", "coach-accuracy", `White ${accuracy.white}% · Black ${accuracy.black}%`);
+    container.appendChild(accEl);
+
+    // Key moments
+    if (keyMoments.length > 0) {
+      const momentsEl = el("div", "coach-moments");
+      const h4 = document.createElement("h4");
+      h4.textContent = "Key moments";
+      momentsEl.appendChild(h4);
+
+      for (const km of keyMoments) {
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "coach-moment-row";
+
+        const plySpan = el("span", "coach-moment-ply", `#${km.ply}`);
+        const moveSpan = el("span", "coach-moment-move", km.uci);
+        const swingCp = (km.swing / 100).toFixed(1);
+        const swingSpan = el("span", "coach-moment-swing", `−${swingCp}`);
+
+        const badge = document.createElement("span");
+        badge.className = `coach-badge coach-badge--${km.classification}`;
+        badge.textContent = km.classification === "inaccuracy" ? "?!" : km.classification === "mistake" ? "?" : "??";
+
+        const bestSpan = km.bestMoveUci ? el("span", "coach-moment-best", `best: ${km.bestMoveUci}`) : null;
+
+        row.appendChild(plySpan);
+        row.appendChild(moveSpan);
+        row.appendChild(swingSpan);
+        row.appendChild(badge);
+        if (bestSpan) row.appendChild(bestSpan);
+
+        row.onclick = () => this.ctrl.goToMove(km.ply);
+        momentsEl.appendChild(row);
+      }
+
+      container.appendChild(momentsEl);
+    }
+  }
+
   private buildPromotionPanel(): HTMLElement {
     const overlay = el("div", "overlay");
     const panel = el("div", "overlay-panel");
@@ -478,7 +717,15 @@ class GameScreen {
     btn.onclick = () => this.startNewGame();
     const back = el("button", "", "Dismiss");
     back.onclick = () => this.dismissGameOver();
+
+    // Review button (available from game-over overlay)
+    const reviewBtn = el("button", "", "Review") as HTMLButtonElement;
+    reviewBtn.onclick = () => {
+      this.dismissGameOver();
+      this.startReview();
+    };
     panel.appendChild(btn);
+    panel.appendChild(reviewBtn);
     panel.appendChild(back);
     overlay.appendChild(panel);
     return overlay;

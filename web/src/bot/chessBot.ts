@@ -178,6 +178,12 @@ function chooseMinimaxMoveInternal(
   return bestMove;
 }
 
+/** Static evaluation in ~centipawns (pawn = 100) from `color`'s perspective.
+ *  Used by the coach's offline fallback; mirrors iOS ChessBot.evaluateCp. */
+export function evaluateCp(game: ChessGame, color: PieceColor): number {
+  return evaluate(game, color);
+}
+
 /** Built-in bot: minimax with alpha-beta (same logic as iOS ChessBot). */
 export function chooseMinimaxMove(
   game: ChessGame,

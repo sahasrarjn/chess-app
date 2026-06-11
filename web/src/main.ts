@@ -94,7 +94,7 @@ try {
     void import("./ui/gameView")
       .then(({ renderReplay }) => {
         teardownGame?.();
-        teardownGame = renderReplay(app, record, showPastGames);
+        teardownGame = renderReplay(app, record, showPastGames, { review: true });
       })
       .catch((err: unknown) => {
         console.error(err);

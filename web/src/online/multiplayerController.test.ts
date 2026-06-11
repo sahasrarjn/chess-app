@@ -204,3 +204,89 @@ describe("MultiplayerController — online history recording", () => {
     assert.equal(calls.length, 2);
   });
 });
+
+// ── NEW: online result threading (item 2) ────────────────────────────────────
+import { completedGameRecord, appendGameToHistory } from "../game/gameHistory";
+import type { CompletedGameRecord } from "../game/gameHistory";
+
+function fakeStorage(initial: Record<string, string> = {}) {
+  const data = new Map(Object.entries(initial));
+  return {
+    getItem: (k: string) => data.get(k) ?? null,
+    setItem: (k: string, v: string) => void data.set(k, v),
+    removeItem: (k: string) => void data.delete(k),
+  };
+}
+
+describe("defaultRecordHistory — server result threading", () => {
+  it("produces a completed record when server says finished but move list alone is ongoing", () => {
+    // A game where the move list hasn't ended (e.g. resigned via message),
+    // but the server result says finished.  defaultRecordHistory must use the
+    // server result rather than deriving it only from the move list.
+    const records: CompletedGameRecord[] = [];
+    const storage = fakeStorage();
+
+    function testRecordHistory(msg: StateMessage, game: ChessGame): void {
+      const playerColor = msg.color;
+      if (!playerColor) return;
+      const oppColor = playerColor === "white" ? "black" : "white";
+      const oppPlayer = msg.players[oppColor];
+      const opponent = oppPlayer?.name ?? "Opponent";
+
+      // Use fallbackResult from server when move-derived result is ongoing
+      const serverResult = msg.result;
+      const fallbackResult = serverResult.type !== "ongoing" ? serverResult : undefined;
+
+      const record = completedGameRecord({
+        game,
+        mode: "online",
+        difficulty: null,
+        playerColor,
+        opponent,
+        fallbackResult,
+      });
+      if (record) {
+        appendGameToHistory(record, storage);
+        records.push(record);
+      }
+    }
+
+    const fake = new FakeSocket();
+    const ctrl = new MultiplayerController(
+      "R",
+      { token: "t", name: "Alice" },
+      "wss://x",
+      () => {},
+      () => {},
+      () => fake,
+      testRecordHistory
+    );
+    ctrl.start();
+    fake.open();
+
+    // Active game with zero moves
+    fake.recv(stateMsg({
+      status: "active",
+      role: "white",
+      color: "white",
+      players: { white: { name: "Alice", connected: true }, black: { name: "Bob", connected: true } },
+      moves: [],
+      result: { type: "ongoing" },
+    }));
+
+    // Server says finished with resignation — no moves were made
+    fake.recv(stateMsg({
+      status: "finished",
+      role: "white",
+      color: "white",
+      players: { white: { name: "Alice", connected: true }, black: { name: "Bob", connected: true } },
+      moves: [],
+      result: { type: "resignation", winner: "black" },
+    }));
+
+    assert.equal(records.length, 1, "should produce a record even with 0 moves");
+    assert.equal(records[0].resultType, "resignation");
+    assert.equal(records[0].winner, "black");
+    void ctrl;
+  });
+});

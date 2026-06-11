@@ -97,6 +97,7 @@ final class AuthStore: NSObject, ObservableObject {
     func signOut() {
         KeychainStore.delete(Self.tokenAccount)
         profile = nil
+        GameUploadQueue.clearQueue()
         #if canImport(GoogleSignIn) && os(iOS)
         GIDSignIn.sharedInstance.signOut()
         #endif

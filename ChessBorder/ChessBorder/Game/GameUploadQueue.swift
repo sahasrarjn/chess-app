@@ -3,8 +3,11 @@ import Foundation
 /// Pending cloud uploads for finished bot/local games (signed-in users only).
 /// One shared mechanism: game end enqueues + flushes; launch flushes leftovers.
 enum GameUploadQueue {
-    private static let key = "chessborder.pendingGameUploads"
+    static let key = "chessborder.pendingGameUploads"
     private static let maxPending = 10
+
+    /// Reentrancy guard — safe because all entry points are @MainActor.
+    private static var isFlushing = false
 
     static func load(defaults: UserDefaults = .standard) -> [CompletedGameRecord] {
         guard let data = defaults.data(forKey: key),
@@ -16,6 +19,12 @@ enum GameUploadQueue {
     private static func save(_ records: [CompletedGameRecord], defaults: UserDefaults = .standard) {
         guard let data = try? JSONEncoder().encode(records) else { return }
         defaults.set(data, forKey: key)
+    }
+
+    /// Remove all queued uploads (call on sign-out to prevent cross-user leakage).
+    @MainActor
+    static func clearQueue(defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: key)
     }
 
     /// Queue and immediately attempt upload. No-ops for guests, online games,
@@ -34,8 +43,14 @@ enum GameUploadQueue {
 
     /// Drain in order. Success or HTTP 400 (permanently invalid) removes the
     /// entry; 401/network errors stop and keep the rest for the next launch.
+    /// Concurrent calls coalesce: a second call while a flush is in progress
+    /// returns immediately.
     @MainActor
     static func flush(defaults: UserDefaults = .standard) async {
+        guard !isFlushing else { return }
+        isFlushing = true
+        defer { isFlushing = false }
+
         guard let url = AccountsConfig.serverURL,
               let token = AuthStore.shared.sessionToken else { return }
         let api = AccountsAPI(baseURL: url)

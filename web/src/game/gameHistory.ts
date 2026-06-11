@@ -1,5 +1,5 @@
 import type { ChessGame } from "../engine/chessGame";
-import type { BotDifficulty, GameMode, PieceColor } from "../engine/types";
+import type { BotDifficulty, GameMode, GameResult, PieceColor } from "../engine/types";
 import { moveUci } from "../engine/types";
 
 export const GAME_HISTORY_KEY = "chessborder.gameHistory";
@@ -67,7 +67,9 @@ export function appendGameToHistory(
   return true;
 }
 
-/** Build a record from a finished game. Returns null while the game is ongoing. */
+/** Build a record from a finished game. Returns null while the game is ongoing.
+ *  `fallbackResult` is used when the game's own result is still "ongoing"
+ *  (e.g. server-signalled resign/timeout before any local move). */
 export function completedGameRecord(opts: {
   game: ChessGame;
   mode: HistoryGameMode;
@@ -75,8 +77,11 @@ export function completedGameRecord(opts: {
   playerColor: PieceColor | null;
   opponent: string;
   endedAt?: string;
+  fallbackResult?: GameResult;
 }): CompletedGameRecord | null {
-  const result = opts.game.result;
+  const gameResult = opts.game.result;
+  const result: GameResult =
+    gameResult.type !== "ongoing" ? gameResult : (opts.fallbackResult ?? gameResult);
   if (result.type === "ongoing") return null;
   return {
     gameId: crypto.randomUUID(),

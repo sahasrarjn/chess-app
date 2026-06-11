@@ -17,12 +17,17 @@ function defaultRecordHistory(msg: StateMessage, game: ChessGame): void {
   const oppColor = playerColor === "white" ? "black" : "white";
   const oppPlayer = msg.players[oppColor];
   const opponent = oppPlayer?.name ?? "Opponent";
+  // Thread the server result as a fallback: handles resign/timeout where the
+  // move list alone hasn't ended the game yet.
+  const serverResult = msg.result;
+  const fallbackResult = serverResult.type !== "ongoing" ? serverResult : undefined;
   const record = completedGameRecord({
     game,
     mode: "online",
     difficulty: null,
     playerColor,
     opponent,
+    fallbackResult,
   });
   if (record) {
     appendGameToHistory(record);

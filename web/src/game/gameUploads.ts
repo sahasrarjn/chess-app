@@ -15,6 +15,9 @@ export interface UploadDeps {
   getToken?: () => string | null;
 }
 
+/** Module-level coalescing guard: maps a storage identity key to an in-flight flush promise. */
+const flushInFlight = new Map<StorageLike, Promise<void>>();
+
 function resolveBaseUrl(deps?: UploadDeps): string | undefined {
   if (deps?.baseUrl !== undefined) return deps.baseUrl;
   // Lazy access of import.meta.env so the module can be loaded in node:test
@@ -64,10 +67,20 @@ function enqueue(storage: StorageLike, record: CompletedGameRecord): void {
   writeQueue(storage, capped);
 }
 
-function dequeue(storage: StorageLike, index: number): void {
+function dequeueById(storage: StorageLike, gameId: string): void {
   const queue = readQueue(storage);
-  queue.splice(index, 1);
+  const idx = queue.findIndex((r) => r.gameId === gameId);
+  if (idx !== -1) queue.splice(idx, 1);
   writeQueue(storage, queue);
+}
+
+/** Remove all pending uploads for this storage (call on sign-out to prevent cross-user leakage). */
+export function clearPendingUploads(storage: StorageLike = localStorage): void {
+  try {
+    storage.removeItem(PENDING_UPLOADS_KEY);
+  } catch {
+    // best-effort
+  }
 }
 
 /** Queue a finished game and try to flush. No-ops for guests, for online
@@ -101,10 +114,25 @@ export async function uploadCompletedGame(
 
 /** Drain the queue in order. Per entry: success or 400 (permanently invalid)
  *  → remove; 401 or network error → stop and keep the rest for the next
- *  boot/sign-in. Never throws. Call once at boot. */
+ *  boot/sign-in. Never throws. Concurrent callers coalesce onto the same
+ *  in-flight promise so each item is uploaded exactly once. */
 export async function flushPendingUploads(deps?: UploadDeps): Promise<void> {
+  const storage = deps?.storage ?? localStorage;
+
+  // Coalesce: if a flush is already in-flight for this storage, return it.
+  const existing = flushInFlight.get(storage);
+  if (existing) return existing;
+
+  const promise = _doFlush(deps, storage);
+  flushInFlight.set(storage, promise);
+  promise.finally(() => {
+    flushInFlight.delete(storage);
+  });
+  return promise;
+}
+
+async function _doFlush(deps: UploadDeps | undefined, storage: StorageLike): Promise<void> {
   try {
-    const storage = deps?.storage ?? localStorage;
     const getToken = deps?.getToken ?? getSessionToken;
     const fetchImpl = deps?.fetchImpl;
     const baseUrl = resolveBaseUrl(deps);
@@ -122,13 +150,13 @@ export async function flushPendingUploads(deps?: UploadDeps): Promise<void> {
       const record = currentQueue[0];
       try {
         await postGame(baseUrl, token, record, fetchImpl);
-        // Success: remove first entry
-        dequeue(storage, 0);
+        // Success: remove by id so concurrent enqueues don't corrupt ordering
+        dequeueById(storage, record.gameId);
       } catch (err) {
         if (err instanceof AuthApiError) {
           if (err.status === 400) {
             // Permanently invalid — drop it and continue
-            dequeue(storage, 0);
+            dequeueById(storage, record.gameId);
           } else {
             // 401 or other — stop, keep remaining for next boot
             break;

@@ -2,6 +2,7 @@ import { ACCOUNTS_API_URL, APPLE_CLIENT_ID, GOOGLE_CLIENT_ID, isAuthConfigured }
 import { AuthApiError, getMe, login } from "./api";
 import { clearSession, getCachedProfile, getSessionToken, saveSession } from "./session";
 import { googleSignOut, renderGoogleButton } from "./googleSignIn";
+import { clearPendingUploads } from "../game/gameUploads";
 
 function el(tag: string, className: string, text?: string): HTMLElement {
   const node = document.createElement(tag);
@@ -91,6 +92,7 @@ export function createAuthWidget(): HTMLElement | null {
     const signOutBtn = el("button", "home-auth-signout", "Sign out");
     signOutBtn.onclick = () => {
       clearSession();
+      clearPendingUploads();
       googleSignOut();
       render();
     };

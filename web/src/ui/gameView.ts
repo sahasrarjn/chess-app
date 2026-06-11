@@ -403,6 +403,7 @@ class GameScreen {
   }
 
   private maybePersist(): void {
+    if (!this.mounted) return;
     if (this.replay) return; // Replay mode: never persist
     const key = [
       this.ctrl.livePly,
@@ -419,7 +420,6 @@ class GameScreen {
 
   private maybeRecordHistory(): void {
     if (this.historyRecorded || this.ctrl.game.result.type === "ongoing") return;
-    this.historyRecorded = true;
     const record = completedGameRecord({
       game: this.ctrl.game,
       mode: this.mode,
@@ -427,7 +427,12 @@ class GameScreen {
       playerColor: this.mode === "vsBot" ? "white" : null,
       opponent: this.mode === "vsBot" ? `Bot (${this.difficulty})` : "Friend (local)",
     });
-    if (record && appendGameToHistory(record)) {
+    if (!record) return;
+    const appended = appendGameToHistory(record);
+    if (appended) {
+      // Only mark recorded when append succeeded; leave false on quota failure
+      // so a later notify can retry.
+      this.historyRecorded = true;
       void uploadCompletedGame(record); // fire-and-forget, never throws
     }
   }

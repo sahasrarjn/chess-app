@@ -29,13 +29,15 @@ export async function listGames(
   baseUrl: string,
   token: string,
   cursor?: string | null,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = fetch,
+  signal?: AbortSignal
 ): Promise<GamePage> {
   const url = cursor
     ? `${baseUrl}/v1/games?cursor=${encodeURIComponent(cursor)}`
     : `${baseUrl}/v1/games`;
   const res = await fetchImpl(url, {
     headers: { Authorization: `Bearer ${token}` },
+    signal,
   });
   await checkResponse(res);
   return res.json() as Promise<GamePage>;
@@ -45,10 +47,12 @@ export async function getGame(
   baseUrl: string,
   token: string,
   gameId: string,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = fetch,
+  signal?: AbortSignal
 ): Promise<CompletedGameRecord> {
   const res = await fetchImpl(`${baseUrl}/v1/games/${gameId}`, {
     headers: { Authorization: `Bearer ${token}` },
+    signal,
   });
   await checkResponse(res);
   const data = (await res.json()) as { game: CompletedGameRecord };

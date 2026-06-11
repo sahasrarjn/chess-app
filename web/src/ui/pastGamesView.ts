@@ -116,7 +116,7 @@ export function renderPastGames(
     async function loadCloudPage(): Promise<void> {
       if (destroyed) return;
       try {
-        const page = await listGames(baseUrl!, token!, cursor || undefined);
+        const page = await listGames(baseUrl!, token!, cursor || undefined, fetch, abort.signal);
         if (destroyed) return;
         allCloudGames = [...allCloudGames, ...page.games];
         cursor = page.nextCursor;
@@ -126,7 +126,9 @@ export function renderPastGames(
           cursor,
           cursor ? loadCloudPage : null
         );
-      } catch {
+      } catch (err) {
+        // Silently ignore aborted requests
+        if ((err as { name?: string }).name === "AbortError") return;
         if (destroyed) return;
         render(
           allCloudGames.length > 0 ? allCloudGames : null,

@@ -185,3 +185,58 @@ describe("getGame()", () => {
     );
   });
 });
+
+// ── NEW: AbortSignal threading (item 4) ──────────────────────────────────────
+
+function makeAbortCapturingFetch(status: number, responseBody: unknown): {
+  fetchImpl: typeof fetch;
+  capturedSignals: Array<AbortSignal | undefined>;
+} {
+  const capturedSignals: Array<AbortSignal | undefined> = [];
+  const fetchImpl = async (
+    _input: RequestInfo | URL,
+    init?: RequestInit
+  ): Promise<Response> => {
+    capturedSignals.push(init?.signal as AbortSignal | undefined);
+    if (init?.signal?.aborted) {
+      const err = new DOMException("Aborted", "AbortError");
+      throw err;
+    }
+    return new Response(JSON.stringify(responseBody), {
+      status,
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+  return { fetchImpl: fetchImpl as typeof fetch, capturedSignals };
+}
+
+describe("listGames() — AbortSignal threading", () => {
+  it("passes signal to fetch when provided", async () => {
+    const { fetchImpl, capturedSignals } = makeAbortCapturingFetch(200, { games: [], nextCursor: null });
+    const ctrl = new AbortController();
+    await listGames(BASE_URL, TOKEN, undefined, fetchImpl, ctrl.signal);
+    assert.equal(capturedSignals.length, 1);
+    assert.ok(capturedSignals[0] === ctrl.signal, "signal should be threaded into fetch");
+  });
+
+  it("throws when the signal is already aborted before the call", async () => {
+    const ctrl = new AbortController();
+    ctrl.abort();
+    const { fetchImpl } = makeAbortCapturingFetch(200, { games: [], nextCursor: null });
+    await assert.rejects(
+      () => listGames(BASE_URL, TOKEN, undefined, fetchImpl, ctrl.signal),
+      (err: unknown) => (err as { name?: string }).name === "AbortError"
+    );
+  });
+});
+
+describe("getGame() — AbortSignal threading", () => {
+  it("passes signal to fetch when provided", async () => {
+    const record = sampleRecord({ gameId: "abc" });
+    const { fetchImpl, capturedSignals } = makeAbortCapturingFetch(200, { game: record });
+    const ctrl = new AbortController();
+    await getGame(BASE_URL, TOKEN, "abc", fetchImpl, ctrl.signal);
+    assert.equal(capturedSignals.length, 1);
+    assert.ok(capturedSignals[0] === ctrl.signal, "signal should be threaded into fetch");
+  });
+});

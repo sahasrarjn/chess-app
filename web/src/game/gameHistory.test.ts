@@ -239,6 +239,38 @@ describe("completedGameRecord", () => {
   });
 });
 
+describe("completedGameRecord — fallbackResult", () => {
+  it("uses fallbackResult when the game is ongoing (e.g. server-resigned with 0 moves)", () => {
+    const game = new ChessGame(); // still ongoing — no moves, no resign
+    const record = completedGameRecord({
+      game,
+      mode: "online",
+      difficulty: null,
+      playerColor: "white",
+      opponent: "Bob",
+      fallbackResult: { type: "resignation", winner: "black" },
+    });
+    assert.ok(record !== null, "should return a record when fallbackResult provided");
+    assert.equal(record!.resultType, "resignation");
+    assert.equal(record!.winner, "black");
+  });
+
+  it("ignores fallbackResult when game already has a real result", () => {
+    const game = new ChessGame();
+    game.resign("white"); // black wins
+    const record = completedGameRecord({
+      game,
+      mode: "online",
+      difficulty: null,
+      playerColor: "white",
+      opponent: "Bob",
+      fallbackResult: { type: "resignation", winner: "white" }, // contradicts real result
+    });
+    assert.ok(record !== null);
+    assert.equal(record!.winner, "black", "real game result should take precedence");
+  });
+});
+
 describe("resultLabel", () => {
   it("vsBot win → W/win", () => {
     const r = sampleRecord({ playerColor: "white", winner: "white", resultType: "checkmate" });

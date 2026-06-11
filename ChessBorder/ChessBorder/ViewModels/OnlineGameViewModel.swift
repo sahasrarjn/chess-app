@@ -28,7 +28,14 @@ final class OnlineGameViewModel: ObservableObject, BoardModel {
         self.identityToken = OnlineIdentity.token
         self.identityName = OnlineIdentity.name
 
-        guard let url = MultiplayerConfig.serverURL else { return }
+        guard var url = MultiplayerConfig.serverURL else { return }
+        // Attach the session JWT as a query param so the multiplayer server can
+        // attribute this seat to the signed-in user (browsers cannot set WS headers).
+        if let token = AuthStore.shared.sessionToken,
+           var comps = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+            comps.queryItems = (comps.queryItems ?? []) + [URLQueryItem(name: "session", value: token)]
+            url = comps.url ?? url
+        }
         let socket = OnlineSocket(url: url)
         socket.onStatus = { [weak self] status in
             self?.connection = status
@@ -199,6 +206,7 @@ final class OnlineGameViewModel: ObservableObject, BoardModel {
     }
 
     private func applyState(_ s: OnlineState) {
+        let prevStatus = firstState ? nil : state?.status
         let prevCount = firstState ? s.moves.count : (state?.moves.count ?? 0)
         lastError = nil
         pendingMove = false
@@ -207,7 +215,40 @@ final class OnlineGameViewModel: ObservableObject, BoardModel {
         state = s
         rebuild(prevCount: prevCount)
         firstState = false
+
+        // Record local history when an active online game finishes.
+        // Cloud copy is written server-side; we only append locally.
+        if prevStatus == "active",
+           s.status == "finished",
+           s.role == .white || s.role == .black {
+            appendOnlineGameToHistory(s)
+        }
+
         objectWillChange.send()
+    }
+
+    private func appendOnlineGameToHistory(_ s: OnlineState) {
+        let resultType = s.result.type
+        guard resultType != "ongoing" else { return }
+        let opponentColor: String = s.color == "white" ? "black" : "white"
+        let opponentName: String
+        switch opponentColor {
+        case "white": opponentName = s.players.white?.name ?? "Opponent"
+        case "black": opponentName = s.players.black?.name ?? "Opponent"
+        default:      opponentName = "Opponent"
+        }
+        let record = CompletedGameRecord(
+            gameId: UUID().uuidString,
+            mode: "online",
+            difficulty: nil,
+            playerColor: s.color,
+            opponent: opponentName,
+            moves: s.moves,
+            resultType: resultType,
+            winner: s.result.winner,
+            endedAt: ISO8601DateFormatter().string(from: Date())
+        )
+        GameHistoryStore.append(record)
     }
 
     private func rebuild(prevCount: Int) {

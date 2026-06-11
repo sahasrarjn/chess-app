@@ -87,6 +87,17 @@ struct HomeView: View {
                         if MultiplayerConfig.isConfigured {
                             onlineSection
                         }
+
+                        NavigationLink {
+                            PastGamesView()
+                        } label: {
+                            Text("Past Games")
+                                .font(.subheadline)
+                                .foregroundStyle(.white.opacity(0.7))
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 4)
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal, 24)
 
@@ -135,6 +146,7 @@ struct HomeView: View {
         }
         .task {
             await auth.restore()
+            await GameUploadQueue.flush()
         }
     }
 

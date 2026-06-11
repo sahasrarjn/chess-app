@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it, before } from "node:test";
-import { SignJWT, exportJWK, generateKeyPair, createLocalJWKSet } from "jose";
+import { SignJWT, exportJWK, generateKeyPair, createLocalJWKSet, importJWK } from "jose";
 import { verifyIdToken, type ProviderKeys } from "./idtoken.ts";
 
 let keys: ProviderKeys;
@@ -125,5 +125,52 @@ describe("verifyIdToken", () => {
     );
     const identity = await verifyIdToken("google", token, ["client-a", "client-b"], keys);
     assert.equal(identity.email, "henry@example.com");
+  });
+});
+
+describe("verifyIdToken security hardening", () => {
+  it("empty audience list rejects", async () => {
+    const token = await sign(
+      { email: "ivan@example.com", email_verified: true },
+      "https://accounts.google.com",
+      "client-a"
+    );
+    await assert.rejects(() => verifyIdToken("google", token, [], keys));
+  });
+
+  it("token without exp rejects", async () => {
+    const token = await new SignJWT({ email: "judy@example.com", email_verified: true })
+      .setProtectedHeader({ alg: "RS256", kid: "test-key" })
+      .setIssuer("https://accounts.google.com")
+      .setAudience("client-a")
+      .setSubject("sub-no-exp")
+      .setIssuedAt()
+      // Deliberately omit .setExpirationTime()
+      .sign(privateKey);
+    await assert.rejects(() => verifyIdToken("google", token, ["client-a"], keys));
+  });
+
+  it("HS256 token signed with symmetric key rejects (alg confusion)", async () => {
+    // Attempt to forge a token using HS256 with the same kid; should be rejected
+    // because verifyIdToken must only accept RS256
+    const symmetricSecret = new TextEncoder().encode("symmetric-secret-for-alg-confusion-attack");
+    const token = await new SignJWT({ email: "mallory@example.com", email_verified: true })
+      .setProtectedHeader({ alg: "HS256", kid: "test-key" })
+      .setIssuer("https://accounts.google.com")
+      .setAudience("client-a")
+      .setSubject("sub-hs256-attacker")
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .sign(symmetricSecret);
+    await assert.rejects(() => verifyIdToken("google", token, ["client-a"], keys));
+  });
+
+  it("Apple-provider token with Google issuer rejects", async () => {
+    const token = await sign(
+      { email: "nina@example.com", email_verified: true },
+      "https://accounts.google.com", // Google iss but verifying as apple
+      "client-a"
+    );
+    await assert.rejects(() => verifyIdToken("apple", token, ["client-a"], keys));
   });
 });

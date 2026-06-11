@@ -68,6 +68,28 @@ describe("parseLoginRequest", () => {
   it("rejects empty string input", () => {
     assert.equal(parseLoginRequest(""), null);
   });
+
+  it('rejects JSON array "[]"', () => {
+    assert.equal(parseLoginRequest("[]"), null);
+  });
+
+  it('rejects JSON string "\\"x\\""', () => {
+    assert.equal(parseLoginRequest('"x"'), null);
+  });
+
+  it('rejects JSON null "null"', () => {
+    assert.equal(parseLoginRequest("null"), null);
+  });
+
+  it("treats name hint of 201 chars as absent (name is null/undefined)", () => {
+    const longName = "a".repeat(201);
+    const result = parseLoginRequest(
+      JSON.stringify({ provider: "google", idToken: "tok", name: longName })
+    );
+    // Request should still parse successfully (valid provider and idToken)
+    assert.ok(result !== null, "request itself should be valid");
+    assert.equal(result?.name, undefined);
+  });
 });
 
 describe("parseUpdateMeRequest", () => {

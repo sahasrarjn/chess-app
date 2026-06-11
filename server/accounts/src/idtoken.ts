@@ -38,6 +38,9 @@ export async function verifyIdToken(
   const { payload } = await jwtVerify(idToken, keys[provider], {
     issuer: ISSUERS[provider],
     audience,
+    algorithms: ["RS256"],
+    requiredClaims: ["exp", "iat"],
+    clockTolerance: "5s",
   });
   if (!payload.sub) throw new Error("id token missing sub");
 

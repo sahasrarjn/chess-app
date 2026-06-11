@@ -50,3 +50,33 @@ describe("session JWTs", () => {
     assert.equal(diff, 30 * 24 * 3600);
   });
 });
+
+describe("session secret guard", () => {
+  it("issueSession throws when secret is empty string", async () => {
+    await assert.rejects(
+      () => issueSession("", "user-abc"),
+      /session secret is not configured/
+    );
+  });
+
+  it("verifySession throws when secret is empty string", async () => {
+    const token = await issueSession(SECRET, "user-abc");
+    await assert.rejects(
+      () => verifySession("", token),
+      /session secret is not configured/
+    );
+  });
+});
+
+describe("session token without exp rejects", () => {
+  it("token crafted without setExpirationTime is rejected by verifySession", async () => {
+    const key = new TextEncoder().encode(SECRET);
+    // Deliberately omit .setExpirationTime() so exp is absent
+    const token = await new SignJWT({})
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject("user-no-exp")
+      .setIssuedAt()
+      .sign(key);
+    await assert.rejects(() => verifySession(SECRET, token));
+  });
+});

@@ -43,7 +43,7 @@ export function parseLoginRequest(raw: string | undefined | null): LoginRequest 
     return null;
   }
   const req: LoginRequest = { provider: m.provider, idToken: m.idToken };
-  if (typeof m.name === "string" && m.name.trim().length > 0) {
+  if (typeof m.name === "string" && m.name.trim().length > 0 && m.name.length <= 200) {
     req.name = m.name;
   }
   return req;

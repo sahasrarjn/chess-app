@@ -124,7 +124,7 @@ def _load_models():
     in_model = False
     collected: list[str] = []
     # Pull in the constants and class definitions we need.
-    for i, line in enumerate(lines):
+    for line in lines:
         stripped = line.rstrip()
         # Collect UCI_MOVE_RE, ANALYZE_MAX_BODY_BYTES, ANALYZE_MAX_MOVETIME_MS constants.
         if stripped.startswith("UCI_MOVE_RE") or \
@@ -146,12 +146,18 @@ def _load_models():
         "from __future__ import annotations\n"
         "import os\n"
         "import re\n"
+        "from typing import List, Optional\n"
         "from pydantic import BaseModel, Field, field_validator, model_validator\n"
         "from validation import validate_fen\n"
     ) + "\n".join(collected)
 
     ns: dict = {}
     exec(compile(exec_src, "<models>", "exec"), ns)
+    # After exec() with `from __future__ import annotations`, Pydantic stores
+    # annotations as strings and defers evaluation.  Rebuild with the exec
+    # namespace so Optional/List/etc. resolve correctly on Python 3.9.
+    ns["AnalyzeRequest"].model_rebuild(_types_namespace=ns)
+    ns["AnalyzeResponse"].model_rebuild(_types_namespace=ns)
     return ns["AnalyzeRequest"], ns["AnalyzeResponse"]
 
 

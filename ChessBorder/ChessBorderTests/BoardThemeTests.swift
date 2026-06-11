@@ -38,4 +38,14 @@ final class BoardThemeTests: XCTestCase {
         let reloaded = BoardThemeStore(defaults: defaults)
         XCTAssertEqual(reloaded.palette.id, "rosewood")
     }
+
+    func testOnlyHighContrastOverridesLegalMoveTint() {
+        for palette in BoardPalette.all {
+            if palette.id == "high-contrast" {
+                XCTAssertNotNil(palette.legalMove)
+            } else {
+                XCTAssertNil(palette.legalMove, palette.id)
+            }
+        }
+    }
 }

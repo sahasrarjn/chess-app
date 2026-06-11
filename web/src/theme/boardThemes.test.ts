@@ -88,4 +88,13 @@ describe("applyBoardTheme", () => {
     assert.equal(set.get("--light-square"), "#f0d9b5");
     assert.equal(set.get("--dark-square"), "#b58863");
   });
+
+  it("sets the legal-dot variable, defaulting when the theme has no override", () => {
+    const set = new Map<string, string>();
+    const root = { style: { setProperty: (k: string, v: string) => void set.set(k, v) } };
+    applyBoardTheme(boardThemeById("walnut"), root);
+    assert.equal(set.get("--legal-dot"), "rgba(30, 30, 30, 0.28)");
+    applyBoardTheme(boardThemeById("high-contrast"), root);
+    assert.equal(set.get("--legal-dot"), "rgba(140, 140, 140, 0.55)");
+  });
 });

@@ -7,6 +7,7 @@ struct BoardPalette: Equatable, Identifiable {
     let name: String
     let lightSquare: Color
     let darkSquare: Color
+    var legalMove: Color? = nil
 
     static let all: [BoardPalette] = [
         BoardPalette(id: "classic", name: "Classic Green",
@@ -20,7 +21,8 @@ struct BoardPalette: Equatable, Identifiable {
         BoardPalette(id: "tournament", name: "Tournament",
                      lightSquare: Color(srgbHex: 0xFFCE9E), darkSquare: Color(srgbHex: 0xD18B47)),
         BoardPalette(id: "high-contrast", name: "High Contrast",
-                     lightSquare: Color(srgbHex: 0xFFFFFF), darkSquare: Color(srgbHex: 0x444444)),
+                     lightSquare: Color(srgbHex: 0xFFFFFF), darkSquare: Color(srgbHex: 0x444444),
+                     legalMove: Color(srgbHex: 0x8C8C8C).opacity(0.55)),
         BoardPalette(id: "rosewood", name: "Rosewood",
                      lightSquare: Color(srgbHex: 0xF1DCD6), darkSquare: Color(srgbHex: 0xA8716E)),
         BoardPalette(id: "blossom", name: "Blossom",

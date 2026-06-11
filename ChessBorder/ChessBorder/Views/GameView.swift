@@ -53,15 +53,25 @@ struct GameView: View {
     @State private var gameOverDismissed = false
     @State private var showSettings = false
     private let onReturnHome: (() -> Void)?
+    private let isReplay: Bool
 
     init(mode: GameMode, difficulty: BotDifficulty = .medium) {
         _viewModel = StateObject(wrappedValue: GameViewModel(mode: mode, botDifficulty: difficulty))
         onReturnHome = nil
+        isReplay = false
     }
 
     init(saved: SavedGameSnapshot, onReturnHome: @escaping () -> Void) {
         _viewModel = StateObject(wrappedValue: GameViewModel(saved: saved))
         self.onReturnHome = onReturnHome
+        isReplay = false
+    }
+
+    init(replay record: CompletedGameRecord) {
+        _viewModel = StateObject(wrappedValue: GameViewModel(replay: record))
+        onReturnHome = nil
+        isReplay = true
+        _gameOverDismissed = State(initialValue: true)
     }
 
     private var displayedPly: Int {
@@ -117,7 +127,7 @@ struct GameView: View {
                     )
                 }
 
-                if viewModel.result != .ongoing, !gameOverDismissed {
+                if viewModel.result != .ongoing, !gameOverDismissed, !isReplay {
                     gameOverOverlay
                 }
             }
@@ -149,11 +159,11 @@ struct GameView: View {
         GameNavBar(backTitle: "Back", onBack: navigateBack) {
             GameNavTitle(
                 title: headerTitle,
-                subtitle: viewModel.mode == .vsBot ? "Fairy-Stockfish" : nil
+                subtitle: isReplay ? viewModel.game.recordedMoves.first.map { _ in headerSubtitle } : (viewModel.mode == .vsBot ? "Fairy-Stockfish" : nil)
             )
         } trailing: {
             HStack(spacing: 12) {
-                if viewModel.mode == .localTwoPlayer {
+                if !isReplay, viewModel.mode == .localTwoPlayer {
                     GameNavTextAction(
                         title: "Auto-flip",
                         active: viewModel.autoFlipBoard,
@@ -162,15 +172,17 @@ struct GameView: View {
                 }
                 GameNavTextAction(
                     title: "Flip",
-                    disabled: viewModel.mode == .localTwoPlayer && viewModel.autoFlipBoard,
+                    disabled: !isReplay && viewModel.mode == .localTwoPlayer && viewModel.autoFlipBoard,
                     action: { viewModel.toggleBoardFlip() }
                 )
-                GameNavIconAction(
-                    systemName: viewModel.isComputingHint ? "lightbulb.fill" : "lightbulb",
-                    active: viewModel.hintMove != nil || viewModel.isComputingHint,
-                    disabled: viewModel.isComputingHint || !viewModel.canRequestHint,
-                    action: { viewModel.requestHint() }
-                )
+                if !isReplay {
+                    GameNavIconAction(
+                        systemName: viewModel.isComputingHint ? "lightbulb.fill" : "lightbulb",
+                        active: viewModel.hintMove != nil || viewModel.isComputingHint,
+                        disabled: viewModel.isComputingHint || !viewModel.canRequestHint,
+                        action: { viewModel.requestHint() }
+                    )
+                }
                 GameNavIconAction(
                     systemName: viewModel.soundMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
                     action: { viewModel.toggleSound() }
@@ -192,6 +204,7 @@ struct GameView: View {
     }
 
     private var headerTitle: String {
+        if isReplay { return "Replay" }
         switch viewModel.mode {
         case .vsBot:
             return "Play vs Bot (\(viewModel.botDifficulty.rawValue))"
@@ -200,11 +213,16 @@ struct GameView: View {
         }
     }
 
+    /// Subtitle shown under "Replay" in the header — the status text when game is done.
+    private var headerSubtitle: String {
+        viewModel.statusText
+    }
+
     // MARK: - Bottom panel
 
     private var bottomPanel: some View {
         VStack(spacing: 10) {
-            if viewModel.canRetryBot {
+            if !isReplay, viewModel.canRetryBot {
                 Button("Retry bot move") { viewModel.retryBotMove() }
                     .buttonStyle(GameChromeButtonStyle(variant: .primary))
             }
@@ -228,11 +246,20 @@ struct GameView: View {
     private var controlRow: some View {
         HStack(spacing: 10) {
             GameToolStrip {
-                if viewModel.livePly > 0 {
+                if !isReplay, viewModel.livePly > 0 {
                     GameToolStripButton(
                         content: .icon("arrow.uturn.backward"),
                         disabled: viewModel.isBrowsingHistory || viewModel.isThinking,
                         action: { viewModel.undo() }
+                    )
+                    GameToolStripDivider()
+                }
+
+                if isReplay {
+                    GameToolStripButton(
+                        content: .text("First"),
+                        disabled: displayedPly == 0,
+                        action: { viewModel.goToMove(ply: 0) }
                     )
                     GameToolStripDivider()
                 }
@@ -250,22 +277,24 @@ struct GameView: View {
                 )
                 GameToolStripDivider()
                 GameToolStripButton(
-                    content: .text("Live"),
+                    content: .text(isReplay ? "Last" : "Live"),
                     disabled: !viewModel.isBrowsingHistory,
                     action: { viewModel.returnToLivePosition() }
                 )
             }
             .frame(maxWidth: .infinity)
 
-            GameSecondaryAction(
-                title: "Resign",
-                disabled: viewModel.result != .ongoing,
-                action: { showResignConfirm = true }
-            )
+            if !isReplay {
+                GameSecondaryAction(
+                    title: "Resign",
+                    disabled: viewModel.result != .ongoing,
+                    action: { showResignConfirm = true }
+                )
 
-            GamePrimaryAction(title: "New Game") {
-                gameOverDismissed = false
-                viewModel.newGame()
+                GamePrimaryAction(title: "New Game") {
+                    gameOverDismissed = false
+                    viewModel.newGame()
+                }
             }
         }
     }

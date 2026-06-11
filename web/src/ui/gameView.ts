@@ -51,6 +51,7 @@ class GameScreen {
   private promotionEl: HTMLElement | null = null;
   private gameOverEl: HTMLElement | null = null;
   private gameOverDismissed = false;
+  private mounted = false;
 
   private board!: BoardView;
   private lastCapturedPly = -1;
@@ -187,6 +188,7 @@ class GameScreen {
     screen.appendChild(bottom);
     this.root.appendChild(screen);
 
+    this.mounted = true;
     this.update();
   }
 
@@ -199,6 +201,7 @@ class GameScreen {
   }
 
   private update(): void {
+    if (!this.mounted) return;
     if (this.autoFlipBtn) {
       this.autoFlipBtn.classList.toggle("active", this.ctrl.autoFlipBoard);
     }

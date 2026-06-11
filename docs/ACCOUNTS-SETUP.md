@@ -22,6 +22,7 @@ automated. Complete them before running `./server/aws/deploy-accounts.sh`.
 3. **Credentials → Create Credentials → OAuth client ID → Web application:**
    - Authorized JavaScript origins:
      - `https://borderchess.org`
+     - `https://www.borderchess.org`
      - `http://localhost:5173`
    - No redirect URIs needed (GIS ID-token popup flow).
    - Copy the **web client ID** →

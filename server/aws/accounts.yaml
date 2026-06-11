@@ -101,6 +101,7 @@ Resources:
       CorsConfiguration:
         AllowOrigins:
           - https://borderchess.org
+          - https://www.borderchess.org
           - http://localhost:5173
         AllowMethods:
           - GET

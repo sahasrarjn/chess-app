@@ -4,8 +4,7 @@ import { describe, it } from "node:test";
 import { moveUci } from "../../../web/src/engine/types";
 import { handleEvent, type Broadcaster, type WsEvent, type HandlerOptions } from "./handler";
 import type { ServerMessage } from "./protocol";
-import type { StateMessage } from "./protocol";
-import { emptyRoom, gameFromMoves, join as roomJoin, type RoomState, type Seat } from "./room";
+import { gameFromMoves, type RoomState, type Seat } from "./room";
 import { InMemoryRoomStore } from "./store";
 import type { OnlineGameRecord, UserGamesWriter } from "./record";
 
@@ -48,22 +47,6 @@ class FakeWriter implements UserGamesWriter {
 /** Seed a finished room (both players signed in) directly into the store. */
 function seatWithUser(name: string, token: string, connId: string, userId: string): Seat {
   return { token, name, connId, connected: true, userId };
-}
-
-function finishedRoomState(): RoomState {
-  return {
-    roomId: "FR",
-    moves: ["e2e4", "e7e5"],
-    status: "finished",
-    white: seatWithUser("Alice", "tW", "cW", "u-alice"),
-    black: seatWithUser("Bob", "tB", "cB", "u-bob"),
-    spectators: [],
-    rematchOfferedBy: null,
-    result: { type: "checkmate", winner: "white" },
-    createdAt: 1000,
-    updatedAt: 2000,
-    ttl: 999999,
-  };
 }
 
 const NOW = 1_000;

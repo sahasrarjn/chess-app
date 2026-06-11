@@ -77,8 +77,8 @@ export async function handleEvent(
         await store.putRoom(state);
         await sendAll(broadcaster, out);
       }
-      await store.deleteConnection(connectionId);
     }
+    await store.deleteConnection(connectionId);
     return OK;
   }
 

@@ -18,7 +18,8 @@ export function renderHome(
   root: HTMLElement,
   onStart: (opts: HomeStart) => void,
   onPlayOnline: (roomId?: string) => void,
-  onPastGames: () => void = () => {}
+  onPastGames: () => void = () => {},
+  onLeaderboard: () => void = () => {}
 ): void {
   let difficulty: BotDifficulty = "medium";
 
@@ -92,6 +93,10 @@ export function renderHome(
     const pastGamesBtn = el("button", "", "Past Games");
     pastGamesBtn.onclick = () => onPastGames();
     actions.appendChild(pastGamesBtn);
+
+    const leaderboardBtn = el("button", "", "Leaderboard");
+    leaderboardBtn.onclick = () => onLeaderboard();
+    actions.appendChild(leaderboardBtn);
 
     home.appendChild(actions);
 

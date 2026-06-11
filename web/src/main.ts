@@ -78,6 +78,18 @@ try {
       });
   }
 
+  function showLeaderboard(): void {
+    void import("./ui/leaderboardView")
+      .then(({ renderLeaderboard }) => {
+        teardownGame?.();
+        teardownGame = renderLeaderboard(app, showHome);
+      })
+      .catch((err: unknown) => {
+        console.error(err);
+        showBootError("Could not load the Leaderboard. Try reloading the page.");
+      });
+  }
+
   function showReplay(record: CompletedGameRecord): void {
     void import("./ui/gameView")
       .then(({ renderReplay }) => {
@@ -98,7 +110,7 @@ try {
       url.searchParams.delete("room");
       history.replaceState(null, "", url.toString());
     }
-    renderHome(app, startGame, (roomId) => startOnline(roomId ?? newRoomId()), showPastGames);
+    renderHome(app, startGame, (roomId) => startOnline(roomId ?? newRoomId()), showPastGames, showLeaderboard);
   }
 
   const roomParam = new URLSearchParams(location.search).get("room");

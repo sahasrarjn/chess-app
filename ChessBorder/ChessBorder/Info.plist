@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>AccountsServerURL</key>
-	<string></string>
+	<string>https://xgl5wqkv4l.execute-api.us-east-1.amazonaws.com</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -25,7 +25,7 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string></string>
+				<string>com.googleusercontent.apps.786628507194-k64bhggpvd58vaf3mflrbbbf3gccfgu3</string>
 			</array>
 		</dict>
 	</array>
@@ -34,7 +34,7 @@
 	<key>EngineServerURL</key>
 	<string>https://borderchess.org</string>
 	<key>GoogleClientID</key>
-	<string></string>
+	<string>786628507194-k64bhggpvd58vaf3mflrbbbf3gccfgu3.apps.googleusercontent.com</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>MultiplayerServerURL</key>

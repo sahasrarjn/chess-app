@@ -55,11 +55,11 @@ targets:
         EngineServerURL: https://borderchess.org
         MultiplayerServerURL: wss://rt7ozwivr6.execute-api.us-east-1.amazonaws.com/prod
         ITSAppUsesNonExemptEncryption: false
-        AccountsServerURL: ""
-        GoogleClientID: ""
+        AccountsServerURL: https://xgl5wqkv4l.execute-api.us-east-1.amazonaws.com
+        GoogleClientID: 786628507194-k64bhggpvd58vaf3mflrbbbf3gccfgu3.apps.googleusercontent.com
         CFBundleURLTypes:
           - CFBundleURLSchemes:
-              - ""   # reversed Google iOS client ID, e.g. com.googleusercontent.apps.1234-abc
+              - "com.googleusercontent.apps.786628507194-k64bhggpvd58vaf3mflrbbbf3gccfgu3"   # reversed Google iOS client ID, e.g. com.googleusercontent.apps.1234-abc
 
   ChessBorderMac:
     type: application

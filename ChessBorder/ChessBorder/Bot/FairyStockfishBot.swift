@@ -11,6 +11,8 @@ actor FairyStockfishBot: BotPlayer {
     #endif
     private var isVariantConfigured = false
     private var configuredElo: Int?
+    /// True while a bot move search is in progress on the shared UCI process.
+    private(set) var isSearching = false
 
     func chooseMove(in game: ChessGame, difficulty: BotDifficulty) async -> Move? {
         guard EngineBundle.isFairyStockfishAvailable,
@@ -18,6 +20,9 @@ actor FairyStockfishBot: BotPlayer {
             BotLogging.debug("FairyStockfish: binary unavailable")
             return nil
         }
+
+        isSearching = true
+        defer { isSearching = false }
 
         do {
             #if os(macOS)

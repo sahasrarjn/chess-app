@@ -744,7 +744,6 @@ final class GameViewModel: ObservableObject, BoardModel {
         // Guards
         guard !isReplay else { return }
         guard UserDefaults.standard.bool(forKey: "coachEnabled") else { return }
-        guard game.result == .ongoing else { return }
 
         let token = coachToken + 1
         coachToken = token

@@ -257,8 +257,8 @@ struct GameView: View {
                     .buttonStyle(GameChromeButtonStyle(variant: .primary))
             }
 
-            // Review controls
-            if !isReplay, viewModel.result != .ongoing || viewModel.review != nil || viewModel.reviewProgress != nil {
+            // Review controls (available in replay mode too — that's the primary use case)
+            if viewModel.result != .ongoing || viewModel.review != nil || viewModel.reviewProgress != nil {
                 if viewModel.canStartReview {
                     Button("Analyze game") { viewModel.startReview() }
                         .buttonStyle(GameChromeButtonStyle(variant: .secondary))

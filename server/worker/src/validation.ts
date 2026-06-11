@@ -80,7 +80,7 @@ export function parseAnalyzePayload(raw: string): AnalyzePayload | { error: stri
     if (typeof record.fen !== "string") return { error: "Invalid FEN" };
     const trimmed = record.fen.trim();
     if (!trimmed || trimmed.length > MAX_FEN_LENGTH) return { error: "Invalid FEN" };
-    if (/[\n\r ]/.test(trimmed)) return { error: "Invalid FEN characters" };
+    if (/[\n\r\u0000]/.test(trimmed)) return { error: "Invalid FEN characters" };
     const normalized = trimmed.replace(/\s+/g, " ");
     if (!FEN_BOARD.test(normalized) || !FEN_TAIL.test(normalized)) {
       return { error: "Invalid FEN format" };

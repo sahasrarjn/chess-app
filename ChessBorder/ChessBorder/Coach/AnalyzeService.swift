@@ -25,13 +25,17 @@ struct AnalyzeService {
         if let analysis = await remoteAnalysis(fen: fen, movetimeMs: movetimeMs) {
             return analysis
         }
+        // Skip local FSF if a bot search is already using the shared process
         if EngineBundle.isFairyStockfishAvailable,
+           await !FairyStockfishBot.shared.isSearching,
            let analysis = await FairyStockfishBot.shared.analyse(fen: fen, movetimeMs: movetimeMs) {
             return analysis
         }
         #else
         // macOS / simulator: local FSF first
+        // Skip local FSF if a bot search is already using the shared process
         if EngineBundle.isFairyStockfishAvailable,
+           await !FairyStockfishBot.shared.isSearching,
            let analysis = await FairyStockfishBot.shared.analyse(fen: fen, movetimeMs: movetimeMs) {
             return analysis
         }

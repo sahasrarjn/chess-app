@@ -314,6 +314,7 @@ class GameScreen {
   destroy(): void {
     this.ctrl.dispose();
     this.coach.dispose();
+    this.reviewAbort?.abort();
     this.promotionEl?.remove();
     this.gameOverEl?.remove();
     closeSettingsPanel();

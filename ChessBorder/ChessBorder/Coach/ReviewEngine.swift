@@ -45,6 +45,7 @@ func analyzeGameReview(
 
     // Analyse the starting position (ply 0)
     let startAnalysis = await analyse(game.copy(), AnalyzeService.reviewMovetimeMs)
+    guard !Task.isCancelled else { return ReviewResult(moves: [], accuracy: (white: 100, black: 100), keyMoments: []) }
     if let a = startAnalysis {
         let wrel = toWhiteRelative(scoreCp: a.scoreCp, mateIn: a.mateIn, sideToMove: game.activeColor)
         evalCache[0] = wrel
@@ -72,6 +73,7 @@ func analyzeGameReview(
         var afterBest: (best: String?, pv: [String])? = bestCache[afterPly]
         if afterEval == nil && !isTerminal {
             let analysis = await analyse(game.copy(), AnalyzeService.reviewMovetimeMs)
+            guard !Task.isCancelled else { break }
             if let a = analysis {
                 let wrel = toWhiteRelative(scoreCp: a.scoreCp, mateIn: a.mateIn, sideToMove: game.activeColor)
                 evalCache[afterPly] = wrel
@@ -161,9 +163,9 @@ func analyzeGameReview(
     let whiteAccuracy = reviewAccuracy(whiteClassifications)
     let blackAccuracy = reviewAccuracy(blackClassifications)
 
-    // Key moments: top 3 by swing (mistake or blunder only)
+    // Key moments: top 3 non-ok by swing (inaccuracy, mistake, or blunder) — matches web behavior
     let keyMoments = reviewedMoves
-        .filter { $0.classification == .mistake || $0.classification == .blunder }
+        .filter { $0.classification != .ok }
         .sorted { $0.swing > $1.swing }
         .prefix(3)
         .map { $0 }

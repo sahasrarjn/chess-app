@@ -2,6 +2,7 @@ import XCTest
 import SwiftUI
 @testable import Border_Chess
 
+@MainActor
 final class BoardThemeTests: XCTestCase {
     func testRegistryHasEightUniquePalettes() {
         XCTAssertEqual(BoardPalette.all.count, 8)

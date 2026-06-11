@@ -1,11 +1,11 @@
 import SwiftUI
 
 enum BoardTheme {
-    static var lightSquare: Color { BoardThemeStore.shared.palette.lightSquare }
-    static var darkSquare: Color { BoardThemeStore.shared.palette.darkSquare }
+    @MainActor static var lightSquare: Color { BoardThemeStore.shared.palette.lightSquare }
+    @MainActor static var darkSquare: Color { BoardThemeStore.shared.palette.darkSquare }
     /// Border uses the same checker as the inner board - empty frame, not a separate zone.
-    static var borderLightSquare: Color { lightSquare }
-    static var borderDarkSquare: Color { darkSquare }
+    @MainActor static var borderLightSquare: Color { lightSquare }
+    @MainActor static var borderDarkSquare: Color { darkSquare }
     static let selected = Color(red: 0.85, green: 0.72, blue: 0.18).opacity(0.55)
     static let lastMove = Color(red: 0.85, green: 0.72, blue: 0.18).opacity(0.35)
     static let legalMove = Color(red: 0.15, green: 0.15, blue: 0.15).opacity(0.28)

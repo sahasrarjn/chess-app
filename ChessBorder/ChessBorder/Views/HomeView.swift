@@ -8,6 +8,7 @@ struct HomeView: View {
     @Environment(\.openURL) private var openURL
     @State private var joinCode = ""
     @State private var onlineRoom: OnlineRoom?
+    @State private var showSettings = false
 
     private struct OnlineRoom: Identifiable, Hashable {
         let id: String
@@ -101,6 +102,21 @@ struct HomeView: View {
                 }
             }
             .chessAppNavigationChromeHidden()
+            .overlay(alignment: .topTrailing) {
+                Button {
+                    showSettings = true
+                } label: {
+                    Image(systemName: "gearshape")
+                        .font(.title3)
+                        .foregroundStyle(.white.opacity(0.6))
+                        .padding(14)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsView()
+            }
             .navigationDestination(item: $onlineRoom) { room in
                 OnlineGameView(roomId: room.id)
             }

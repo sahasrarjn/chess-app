@@ -43,6 +43,7 @@ struct PieceView: View {
 }
 
 struct SquareView<VM: BoardModel>: View {
+    @ObservedObject private var themeStore = BoardThemeStore.shared
     let square: Square
     @ObservedObject var viewModel: VM
     let squareSize: CGFloat
@@ -229,6 +230,7 @@ enum GameBoardLayout {
 }
 
 struct BoardView<VM: BoardModel>: View {
+    @ObservedObject private var themeStore = BoardThemeStore.shared
     @ObservedObject var viewModel: VM
     var boardSide: CGFloat
 

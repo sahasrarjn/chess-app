@@ -20,6 +20,7 @@
 		13507C7F16B3FDD7955D9BD4 /* UCIProcessClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACFF1ABE9D507EF35EBAD2A7 /* UCIProcessClient.swift */; };
 		1888864C52F396E42E817511 /* fairy-stockfish in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3D7693656EEDC87C59AD8C09 /* fairy-stockfish */; };
 		192759D25866D966AE529219 /* HybridBotPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 651BC030E32722D0B826D180 /* HybridBotPlayer.swift */; };
+		253258A6E40A1445A27728BB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD28087DC5030CE952BD2D88 /* SettingsView.swift */; };
 		27D69BE0FEE0DFBEE76CDE7F /* variants.ini in CopyFiles */ = {isa = PBXBuildFile; fileRef = 6F8D99E4EB6E52E62423A54D /* variants.ini */; };
 		2CA4FEBE91C44B3C01CC220F /* OnlineGameViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DCBC37E53FB7D8E428A5724 /* OnlineGameViewModel.swift */; };
 		37F47809DCB8323A27847E9D /* BoardTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB05B3595E69DCB456B559B7 /* BoardTheme.swift */; };
@@ -33,6 +34,7 @@
 		528CDA5EC4E148B377A150C8 /* PlatformChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53C7BCE50DA7090FD7889D96 /* PlatformChrome.swift */; };
 		52C83AC0562BEE325CAF39A8 /* OnlineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D3DFB0AEF0B2351A92440D2 /* OnlineTests.swift */; };
 		575ECA70C93BCE7D6DF0F50A /* MoveListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EB5AA45251321006BFB27EE /* MoveListView.swift */; };
+		57C2D42ECB5A9D81625A30D0 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD28087DC5030CE952BD2D88 /* SettingsView.swift */; };
 		58572368DF089D66CBC3971B /* BoardThemeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0CEAB4D38805612C0C7A73A /* BoardThemeTests.swift */; };
 		5B768C97CD951E2DB0765704 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41A41F6F73FA8C0F107B5E4B /* HomeView.swift */; };
 		5C1FB1CEE8D640A12DF35E2A /* BoardThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDFE8668510C907BF55F82C0 /* BoardThemeStore.swift */; };
@@ -175,6 +177,7 @@
 		F0CEAB4D38805612C0C7A73A /* BoardThemeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardThemeTests.swift; sourceTree = "<group>"; };
 		F3BB49AF50BCA870CDEC628B /* FEN.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FEN.swift; sourceTree = "<group>"; };
 		F5D422DAC760ECA795133D3E /* UCIParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UCIParser.swift; sourceTree = "<group>"; };
+		FD28087DC5030CE952BD2D88 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -227,6 +230,7 @@
 				41A41F6F73FA8C0F107B5E4B /* HomeView.swift */,
 				5EB5AA45251321006BFB27EE /* MoveListView.swift */,
 				41944F7DEA87D1F803C98A47 /* OnlineGameView.swift */,
+				FD28087DC5030CE952BD2D88 /* SettingsView.swift */,
 				3D1A353C72F516AC4A79E174 /* SplashView.swift */,
 			);
 			path = Views;
@@ -516,6 +520,7 @@
 				528CDA5EC4E148B377A150C8 /* PlatformChrome.swift in Sources */,
 				F7757C16C5CDF478818FD41D /* RemoteEngineBot.swift in Sources */,
 				078370140F322523387533D8 /* SavedGameStore.swift in Sources */,
+				253258A6E40A1445A27728BB /* SettingsView.swift in Sources */,
 				C10CE935821133205E96E891 /* SplashView.swift in Sources */,
 				C9B5C4DB2EA70FE9F3664839 /* UCIParser.swift in Sources */,
 				AB0F8D6042262BA76BB83392 /* UCIProcessClient.swift in Sources */,
@@ -558,6 +563,7 @@
 				D6FC7E71A1C4990B5F5552C1 /* PlatformChrome.swift in Sources */,
 				CC76CF5887B2847D7B952914 /* RemoteEngineBot.swift in Sources */,
 				BA6DB252D72880F9550BE964 /* SavedGameStore.swift in Sources */,
+				57C2D42ECB5A9D81625A30D0 /* SettingsView.swift in Sources */,
 				013EE86B5109C7A16583599B /* SplashView.swift in Sources */,
 				D620849E130B3276EA35A014 /* UCIParser.swift in Sources */,
 				13507C7F16B3FDD7955D9BD4 /* UCIProcessClient.swift in Sources */,

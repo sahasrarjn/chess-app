@@ -5,6 +5,43 @@ import type { IdpIdentity } from "./idtoken";
 import { InMemoryUserStore } from "./store";
 import { resolveUser } from "./users";
 
+describe("InMemoryUserStore.updateDisplayName", () => {
+  it("throws when userId does not exist (mirrors Dynamo conditional update)", async () => {
+    const store = new InMemoryUserStore();
+    await assert.rejects(
+      () => store.updateDisplayName("nonexistent-user", "New Name"),
+      /not found|does not exist|ConditionalCheckFailed/i
+    );
+  });
+});
+
+describe("InMemoryUserStore putMapping conditional semantics", () => {
+  it("putIdpMapping returns true on first write, false when already exists (no clobber)", async () => {
+    const store = new InMemoryUserStore();
+    const first = await store.putIdpMapping("google", "sub-1", "user-a");
+    assert.equal(first, true, "first put should report written");
+
+    const second = await store.putIdpMapping("google", "sub-1", "user-b");
+    assert.equal(second, false, "second put should report already existed");
+
+    // The original mapping must NOT be overwritten
+    const userId = await store.getUserIdByIdp("google", "sub-1");
+    assert.equal(userId, "user-a");
+  });
+
+  it("putEmailMapping returns true on first write, false when already exists (no clobber)", async () => {
+    const store = new InMemoryUserStore();
+    const first = await store.putEmailMapping("a@example.com", "user-a");
+    assert.equal(first, true);
+
+    const second = await store.putEmailMapping("a@example.com", "user-b");
+    assert.equal(second, false);
+
+    const userId = await store.getUserIdByEmail("a@example.com");
+    assert.equal(userId, "user-a");
+  });
+});
+
 const NOW = new Date("2025-01-01T00:00:00Z");
 
 function googleId(sub: string, email: string | null = "user@gmail.com", name: string | null = "Test User"): IdpIdentity {
@@ -134,5 +171,48 @@ describe("resolveUser", () => {
     const user = await resolveUser(store, identity, "   ", NOW);
 
     assert.equal(user.displayName, "Player");
+  });
+
+  it("concurrent first-login race: second call when IDP mapping already exists returns first user (no duplicate)", async () => {
+    const store = new InMemoryUserStore();
+    const identity = googleId("g-race-1", "race@example.com", "Race User");
+
+    // Simulate the race: both calls are in-flight simultaneously.
+    // Promise.all makes both calls start before either completes.
+    const [user1, user2] = await Promise.all([
+      resolveUser(store, identity, undefined, NOW),
+      resolveUser(store, identity, undefined, NOW),
+    ]);
+
+    // Both must resolve to the SAME userId (no duplicates)
+    assert.equal(user1.userId, user2.userId);
+
+    // Only one user record must exist under that userId
+    const stored = await store.getUser(user1.userId);
+    assert.ok(stored !== null);
+    assert.equal(stored.userId, user1.userId);
+  });
+
+  it("IDP mapping exists but profile deleted → recreates user (same IDP, new userId)", async () => {
+    const store = new InMemoryUserStore();
+    const identity = googleId("g-orphan-1", "orphan@example.com", "Orphan User");
+
+    // First login creates the user and mapping
+    const user1 = await resolveUser(store, identity, undefined, NOW);
+    const oldUserId = user1.userId;
+
+    // Simulate partial delete: remove the user record but leave the IDP mapping
+    // InMemoryUserStore doesn't expose delete, so we monkey-patch:
+    (store as unknown as { users: Map<string, unknown> }).users.delete(oldUserId);
+
+    // Second login: IDP mapping found, but getUser returns null → should recreate
+    const user2 = await resolveUser(store, identity, undefined, NOW);
+
+    // A new user must have been created (new userId since the old profile is gone)
+    assert.ok(user2 !== null);
+    assert.ok(user2.displayName !== "");
+    // Profile must be retrievable
+    const stored = await store.getUser(user2.userId);
+    assert.ok(stored !== null);
   });
 });

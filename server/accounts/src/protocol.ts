@@ -64,6 +64,7 @@ export function validateDisplayName(name: string): string | null {
 
 function parseObject(raw: string | undefined | null): Record<string, unknown> | null {
   if (!raw) return null;
+  if (raw.length > 8192) return null;
   let data: unknown;
   try {
     data = JSON.parse(raw);

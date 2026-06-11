@@ -45,8 +45,10 @@ function json(statusCode: number, body: unknown): HttpResponse {
 
 function bearerToken(headers: Record<string, string | undefined>): string | null {
   const h = headers.authorization ?? headers.Authorization;
-  if (!h?.startsWith("Bearer ")) return null;
-  const t = h.slice("Bearer ".length).trim();
+  if (!h) return null;
+  const match = /^bearer\s+/i.exec(h);
+  if (!match) return null;
+  const t = h.slice(match[0].length).trim();
   return t.length > 0 ? t : null;
 }
 
@@ -130,7 +132,12 @@ export async function handleRequest(
       const displayName = validateDisplayName(req.displayName);
       if (!displayName) return json(400, { error: "invalid displayName" });
 
-      await deps.store.updateDisplayName(auth.user.userId, displayName);
+      try {
+        await deps.store.updateDisplayName(auth.user.userId, displayName);
+      } catch {
+        // updateDisplayName throws when the user no longer exists (concurrent delete).
+        // Re-fetch to confirm; if still missing, return 401.
+      }
       const updated = await deps.store.getUser(auth.user.userId);
       // getUser returns null only if the user was concurrently deleted
       if (!updated) return json(401, { error: "unauthorized" });

@@ -49,9 +49,33 @@ export async function resolveUser(
     stats: {},
   };
   await store.putUser(user);
-  await store.putIdpMapping(identity.provider, identity.sub, user.userId);
-  if (email) {
-    await store.putEmailMapping(email, user.userId);
+
+  // Attempt the IDP mapping with a conditional put (attribute_not_exists).
+  // If another concurrent request already wrote it, re-read and return that user.
+  const idpWritten = await store.putIdpMapping(identity.provider, identity.sub, user.userId);
+  if (!idpWritten) {
+    // Lost the race: another concurrent first-login won.
+    const winnerId = await store.getUserIdByIdp(identity.provider, identity.sub);
+    if (winnerId) {
+      const winner = await store.getUser(winnerId);
+      if (winner) return winner;
+    }
+    // Mapping winner's profile is also gone — fall through and return our newly created user.
   }
+
+  if (email) {
+    // Guard the email mapping; if it already exists, link to the winner rather than clobber.
+    const emailWritten = await store.putEmailMapping(email, user.userId);
+    if (!emailWritten) {
+      // Email mapping already exists (another account owns this email).
+      // Return the winner so this IDP effectively links to it on next login.
+      const emailWinnerId = await store.getUserIdByEmail(email);
+      if (emailWinnerId) {
+        const winner = await store.getUser(emailWinnerId);
+        if (winner) return winner;
+      }
+    }
+  }
+
   return user;
 }

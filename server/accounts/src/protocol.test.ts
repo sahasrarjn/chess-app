@@ -111,6 +111,30 @@ describe("parseUpdateMeRequest", () => {
   });
 });
 
+describe("parseObject 8192-byte guard", () => {
+  it("rejects a body larger than 8192 bytes", () => {
+    // Craft a JSON string whose length is just over 8192 bytes.
+    const prefix = '{"displayName":"';
+    const suffix = '"}';
+    const padding = "x".repeat(8192 - prefix.length - suffix.length + 1);
+    const big = prefix + padding + suffix;
+    assert.ok(big.length > 8192, `sanity: body length is ${big.length}`);
+    assert.equal(parseUpdateMeRequest(big), null);
+  });
+
+  it("accepts a body at exactly 8192 bytes", () => {
+    const prefix = '{"displayName":"';
+    const suffix = '"}';
+    const padding = "x".repeat(8192 - prefix.length - suffix.length);
+    const exact = prefix + padding + suffix;
+    assert.equal(exact.length, 8192, `sanity: body length is ${exact.length}`);
+    // The displayName value is far over 30 chars so validateDisplayName rejects it,
+    // but parseUpdateMeRequest should still return a non-null object (size gate passes).
+    const result = parseUpdateMeRequest(exact);
+    assert.ok(result !== null, "parseUpdateMeRequest should parse a body at exactly 8192 bytes");
+  });
+});
+
 describe("validateDisplayName", () => {
   it("accepts a simple name", () => {
     assert.equal(validateDisplayName("Alice"), "Alice");

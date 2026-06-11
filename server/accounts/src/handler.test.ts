@@ -280,6 +280,151 @@ describe("POST /v1/me", () => {
   });
 });
 
+describe("Bearer token parsing robustness", () => {
+  it("lowercase 'bearer' scheme is accepted", async () => {
+    const deps = makeDeps();
+    const loginRes = await handleRequest(
+      ev("POST /v1/auth/login", { provider: "google", idToken: "tok" }),
+      deps,
+      NOW
+    );
+    const { token } = JSON.parse(loginRes.body) as { token: string };
+    const res = await handleRequest(
+      { routeKey: "GET /v1/me", headers: { authorization: `bearer ${token}` }, body: undefined },
+      deps,
+      NOW
+    );
+    assert.equal(res.statusCode, 200);
+  });
+
+  it("'Bearer' with extra internal spaces is accepted (leading space trimmed)", async () => {
+    const deps = makeDeps();
+    const loginRes = await handleRequest(
+      ev("POST /v1/auth/login", { provider: "google", idToken: "tok" }),
+      deps,
+      NOW
+    );
+    const { token } = JSON.parse(loginRes.body) as { token: string };
+    // "Bearer  <token>" — double space between scheme and credential
+    const res = await handleRequest(
+      { routeKey: "GET /v1/me", headers: { authorization: `Bearer  ${token}` }, body: undefined },
+      deps,
+      NOW
+    );
+    // RFC 7235 allows extra whitespace; our handler trims, so this should succeed
+    assert.equal(res.statusCode, 200);
+  });
+
+  it("'Bearer' alone (no token after scheme) → 401", async () => {
+    const deps = makeDeps();
+    const res = await handleRequest(
+      { routeKey: "GET /v1/me", headers: { authorization: "Bearer" }, body: undefined },
+      deps,
+      NOW
+    );
+    assert.equal(res.statusCode, 401);
+  });
+
+  it("'Basic abc' scheme → 401", async () => {
+    const deps = makeDeps();
+    const res = await handleRequest(
+      { routeKey: "GET /v1/me", headers: { authorization: "Basic abc" }, body: undefined },
+      deps,
+      NOW
+    );
+    assert.equal(res.statusCode, 401);
+  });
+
+  it("capital-A 'Authorization' header key is accepted", async () => {
+    const deps = makeDeps();
+    const loginRes = await handleRequest(
+      ev("POST /v1/auth/login", { provider: "google", idToken: "tok" }),
+      deps,
+      NOW
+    );
+    const { token } = JSON.parse(loginRes.body) as { token: string };
+    // Use capital-A Authorization header key
+    const res = await handleRequest(
+      { routeKey: "GET /v1/me", headers: { Authorization: `Bearer ${token}` }, body: undefined },
+      deps,
+      NOW
+    );
+    assert.equal(res.statusCode, 200);
+  });
+});
+
+describe("POST /v1/me — user deleted after auth", () => {
+  it("updateDisplayName on deleted user → 401, not 500", async () => {
+    // Phase 1: log in with a real user
+    const store = new InMemoryUserStore();
+    const deps = makeDeps({ store });
+    const loginRes = await handleRequest(
+      ev("POST /v1/auth/login", { provider: "google", idToken: "tok" }),
+      deps,
+      NOW
+    );
+    assert.equal(loginRes.statusCode, 200);
+    const { token } = JSON.parse(loginRes.body) as { token: string };
+
+    // Phase 2: nuke the user from the store (simulate concurrent delete)
+    // We can do this by using a fresh store for subsequent requests while
+    // keeping the same JWT secret so the token remains structurally valid.
+    const emptyStore = new InMemoryUserStore();
+    const deletedDeps = makeDeps({ store: emptyStore, jwtSecret: JWT_SECRET });
+
+    const res = await handleRequest(
+      ev("POST /v1/me", { displayName: "NewName" }, authHeader(token)),
+      deletedDeps,
+      NOW
+    );
+    assert.equal(res.statusCode, 401);
+    const body = JSON.parse(res.body) as { error: string };
+    assert.equal(body.error, "unauthorized");
+  });
+});
+
+describe("POST /v1/auth/login — email-link path", () => {
+  it("Apple login with existing Google user's verified email → returns same userId", async () => {
+    const store = new InMemoryUserStore();
+    // First: Google login establishes the account
+    const googleIdentityLocal: IdpIdentity = {
+      provider: "google",
+      sub: "google-sub-email-link",
+      email: "shared@example.com",
+      name: "Shared User",
+      avatarUrl: null,
+    };
+    const googleDeps = makeDeps({ store, verify: makeVerifyStub(googleIdentityLocal) });
+    const googleRes = await handleRequest(
+      ev("POST /v1/auth/login", { provider: "google", idToken: "g-tok" }),
+      googleDeps,
+      NOW
+    );
+    assert.equal(googleRes.statusCode, 200);
+    const { profile: googleProfile } = JSON.parse(googleRes.body) as { profile: { userId: string } };
+
+    // Second: Apple login with the SAME verified email
+    const appleIdentityLocal: IdpIdentity = {
+      provider: "apple",
+      sub: "apple-sub-email-link",
+      email: "shared@example.com",
+      name: null,
+      avatarUrl: null,
+    };
+    const appleDeps = makeDeps({ store, verify: makeVerifyStub(appleIdentityLocal) });
+    const appleRes = await handleRequest(
+      ev("POST /v1/auth/login", { provider: "apple", idToken: "a-tok" }),
+      appleDeps,
+      NOW
+    );
+    assert.equal(appleRes.statusCode, 200);
+    const { profile: appleProfile } = JSON.parse(appleRes.body) as { profile: { userId: string } };
+
+    // Must resolve to the same userId
+    assert.equal(appleProfile.userId, googleProfile.userId);
+  });
+});
+
 describe("routing and content-type", () => {
   it("unknown route → 404 with error field", async () => {
     const deps = makeDeps();

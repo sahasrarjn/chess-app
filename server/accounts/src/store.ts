@@ -1,4 +1,4 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { ConditionalCheckFailedException, DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
   DynamoDBDocumentClient,
   GetCommand,
@@ -22,9 +22,11 @@ export interface UserStore {
   putUser(user: UserRecord): Promise<void>;
   updateDisplayName(userId: string, displayName: string): Promise<void>;
   getUserIdByIdp(provider: Provider, sub: string): Promise<string | null>;
-  putIdpMapping(provider: Provider, sub: string, userId: string): Promise<void>;
+  /** Returns true if the mapping was written, false if it already existed (no clobber). */
+  putIdpMapping(provider: Provider, sub: string, userId: string): Promise<boolean>;
   getUserIdByEmail(email: string): Promise<string | null>;
-  putEmailMapping(email: string, userId: string): Promise<void>;
+  /** Returns true if the mapping was written, false if it already existed (no clobber). */
+  putEmailMapping(email: string, userId: string): Promise<boolean>;
 }
 
 /** In-memory store for tests. */
@@ -42,19 +44,25 @@ export class InMemoryUserStore implements UserStore {
   }
   async updateDisplayName(userId: string, displayName: string): Promise<void> {
     const u = this.users.get(userId);
-    if (u) u.displayName = displayName;
+    if (!u) throw new Error(`User not found: ${userId}`);
+    u.displayName = displayName;
   }
   async getUserIdByIdp(provider: Provider, sub: string): Promise<string | null> {
     return this.idp.get(`${provider}:${sub}`) ?? null;
   }
-  async putIdpMapping(provider: Provider, sub: string, userId: string): Promise<void> {
-    this.idp.set(`${provider}:${sub}`, userId);
+  async putIdpMapping(provider: Provider, sub: string, userId: string): Promise<boolean> {
+    const key = `${provider}:${sub}`;
+    if (this.idp.has(key)) return false;
+    this.idp.set(key, userId);
+    return true;
   }
   async getUserIdByEmail(email: string): Promise<string | null> {
     return this.emails.get(email) ?? null;
   }
-  async putEmailMapping(email: string, userId: string): Promise<void> {
+  async putEmailMapping(email: string, userId: string): Promise<boolean> {
+    if (this.emails.has(email)) return false;
     this.emails.set(email, userId);
+    return true;
   }
 }
 
@@ -113,14 +121,14 @@ export class DynamoUserStore implements UserStore {
   async getUserIdByIdp(provider: Provider, sub: string): Promise<string | null> {
     return this.getMappedUserId(`IDP#${provider}:${sub}`);
   }
-  async putIdpMapping(provider: Provider, sub: string, userId: string): Promise<void> {
-    await this.putMapping(`IDP#${provider}:${sub}`, userId);
+  async putIdpMapping(provider: Provider, sub: string, userId: string): Promise<boolean> {
+    return this.putMappingIfAbsent(`IDP#${provider}:${sub}`, userId);
   }
   async getUserIdByEmail(email: string): Promise<string | null> {
     return this.getMappedUserId(`EMAIL#${email}`);
   }
-  async putEmailMapping(email: string, userId: string): Promise<void> {
-    await this.putMapping(`EMAIL#${email}`, userId);
+  async putEmailMapping(email: string, userId: string): Promise<boolean> {
+    return this.putMappingIfAbsent(`EMAIL#${email}`, userId);
   }
 
   private async getMappedUserId(pk: string): Promise<string | null> {
@@ -129,9 +137,21 @@ export class DynamoUserStore implements UserStore {
     );
     return (res.Item?.userId as string | undefined) ?? null;
   }
-  private async putMapping(pk: string, userId: string): Promise<void> {
-    await this.doc.send(
-      new PutCommand({ TableName: this.tableName, Item: { PK: pk, SK: "META", userId } })
-    );
+  /** Writes the mapping only if no item with that PK exists.
+   *  Returns true if written, false if the item already existed. */
+  private async putMappingIfAbsent(pk: string, userId: string): Promise<boolean> {
+    try {
+      await this.doc.send(
+        new PutCommand({
+          TableName: this.tableName,
+          Item: { PK: pk, SK: "META", userId },
+          ConditionExpression: "attribute_not_exists(PK)",
+        })
+      );
+      return true;
+    } catch (err) {
+      if (err instanceof ConditionalCheckFailedException) return false;
+      throw err;
+    }
   }
 }

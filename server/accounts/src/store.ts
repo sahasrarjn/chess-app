@@ -264,6 +264,7 @@ export class DynamoUserStore implements UserStore {
             ":id": gameId,
           },
           ExclusiveStartKey: startKey,
+          Limit: 100,
         })
       );
       if (res.Items && res.Items.length > 0) return itemToStoredGame(res.Items[0]);

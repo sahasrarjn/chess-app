@@ -5,6 +5,7 @@ import { MultiplayerController } from "../online/multiplayerController";
 import { BoardView } from "./boardView";
 import { MoveListView } from "./moveListView";
 import { MuteButton } from "./muteButton";
+import { createSettingsButton, closeSettingsPanel } from "./settingsPanel";
 
 const WS_URL = import.meta.env.VITE_MULTIPLAYER_WS_URL as string | undefined;
 
@@ -76,6 +77,7 @@ class OnlineGameScreen {
     header.appendChild(this.titleEl);
     this.muteBtn = new MuteButton(this.sound);
     header.appendChild(this.muteBtn.el);
+    header.appendChild(createSettingsButton());
     top.appendChild(header);
 
     this.playersEl = el("div", "online-players");
@@ -130,6 +132,7 @@ class OnlineGameScreen {
 
   destroy(): void {
     this.ctrl.dispose();
+    closeSettingsPanel();
     this.root.innerHTML = "";
   }
 

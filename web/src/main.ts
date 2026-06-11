@@ -1,7 +1,10 @@
 import "./styles.css";
+import { applyBoardTheme, boardThemeById, loadBoardThemeId } from "./theme/boardThemes";
 import { loadSavedGame } from "./game/savedGame";
 import { renderHome, type HomeStart } from "./ui/home";
 import { newRoomId } from "./online/guestIdentity";
+
+applyBoardTheme(boardThemeById(loadBoardThemeId()));
 
 void import("./analytics/posthog").then(({ initAnalytics }) => initAnalytics());
 

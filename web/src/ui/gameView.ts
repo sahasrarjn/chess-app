@@ -15,6 +15,7 @@ import {
 import { BoardView } from "./boardView";
 import { MoveListView } from "./moveListView";
 import { MuteButton } from "./muteButton";
+import { createSettingsButton, closeSettingsPanel } from "./settingsPanel";
 
 
 const HINT_SVG =
@@ -121,6 +122,7 @@ class GameScreen {
       void this.ctrl.requestHint();
     };
     header.appendChild(this.hintBtn);
+    header.appendChild(createSettingsButton());
     top.appendChild(header);
 
     const capBar = el("div", "captured-bar");
@@ -192,6 +194,7 @@ class GameScreen {
     this.ctrl.dispose();
     this.promotionEl?.remove();
     this.gameOverEl?.remove();
+    closeSettingsPanel();
     this.root.innerHTML = "";
   }
 

@@ -51,6 +51,7 @@ struct GameView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showResignConfirm = false
     @State private var gameOverDismissed = false
+    @State private var showSettings = false
     private let onReturnHome: (() -> Void)?
 
     init(mode: GameMode, difficulty: BotDifficulty = .medium) {
@@ -133,6 +134,10 @@ struct GameView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
+                .presentationDetents([.medium, .large])
+        }
         .onAppear {
             viewModel.finishRestoringSavedGameIfNeeded()
         }
@@ -169,6 +174,10 @@ struct GameView: View {
                 GameNavIconAction(
                     systemName: viewModel.soundMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
                     action: { viewModel.toggleSound() }
+                )
+                GameNavIconAction(
+                    systemName: "gearshape",
+                    action: { showSettings = true }
                 )
             }
         }

@@ -36,11 +36,28 @@ Resources:
           AttributeType: S
         - AttributeName: SK
           AttributeType: S
+        - AttributeName: LBPK
+          AttributeType: S
+        - AttributeName: LBSK
+          AttributeType: S
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
         - AttributeName: SK
           KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: LEADERBOARD
+          KeySchema:
+            - AttributeName: LBPK
+              KeyType: HASH
+            - AttributeName: LBSK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: INCLUDE
+            NonKeyAttributes:
+              - displayName
+              - avatarUrl
+              - stats
 
   LambdaRole:
     Type: AWS::IAM::Role
@@ -73,7 +90,9 @@ Resources:
                   - dynamodb:PutItem
                   - dynamodb:UpdateItem
                   - dynamodb:Query
-                Resource: !GetAtt UsersTable.Arn
+                Resource:
+                  - !GetAtt UsersTable.Arn
+                  - !Sub "${UsersTable.Arn}/index/*"
 
   AccountsFunction:
     Type: AWS::Lambda::Function
@@ -163,6 +182,13 @@ Resources:
       RouteKey: "GET /v1/games/{gameId}"
       Target: !Sub "integrations/${Integration}"
 
+  LeaderboardRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: "GET /v1/leaderboard"
+      Target: !Sub "integrations/${Integration}"
+
   Stage:
     Type: AWS::ApiGatewayV2::Stage
     DependsOn:
@@ -172,6 +198,7 @@ Resources:
       - GamesPostRoute
       - GamesListRoute
       - GameGetRoute
+      - LeaderboardRoute
     Properties:
       ApiId: !Ref HttpApi
       StageName: "$default"

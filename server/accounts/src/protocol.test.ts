@@ -345,7 +345,7 @@ describe("parseGameRecordInput", () => {
     );
     assert.ok(result !== null);
     // gameId should not be in the returned record (it has no gameId field)
-    assert.equal((result as Record<string, unknown>).gameId, undefined);
+    assert.equal((result as unknown as Record<string, unknown>).gameId, undefined);
   });
 
   it("null input → null", () => {

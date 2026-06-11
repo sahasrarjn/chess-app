@@ -75,7 +75,7 @@ final class GameViewModel: ObservableObject, BoardModel {
         self.isReplay = true
         let game = ChessGame()
         for uci in record.moves {
-            guard let move = game.move(from: uci), game.applyMove(move) else { break }
+            guard let move = game.move(from: uci) ?? game.move(fromEngineUCI: uci), game.applyMove(move) else { break }
         }
         if record.resultType == "resignation", let winner = record.winner {
             game.resign(by: winner == "white" ? .black : .white)

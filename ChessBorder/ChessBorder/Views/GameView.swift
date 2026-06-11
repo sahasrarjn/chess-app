@@ -107,8 +107,29 @@ struct GameView: View {
                         .padding(.horizontal, 12)
                         .padding(.top, 4)
 
+                    if let banner = viewModel.coachBanner {
+                        coachBannerView(banner: banner)
+                            .padding(.horizontal, 12)
+                            .padding(.top, 4)
+                    }
+
+                    if let why = viewModel.coachHintWhy, viewModel.hintMove != nil {
+                        Text(why)
+                            .font(.caption)
+                            .foregroundStyle(BoardTheme.muted)
+                            .padding(.horizontal, 12)
+                    }
+
                     ZStack {
                         BoardView(viewModel: viewModel, boardSide: boardSide)
+
+                        if UserDefaults.standard.bool(forKey: "coachEnabled"),
+                           let eval = viewModel.coachEval {
+                            evalBarView(eval: eval)
+                                .frame(width: 12)
+                                .padding(.trailing, 4)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                        }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -297,6 +318,58 @@ struct GameView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Coach views
+
+    private func evalBarView(eval: PositionEval) -> some View {
+        GeometryReader { geo in
+            let fraction: Double = {
+                if let m = eval.mateIn {
+                    return m > 0 ? 1.0 : 0.0
+                }
+                let cp = Double(eval.cp ?? 0)
+                return 1.0 / (1.0 + exp(-cp / 400.0))
+            }()
+            // White fills from bottom; fraction = white advantage
+            ZStack(alignment: .bottom) {
+                Capsule()
+                    .fill(Color.black.opacity(0.5))
+                Capsule()
+                    .fill(Color.white)
+                    .frame(height: geo.size.height * fraction)
+            }
+        }
+        .clipShape(Capsule())
+    }
+
+    private func coachBannerView(banner: GameViewModel.CoachBannerInfo) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: banner.classification == .blunder ? "exclamationmark.triangle.fill" : "exclamationmark.circle.fill")
+                .foregroundStyle(banner.classification == .blunder ? .red : .orange)
+            Text(banner.text)
+                .font(.caption)
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.leading)
+            Spacer()
+            Button {
+                viewModel.dismissCoachBanner()
+            } label: {
+                Image(systemName: "xmark")
+                    .foregroundStyle(BoardTheme.muted)
+                    .font(.caption)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(BoardTheme.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(banner.classification == .blunder ? Color.red.opacity(0.5) : Color.orange.opacity(0.5), lineWidth: 1)
+        )
     }
 
     // MARK: - Game over

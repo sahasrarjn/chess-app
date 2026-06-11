@@ -31,6 +31,25 @@ final class GameViewModel: ObservableObject, BoardModel {
     @Published private(set) var hintMove: Move?
     @Published private(set) var isComputingHint = false
 
+    // Coach state
+    @Published private(set) var coachEval: PositionEval?
+    @Published private(set) var coachBanner: CoachBannerInfo?
+    @Published private(set) var coachHintWhy: String?
+    private var coachToken = 0
+    private var coachEvalByPly: [Int: PositionEval] = [:]
+    private var coachBestByPly: [Int: (best: String?, pv: [String])] = [:]
+
+    struct CoachBannerInfo {
+        let classification: MoveClassification
+        let text: String
+        let ply: Int
+    }
+
+    func dismissCoachBanner() {
+        coachBanner = nil
+        objectWillChange.send()
+    }
+
     let mode: GameMode
     let botDifficulty: BotDifficulty
     /// True when this view model is browsing a completed record (no bot, no persistence).
@@ -156,12 +175,18 @@ final class GameViewModel: ObservableObject, BoardModel {
 
         let plyAtRequest = game.recordedMoves.count
         let snapshot = game.copy()
+        let currentFen = game.toFEN()
+        let moverColor = game.activeColor
         Task { @MainActor in
             let move = await HybridBotPlayer().chooseMove(in: snapshot, difficulty: Self.hintDifficulty)
             guard token == self.hintToken else { return }
             self.isComputingHint = false
             if self.game.recordedMoves.count == plyAtRequest {
                 self.hintMove = move
+                // Compute hint why from cached eval
+                if let move, let cachedEval = self.coachEvalByPly[plyAtRequest] {
+                    self.coachHintWhy = hintWhy(fen: currentFen, bestUci: move.uci, evalAtPosition: cachedEval, mover: moverColor)
+                }
             }
             self.objectWillChange.send()
         }
@@ -172,6 +197,7 @@ final class GameViewModel: ObservableObject, BoardModel {
         hintToken += 1
         hintMove = nil
         isComputingHint = false
+        coachHintWhy = nil
     }
 
     func piece(at square: Square) -> Piece? {
@@ -333,6 +359,10 @@ final class GameViewModel: ObservableObject, BoardModel {
         guard let move = candidates.first,
               let piece = game.piece(at: from) else { return false }
 
+        let fenBefore = game.toFEN()
+        let plyBefore = game.recordedMoves.count
+        let moverColor = game.activeColor
+
         guard game.applyMove(move) else { return false }
 
         emitMoveSound(for: move)
@@ -341,6 +371,11 @@ final class GameViewModel: ObservableObject, BoardModel {
         clearSelection()
         beginMoveAnimation(move: move, piece: piece)
         notifyChange()
+
+        let plyAfter = plyBefore + 1
+        let shouldClassify = (mode == .vsBot && moverColor == .white) || mode == .localTwoPlayer
+        analyzeCurrentPosition(ply: plyAfter, lastMove: move, fenBefore: fenBefore, mover: moverColor, shouldClassify: shouldClassify)
+
         if triggerBot {
             maybePlayBotMove()
         }
@@ -354,6 +389,9 @@ final class GameViewModel: ObservableObject, BoardModel {
         }
         pendingPromotion = nil
         guard let move, let pawn = game.piece(at: move.from) else { return }
+        let fenBefore = game.toFEN()
+        let plyBefore = game.recordedMoves.count
+        let moverColor = game.activeColor
         guard game.applyMove(move) else { return }
         emitMoveSound(for: move)
         previewPly = nil
@@ -361,6 +399,9 @@ final class GameViewModel: ObservableObject, BoardModel {
         clearSelection()
         beginMoveAnimation(move: move, piece: Piece(kind: kind, color: pawn.color))
         notifyChange()
+        let plyAfter = plyBefore + 1
+        let shouldClassify = (mode == .vsBot && moverColor == .white) || mode == .localTwoPlayer
+        analyzeCurrentPosition(ply: plyAfter, lastMove: move, fenBefore: fenBefore, mover: moverColor, shouldClassify: shouldClassify)
         maybePlayBotMove()
     }
 
@@ -413,6 +454,12 @@ final class GameViewModel: ObservableObject, BoardModel {
         botEngineError = nil
         historyRecorded = false
         clearHint()
+        coachEval = nil
+        coachBanner = nil
+        coachHintWhy = nil
+        coachToken += 1
+        coachEvalByPly = [:]
+        coachBestByPly = [:]
         notifyChange()
         sound.play(.gameStart)
     }
@@ -499,6 +546,8 @@ final class GameViewModel: ObservableObject, BoardModel {
             var applied = false
             var lastUci = ""
             var lastError: String?
+            var appliedMove: Move?
+            var fenBeforeBot: String?
 
             for _ in 0..<2 where !applied {
                 guard token == self.botMoveToken,
@@ -524,12 +573,15 @@ final class GameViewModel: ObservableObject, BoardModel {
                 }
 
                 if let move = attempt.move,
-                   let piece = self.game.piece(at: move.from),
-                   self.game.applyMove(move) {
-                    BotLogging.debug("maybePlayBotMove: applied \(move.uci)")
-                    self.emitMoveSound(for: move)
-                    self.beginMoveAnimation(move: move, piece: piece)
-                    applied = true
+                   let piece = self.game.piece(at: move.from) {
+                    fenBeforeBot = self.game.toFEN()
+                    if self.game.applyMove(move) {
+                        BotLogging.debug("maybePlayBotMove: applied \(move.uci)")
+                        self.emitMoveSound(for: move)
+                        self.beginMoveAnimation(move: move, piece: piece)
+                        appliedMove = move
+                        applied = true
+                    }
                 }
             }
 
@@ -549,22 +601,28 @@ final class GameViewModel: ObservableObject, BoardModel {
 
             if applied {
                 self.notifyChange()
+                let botPly = plyAtRequest + 1
+                self.analyzeCurrentPosition(ply: botPly, lastMove: appliedMove, fenBefore: fenBeforeBot, mover: .black, shouldClassify: self.mode == .localTwoPlayer)
                 return
             }
 
             if let fallback = pickFallbackMove(in: self.game, difficulty: difficulty),
-               let piece = self.game.piece(at: fallback.from),
-               self.game.applyMove(fallback) {
-                self.emitMoveSound(for: fallback)
-                BotLogging.debug("maybePlayBotMove: applied fallback \(fallback.uci)")
-                if let lastError {
-                    BotLogging.debug("maybePlayBotMove: engine unavailable (\(lastError))")
-                } else {
-                    BotLogging.debug("maybePlayBotMove: engine unavailable (no move from server/local engine)")
+               let piece = self.game.piece(at: fallback.from) {
+                let fenBeforeFallback = self.game.toFEN()
+                if self.game.applyMove(fallback) {
+                    self.emitMoveSound(for: fallback)
+                    BotLogging.debug("maybePlayBotMove: applied fallback \(fallback.uci)")
+                    if let lastError {
+                        BotLogging.debug("maybePlayBotMove: engine unavailable (\(lastError))")
+                    } else {
+                        BotLogging.debug("maybePlayBotMove: engine unavailable (no move from server/local engine)")
+                    }
+                    self.beginMoveAnimation(move: fallback, piece: piece)
+                    self.notifyChange()
+                    let botPly = plyAtRequest + 1
+                    self.analyzeCurrentPosition(ply: botPly, lastMove: fallback, fenBefore: fenBeforeFallback, mover: .black, shouldClassify: self.mode == .localTwoPlayer)
+                    return
                 }
-                self.beginMoveAnimation(move: fallback, piece: piece)
-                self.notifyChange()
-                return
             }
 
             BotLogging.debug("maybePlayBotMove: no move applied")
@@ -635,6 +693,65 @@ final class GameViewModel: ObservableObject, BoardModel {
             return "Stalemate. Draw"
         case .draw(let reason):
             return "Draw: \(reason)"
+        }
+    }
+
+    private func analyzeCurrentPosition(
+        ply: Int,
+        lastMove: Move?,
+        fenBefore: String?,
+        mover: PieceColor?,
+        shouldClassify: Bool
+    ) {
+        // Guards
+        guard !isReplay else { return }
+        guard UserDefaults.standard.bool(forKey: "coachEnabled") else { return }
+        guard game.result == .ongoing else { return }
+
+        let token = coachToken + 1
+        coachToken = token
+        let gameCopy = game.copy()
+
+        Task { @MainActor in
+            guard token == self.coachToken else { return }
+
+            let analysis = await AnalyzeService.shared.analyse(in: gameCopy, movetimeMs: AnalyzeService.liveMovetimeMs)
+            guard token == self.coachToken else { return }
+
+            if let analysis {
+                let wrel = toWhiteRelative(scoreCp: analysis.scoreCp, mateIn: analysis.mateIn, sideToMove: gameCopy.activeColor)
+                self.coachEval = wrel
+                self.coachEvalByPly[ply] = wrel
+                self.coachBestByPly[ply] = (best: analysis.bestMoveUci, pv: analysis.pv)
+
+                // Classify the last move if we can
+                if shouldClassify, let mover, let prevEval = self.coachEvalByPly[ply - 1] {
+                    let classification = classifyMove(before: prevEval, after: wrel, mover: mover)
+                    if classification == .mistake || classification == .blunder {
+                        if let lastMove, let fen = fenBefore {
+                            let prevBest = self.coachBestByPly[ply - 1]
+                            let input = ExplainInput(
+                                fen: fen,
+                                movePlayed: lastMove.uci,
+                                bestMoveUci: prevBest?.best,
+                                pv: prevBest?.pv ?? [],
+                                before: prevEval,
+                                after: wrel,
+                                classification: classification,
+                                mover: mover
+                            )
+                            let explanation = explainMove(input)
+                            self.coachBanner = CoachBannerInfo(
+                                classification: classification,
+                                text: explanation,
+                                ply: ply
+                            )
+                        }
+                    }
+                }
+
+                self.objectWillChange.send()
+            }
         }
     }
 

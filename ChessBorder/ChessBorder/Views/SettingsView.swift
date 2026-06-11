@@ -5,6 +5,7 @@ struct SettingsView: View {
     @ObservedObject private var themeStore = BoardThemeStore.shared
     @StateObject private var auth = AuthStore.shared
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("coachEnabled") private var coachEnabled = false
 
     var body: some View {
         NavigationStack {
@@ -30,6 +31,12 @@ struct SettingsView: View {
                                 }
                             }
                         }
+
+                        Toggle("Coach (eval bar + blunder warnings)", isOn: $coachEnabled)
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                            .tint(BoardTheme.accent)
+                            .padding(.vertical, 6)
                     }
                     .padding(20)
                 }

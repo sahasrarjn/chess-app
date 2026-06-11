@@ -7,6 +7,10 @@ options:
   xcodeVersion: "16.0"
 settings:
   SWIFT_VERSION: "5.10"
+packages:
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: 8.0.0
 targets:
   ChessBorder:
     type: application
@@ -25,6 +29,9 @@ targets:
             subpath: Engine
     resources:
       - path: ChessBorder/Assets.xcassets
+    dependencies:
+      - package: GoogleSignIn
+        product: GoogleSignIn
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.sahasraranjan.chessborder
       DEVELOPMENT_TEAM: LG3L588JT3
@@ -36,6 +43,7 @@ targets:
       INFOPLIST_KEY_UILaunchScreen_Generation: YES
       INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
       INFOPLIST_KEY_CFBundleDisplayName: Border Chess
+      CODE_SIGN_ENTITLEMENTS: ChessBorder/ChessBorder-iOS.entitlements
     info:
       path: ChessBorder/Info.plist
       properties:
@@ -47,6 +55,11 @@ targets:
         EngineServerURL: https://borderchess.org
         MultiplayerServerURL: wss://rt7ozwivr6.execute-api.us-east-1.amazonaws.com/prod
         ITSAppUsesNonExemptEncryption: false
+        AccountsServerURL: ""
+        GoogleClientID: ""
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - ""   # reversed Google iOS client ID, e.g. com.googleusercontent.apps.1234-abc
 
   ChessBorderMac:
     type: application

@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(GoogleSignIn)
+import GoogleSignIn
+#endif
 
 @main
 struct ChessBorderApp: App {
@@ -25,6 +28,11 @@ struct ChessBorderApp: App {
                     showSplash = false
                 }
             }
+            #if canImport(GoogleSignIn)
+            .onOpenURL { url in
+                GIDSignIn.sharedInstance.handle(url)
+            }
+            #endif
         }
     }
 }

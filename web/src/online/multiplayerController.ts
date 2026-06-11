@@ -2,12 +2,36 @@ import { ChessGame, squaresEqual, type GameSnapshot } from "../engine/chessGame"
 import { matchEngineMove } from "../engine/fen";
 import { moveUci, type Move, type PieceColor, type Piece, type Square } from "../engine/types";
 import { classifyMoveSound, type SoundEvent } from "../audio/classifyMoveSound";
+import { appendGameToHistory, completedGameRecord } from "../game/gameHistory";
 import type { StateMessage } from "./protocol";
 import { WsClient, type SocketFactory, type WsStatus } from "./wsClient";
 
 export interface Identity {
   token: string;
   name: string;
+}
+
+function defaultRecordHistory(msg: StateMessage, game: ChessGame): void {
+  const playerColor = msg.color;
+  if (!playerColor) return;
+  const oppColor = playerColor === "white" ? "black" : "white";
+  const oppPlayer = msg.players[oppColor];
+  const opponent = oppPlayer?.name ?? "Opponent";
+  // Thread the server result as a fallback: handles resign/timeout where the
+  // move list alone hasn't ended the game yet.
+  const serverResult = msg.result;
+  const fallbackResult = serverResult.type !== "ongoing" ? serverResult : undefined;
+  const record = completedGameRecord({
+    game,
+    mode: "online",
+    difficulty: null,
+    playerColor,
+    opponent,
+    fallbackResult,
+  });
+  if (record) {
+    appendGameToHistory(record);
+  }
 }
 
 export class MultiplayerController {
@@ -34,7 +58,8 @@ export class MultiplayerController {
     wsUrl: string,
     private readonly onChange: () => void,
     private readonly onSound: (event: SoundEvent) => void,
-    factory?: SocketFactory
+    factory?: SocketFactory,
+    private readonly recordHistory: (state: StateMessage, game: ChessGame) => void = defaultRecordHistory
   ) {
     this.ws = new WsClient({
       url: wsUrl,
@@ -238,6 +263,7 @@ export class MultiplayerController {
 
   private applyState(msg: StateMessage): void {
     const prevCount = this.firstState ? msg.moves.length : (this.state?.moves.length ?? 0);
+    const prevStatus = this.firstState ? null : (this.state?.status ?? null);
     this.lastError = null;
     this.pendingMove = false;
     this.previewPly = null;
@@ -245,6 +271,20 @@ export class MultiplayerController {
     this.state = msg;
     this.rebuild(prevCount);
     this.firstState = false;
+
+    // Record local history on the active → finished transition for players only.
+    if (
+      prevStatus === "active" &&
+      msg.status === "finished" &&
+      (msg.role === "white" || msg.role === "black")
+    ) {
+      try {
+        this.recordHistory(msg, this.game);
+      } catch {
+        // History is best-effort; never break the game screen.
+      }
+    }
+
     this.onChange();
   }
 

@@ -1,21 +1,26 @@
+import { randomUUID } from "node:crypto";
 import { verifyIdToken } from "./idtoken";
 import type { IdpIdentity } from "./idtoken";
 import {
+  parseGameRecordInput,
   parseLoginRequest,
   parseUpdateMeRequest,
+  statsKeyFor,
   validateDisplayName,
 } from "./protocol";
 import type { Profile, Provider } from "./protocol";
 import { issueSession, verifySession } from "./session";
 import { DynamoUserStore } from "./store";
-import type { UserRecord, UserStore } from "./store";
+import type { StoredGame, UserRecord, UserStore } from "./store";
 import { resolveUser } from "./users";
 
 /** Subset of APIGatewayProxyEventV2 the handler needs. */
 export interface HttpEvent {
-  routeKey: string; // e.g. "POST /v1/auth/login"
+  routeKey: string; // e.g. "POST /v1/auth/login", "GET /v1/games/{gameId}"
   headers: Record<string, string | undefined>;
   body?: string | null;
+  queryStringParameters?: Record<string, string | undefined>;
+  pathParameters?: Record<string, string | undefined>;
 }
 
 export interface HttpResponse {
@@ -144,6 +149,48 @@ export async function handleRequest(
       return json(200, { profile: toProfile(updated) });
     }
 
+    case "POST /v1/games": {
+      const auth = await authenticate(event.headers, deps.store, deps.jwtSecret);
+      if (auth.response) return auth.response;
+
+      const req = parseGameRecordInput(event.body);
+      if (!req) return json(400, { error: "invalid game record" });
+
+      const endedAt = new Date(
+        Math.min(Date.parse(req.endedAt), now.getTime())
+      ).toISOString();
+      const game: StoredGame = { ...req, endedAt, gameId: randomUUID() };
+      await deps.store.putGame(auth.user.userId, game);
+
+      const statKey = statsKeyFor(game);
+      if (statKey) {
+        try {
+          await deps.store.addStat(auth.user.userId, statKey);
+        } catch {
+          // Stats are best-effort; the GAME# item is the source of truth.
+        }
+      }
+      return json(200, { game });
+    }
+
+    case "GET /v1/games": {
+      const auth = await authenticate(event.headers, deps.store, deps.jwtSecret);
+      if (auth.response) return auth.response;
+      const cursor = event.queryStringParameters?.cursor ?? null;
+      const page = await deps.store.listGames(auth.user.userId, 20, cursor);
+      return json(200, { games: page.games, nextCursor: page.nextCursor });
+    }
+
+    case "GET /v1/games/{gameId}": {
+      const auth = await authenticate(event.headers, deps.store, deps.jwtSecret);
+      if (auth.response) return auth.response;
+      const gameId = event.pathParameters?.gameId;
+      if (!gameId) return json(404, { error: "not found" });
+      const game = await deps.store.getGame(auth.user.userId, gameId);
+      if (!game) return json(404, { error: "not found" });
+      return json(200, { game });
+    }
+
     default:
       return json(404, { error: "not found" });
   }
@@ -159,6 +206,8 @@ export async function handler(event: {
   routeKey: string;
   headers: Record<string, string | undefined>;
   body?: string | null;
+  queryStringParameters?: Record<string, string | undefined>;
+  pathParameters?: Record<string, string | undefined>;
 }): Promise<HttpResponse> {
   prodStore ??= new DynamoUserStore(process.env.TABLE_NAME ?? "");
   const deps: HandlerDeps = {

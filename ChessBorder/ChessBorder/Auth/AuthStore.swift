@@ -22,6 +22,9 @@ final class AuthStore: NSObject, ObservableObject {
 
     var isSignedIn: Bool { profile != nil }
 
+    /// Stored session token, if any (for WebSocket attribution and game uploads).
+    var sessionToken: String? { KeychainStore.read(Self.tokenAccount) }
+
     // MARK: - Restore
 
     /// Call at launch (SettingsView/HomeView .task): validate the stored token.
@@ -94,6 +97,7 @@ final class AuthStore: NSObject, ObservableObject {
     func signOut() {
         KeychainStore.delete(Self.tokenAccount)
         profile = nil
+        GameUploadQueue.clearQueue()
         #if canImport(GoogleSignIn) && os(iOS)
         GIDSignIn.sharedInstance.signOut()
         #endif

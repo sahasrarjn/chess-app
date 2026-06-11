@@ -33,6 +33,8 @@ final class GameViewModel: ObservableObject, BoardModel {
 
     let mode: GameMode
     let botDifficulty: BotDifficulty
+    /// True when this view model is browsing a completed record (no bot, no persistence).
+    let isReplay: Bool
 
     /// Hints are always computed at full strength so the suggestion is genuinely good.
     private static let hintDifficulty: BotDifficulty = .hard
@@ -46,15 +48,19 @@ final class GameViewModel: ObservableObject, BoardModel {
     private static let botMoveTimeout: Duration = .seconds(35)
 
     private var botMoveToken = 0
+    /// Set true the first time a completed game is appended to history; reset in newGame().
+    private var historyRecorded = false
 
     init(mode: GameMode, botDifficulty: BotDifficulty = .medium) {
         self.mode = mode
         self.botDifficulty = botDifficulty
+        self.isReplay = false
     }
 
     init(saved: SavedGameSnapshot) {
         self.mode = saved.gameMode ?? .vsBot
         self.botDifficulty = saved.difficulty ?? .medium
+        self.isReplay = false
         if let restored = SavedGameStore.restoreGame(from: saved) {
             self.game = restored
         }
@@ -62,7 +68,27 @@ final class GameViewModel: ObservableObject, BoardModel {
         self.autoFlipBoard = saved.autoFlipBoard
     }
 
+    /// Browse-only replay of a completed game. No bot, no persistence.
+    init(replay record: CompletedGameRecord) {
+        self.mode = .localTwoPlayer   // never schedules the bot
+        self.botDifficulty = .medium
+        self.isReplay = true
+        let game = ChessGame()
+        for uci in record.moves {
+            guard let move = game.move(from: uci) ?? game.move(fromEngineUCI: uci), game.applyMove(move) else { break }
+        }
+        if record.resultType == "resignation", let winner = record.winner {
+            game.resign(by: winner == "white" ? .black : .white)
+        }
+        self.game = game
+        self.boardFlipped = record.playerColor == "black"
+        self.autoFlipBoard = false
+    }
+
     func finishRestoringSavedGameIfNeeded() {
+        // Record a finished restored game into history (dedupe makes this a no-op if
+        // the game was already recorded in a previous session).
+        recordHistoryIfFinished()
         guard mode == .vsBot, isBotTurn else { return }
         maybePlayBotMove()
     }
@@ -385,6 +411,7 @@ final class GameViewModel: ObservableObject, BoardModel {
         previewPly = nil
         activeMoveAnimation = nil
         botEngineError = nil
+        historyRecorded = false
         clearHint()
         notifyChange()
         sound.play(.gameStart)
@@ -617,11 +644,47 @@ final class GameViewModel: ObservableObject, BoardModel {
             boardFlipped = game.activeColor == .black
         }
         persistIfNeeded()
+        recordHistoryIfFinished()
         objectWillChange.send()
     }
 
     private func persistIfNeeded() {
+        guard !isReplay else { return }
         SavedGameStore.save(from: self)
+    }
+
+    func recordHistoryIfFinished() {
+        guard !isReplay, !historyRecorded, game.result != .ongoing else { return }
+        historyRecorded = true
+        guard let record = completedRecord() else { return }
+        if GameHistoryStore.append(record) {
+            GameUploadQueue.enqueueAndFlush(record)
+        }
+    }
+
+    private func completedRecord() -> CompletedGameRecord? {
+        let (resultType, winner): (String, String?) = {
+            switch game.result {
+            case .ongoing: return ("", nil)
+            case .checkmate(let w): return ("checkmate", w == .white ? "white" : "black")
+            case .resignation(let w): return ("resignation", w == .white ? "white" : "black")
+            case .stalemate: return ("stalemate", nil)
+            case .draw: return ("draw", nil)
+            }
+        }()
+        guard !resultType.isEmpty else { return nil }
+        let vsBot = mode == .vsBot
+        return CompletedGameRecord(
+            gameId: UUID().uuidString,
+            mode: vsBot ? "vsBot" : "localTwoPlayer",
+            difficulty: vsBot ? botDifficulty.rawValue.lowercased() : nil,
+            playerColor: vsBot ? "white" : nil,
+            opponent: vsBot ? "Bot (\(botDifficulty.rawValue.lowercased()))" : "Friend (local)",
+            moves: game.recordedMoves.map(\.move.uci),
+            resultType: resultType,
+            winner: winner,
+            endedAt: ISO8601DateFormatter().string(from: Date())
+        )
     }
 
     private func playSelectionHaptic() {

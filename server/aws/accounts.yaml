@@ -72,6 +72,7 @@ Resources:
                   - dynamodb:GetItem
                   - dynamodb:PutItem
                   - dynamodb:UpdateItem
+                  - dynamodb:Query
                 Resource: !GetAtt UsersTable.Arn
 
   AccountsFunction:
@@ -141,12 +142,36 @@ Resources:
       RouteKey: "POST /v1/me"
       Target: !Sub "integrations/${Integration}"
 
+  GamesPostRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: "POST /v1/games"
+      Target: !Sub "integrations/${Integration}"
+
+  GamesListRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: "GET /v1/games"
+      Target: !Sub "integrations/${Integration}"
+
+  GameGetRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: "GET /v1/games/{gameId}"
+      Target: !Sub "integrations/${Integration}"
+
   Stage:
     Type: AWS::ApiGatewayV2::Stage
     DependsOn:
       - LoginRoute
       - GetMeRoute
       - PostMeRoute
+      - GamesPostRoute
+      - GamesListRoute
+      - GameGetRoute
     Properties:
       ApiId: !Ref HttpApi
       StageName: "$default"

@@ -3,9 +3,10 @@ import {
   DynamoDBDocumentClient,
   GetCommand,
   PutCommand,
+  QueryCommand,
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
-import type { Provider } from "./protocol";
+import type { GameRecord, Provider, RecordableMode } from "./protocol";
 
 export interface UserRecord {
   userId: string;
@@ -13,8 +14,19 @@ export interface UserRecord {
   displayName: string;
   avatarUrl: string | null;
   createdAt: string; // ISO 8601
-  /** Phase 3/4 placeholder — empty map for now. */
-  stats: Record<string, never>;
+  /** Flat counters: bot_<difficulty>_<w|l|d>, online_<w|l|d>. Phase 4 reads these. */
+  stats: Record<string, number>;
+}
+
+/**
+ * A stored game record. mode allows "online" in addition to RecordableMode
+ * because online game items are written directly by the multiplayer Lambda.
+ */
+export type StoredGame = Omit<GameRecord, "mode"> & { mode: RecordableMode | "online" };
+
+export interface GamePage {
+  games: StoredGame[];
+  nextCursor: string | null;
 }
 
 export interface UserStore {
@@ -27,6 +39,12 @@ export interface UserStore {
   getUserIdByEmail(email: string): Promise<string | null>;
   /** Returns true if the mapping was written, false if it already existed (no clobber). */
   putEmailMapping(email: string, userId: string): Promise<boolean>;
+  putGame(userId: string, game: StoredGame): Promise<void>;
+  /** Newest-first by endedAt. cursor is opaque; invalid cursors yield the first page. */
+  listGames(userId: string, limit: number, cursor: string | null): Promise<GamePage>;
+  getGame(userId: string, gameId: string): Promise<StoredGame | null>;
+  /** Increment a flat stats counter by 1. Throws if the user item is missing. */
+  addStat(userId: string, key: string): Promise<void>;
 }
 
 /** In-memory store for tests. */
@@ -34,6 +52,7 @@ export class InMemoryUserStore implements UserStore {
   private users = new Map<string, UserRecord>();
   private idp = new Map<string, string>();
   private emails = new Map<string, string>();
+  private games = new Map<string, StoredGame[]>();
 
   async getUser(userId: string): Promise<UserRecord | null> {
     const u = this.users.get(userId);
@@ -64,6 +83,50 @@ export class InMemoryUserStore implements UserStore {
     this.emails.set(email, userId);
     return true;
   }
+
+  async putGame(userId: string, game: StoredGame): Promise<void> {
+    const list = this.games.get(userId) ?? [];
+    list.push(structuredClone(game));
+    this.games.set(userId, list);
+  }
+
+  async listGames(userId: string, limit: number, cursor: string | null): Promise<GamePage> {
+    const list = (this.games.get(userId) ?? []).slice();
+    // Sort descending by sort key
+    list.sort((a, b) => {
+      const skA = gameSk(a);
+      const skB = gameSk(b);
+      return skA < skB ? 1 : skA > skB ? -1 : 0;
+    });
+
+    // Apply cursor: cursor is the SK of the last item returned on the previous page.
+    // Return only items whose SK is strictly less than the cursor.
+    // If cursor is invalid/garbage (doesn't match any item's SK), treat as first page.
+    let filtered = list;
+    if (cursor) {
+      const anyMatch = list.some((g) => gameSk(g) === cursor);
+      if (anyMatch) {
+        filtered = list.filter((g) => gameSk(g) < cursor);
+      }
+      // else: garbage cursor → fall through with full list (first page)
+    }
+
+    const page = filtered.slice(0, limit);
+    const nextCursor = filtered.length > limit ? gameSk(filtered[limit - 1]) : null;
+    return { games: page.map((g) => structuredClone(g)), nextCursor };
+  }
+
+  async getGame(userId: string, gameId: string): Promise<StoredGame | null> {
+    const list = this.games.get(userId) ?? [];
+    const found = list.find((g) => g.gameId === gameId);
+    return found ? structuredClone(found) : null;
+  }
+
+  async addStat(userId: string, key: string): Promise<void> {
+    const u = this.users.get(userId);
+    if (!u) throw new Error(`User not found: ${userId}`);
+    u.stats[key] = (u.stats[key] ?? 0) + 1;
+  }
 }
 
 /** DynamoDB-backed store: one table keyed by (PK, SK), mirroring DynamoRoomStore. */
@@ -85,7 +148,7 @@ export class DynamoUserStore implements UserStore {
       displayName: (it.displayName as string) ?? "Player",
       avatarUrl: (it.avatarUrl as string | null) ?? null,
       createdAt: (it.createdAt as string) ?? "",
-      stats: (it.stats as Record<string, never>) ?? {},
+      stats: (it.stats as Record<string, number>) ?? {},
     };
   }
 
@@ -153,5 +216,117 @@ export class DynamoUserStore implements UserStore {
       if (err instanceof ConditionalCheckFailedException) return false;
       throw err;
     }
+  }
+
+  async putGame(userId: string, game: StoredGame): Promise<void> {
+    await this.doc.send(
+      new PutCommand({
+        TableName: this.tableName,
+        Item: {
+          PK: `USER#${userId}`,
+          SK: `GAME#${game.endedAt}#${game.gameId}`,
+          ...game,
+        },
+      })
+    );
+  }
+
+  async listGames(userId: string, limit: number, cursor: string | null): Promise<GamePage> {
+    const res = await this.doc.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :game)",
+        ExpressionAttributeValues: { ":pk": `USER#${userId}`, ":game": "GAME#" },
+        ScanIndexForward: false,
+        Limit: limit,
+        ExclusiveStartKey: decodeCursor(cursor, `USER#${userId}`),
+      })
+    );
+    return {
+      games: (res.Items ?? []).map(itemToStoredGame),
+      nextCursor: res.LastEvaluatedKey ? encodeCursor(res.LastEvaluatedKey) : null,
+    };
+  }
+
+  async getGame(userId: string, gameId: string): Promise<StoredGame | null> {
+    // No GSI: filter-scan the user's GAME# partition slice. Bounded by per-user
+    // game counts; revisit with a GSI if users accumulate thousands of games.
+    let startKey: Record<string, unknown> | undefined;
+    do {
+      const res = await this.doc.send(
+        new QueryCommand({
+          TableName: this.tableName,
+          KeyConditionExpression: "PK = :pk AND begins_with(SK, :game)",
+          FilterExpression: "gameId = :id",
+          ExpressionAttributeValues: {
+            ":pk": `USER#${userId}`,
+            ":game": "GAME#",
+            ":id": gameId,
+          },
+          ExclusiveStartKey: startKey,
+          Limit: 100,
+        })
+      );
+      if (res.Items && res.Items.length > 0) return itemToStoredGame(res.Items[0]);
+      startKey = res.LastEvaluatedKey as Record<string, unknown> | undefined;
+    } while (startKey);
+    return null;
+  }
+
+  async addStat(userId: string, key: string): Promise<void> {
+    await this.doc.send(
+      new UpdateCommand({
+        TableName: this.tableName,
+        Key: { PK: `USER#${userId}`, SK: "META" },
+        UpdateExpression: "ADD stats.#k :one",
+        ConditionExpression: "attribute_exists(PK)",
+        ExpressionAttributeNames: { "#k": key },
+        ExpressionAttributeValues: { ":one": 1 },
+      })
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function gameSk(g: StoredGame): string {
+  return `GAME#${g.endedAt}#${g.gameId}`;
+}
+
+function itemToStoredGame(it: Record<string, unknown>): StoredGame {
+  return {
+    gameId: it.gameId as string,
+    mode: it.mode as StoredGame["mode"],
+    difficulty: (it.difficulty as StoredGame["difficulty"]) ?? null,
+    playerColor: (it.playerColor as StoredGame["playerColor"]) ?? null,
+    opponent: (it.opponent as string) ?? "",
+    moves: (it.moves as string[]) ?? [],
+    resultType: it.resultType as StoredGame["resultType"],
+    winner: (it.winner as StoredGame["winner"]) ?? null,
+    endedAt: (it.endedAt as string) ?? "",
+  };
+}
+
+/** base64url(JSON LastEvaluatedKey). Shape-validated on decode; bad cursors ⇒ first page. */
+export function encodeCursor(key: Record<string, unknown>): string {
+  return Buffer.from(JSON.stringify(key)).toString("base64url");
+}
+
+export function decodeCursor(
+  cursor: string | null,
+  expectedPk: string
+): Record<string, unknown> | undefined {
+  if (!cursor) return undefined;
+  try {
+    const key = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as Record<
+      string,
+      unknown
+    >;
+    if (key.PK !== expectedPk || typeof key.SK !== "string") return undefined;
+    return key;
+  } catch {
+    return undefined;
   }
 }

@@ -79,6 +79,12 @@ if [[ -n "${ACCOUNTS_API_URL:-}" ]]; then
   else
     echo "FAIL accounts api (expected 401, got $code)"; FAIL=1
   fi
+  gcode="$("$CURL" -s -o /dev/null -w "%{http_code}" "${ACCOUNTS_API_URL%/}/v1/games" || echo "000")"
+  if [[ "$gcode" == "401" ]]; then
+    echo "OK   games api (unauthenticated /v1/games -> 401)"
+  else
+    echo "FAIL games api (expected 401, got $gcode)"; FAIL=1
+  fi
 fi
 
 echo -n "     bot move … "

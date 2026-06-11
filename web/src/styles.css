@@ -1012,3 +1012,135 @@ select {
   color: #ff8a80;
   line-height: 1.4;
 }
+
+/* Past Games screen */
+
+.past-games {
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 16px 24px;
+}
+
+.past-games-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 16px;
+}
+
+.past-games-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.past-games-section-title {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.past-games-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.past-game-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  border: none;
+  color: var(--text);
+}
+
+.past-game-row:hover {
+  background: color-mix(in srgb, var(--surface) 80%, var(--accent) 20%);
+}
+
+.past-game-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.past-game-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.past-game-opponent {
+  font-size: 0.95rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.past-game-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.result-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--muted) 20%, transparent);
+  color: var(--muted);
+}
+
+.result-badge.win {
+  background: color-mix(in srgb, #4caf50 25%, transparent);
+  color: #81c784;
+}
+
+.result-badge.loss {
+  background: color-mix(in srgb, #f44336 25%, transparent);
+  color: #e57373;
+}
+
+.result-badge.draw {
+  background: color-mix(in srgb, var(--muted) 20%, transparent);
+  color: var(--muted);
+}
+
+.result-badge.neutral {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+.past-games-note {
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+  margin: 16px 0;
+}
+
+.past-games-load-more {
+  margin-top: 4px;
+  font-size: 0.85rem;
+  color: var(--accent);
+  background: transparent;
+  padding: 8px;
+}

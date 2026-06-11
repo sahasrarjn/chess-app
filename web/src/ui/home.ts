@@ -17,7 +17,8 @@ export type HomeStart = {
 export function renderHome(
   root: HTMLElement,
   onStart: (opts: HomeStart) => void,
-  onPlayOnline: (roomId?: string) => void
+  onPlayOnline: (roomId?: string) => void,
+  onPastGames: () => void = () => {}
 ): void {
   let difficulty: BotDifficulty = "medium";
 
@@ -87,6 +88,10 @@ export function renderHome(
     joinRow.appendChild(joinInput);
     joinRow.appendChild(joinBtn);
     actions.appendChild(joinRow);
+
+    const pastGamesBtn = el("button", "", "Past Games");
+    pastGamesBtn.onclick = () => onPastGames();
+    actions.appendChild(pastGamesBtn);
 
     home.appendChild(actions);
 

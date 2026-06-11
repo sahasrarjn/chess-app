@@ -8,6 +8,15 @@ Parameters:
   FunctionName:
     Type: String
     Default: chess-border-multiplayer
+  UsersTableName:
+    Type: String
+    Default: chess-border-users
+    Description: Accounts users table that finished online games are written to
+  SessionJwtSecret:
+    Type: String
+    NoEcho: true
+    Default: ""
+    Description: Accounts session-JWT secret (sourced from SSM by deploy-multiplayer.sh; empty disables recording)
 
 Resources:
   RoomTable:
@@ -60,6 +69,15 @@ Resources:
                   - dynamodb:PutItem
                   - dynamodb:DeleteItem
                 Resource: !GetAtt RoomTable.Arn
+        - PolicyName: usersdynamodb
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${UsersTableName}"
         - PolicyName: manageconnections
           PolicyDocument:
             Version: "2012-10-17"
@@ -80,6 +98,8 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref TableName
+          USERS_TABLE_NAME: !Ref UsersTableName
+          SESSION_JWT_SECRET: !Ref SessionJwtSecret
       Code:
         ZipFile: |
           exports.handler = async () => ({ statusCode: 200, body: "stub - run deploy-multiplayer.sh" });

@@ -18,7 +18,7 @@ export class AuthApiError extends Error {
 
 type FetchLike = typeof fetch;
 
-async function checkResponse(res: Response): Promise<Response> {
+export async function checkResponse(res: Response): Promise<Response> {
   if (!res.ok) {
     let message = res.statusText;
     try {

@@ -133,3 +133,38 @@ describe("room: disconnect", () => {
     assert.equal(res.out[0].connId, "cB");
   });
 });
+
+describe("room: seat userId attribution", () => {
+  it("join with userId sets it on the white seat", () => {
+    const r = emptyRoom("R", 1);
+    const res = join(r, "cW", "tokW", "Alice", 1, "u1");
+    assert.equal(res.state.white?.userId, "u1");
+  });
+
+  it("second player without a session seats black with no userId", () => {
+    const r = emptyRoom("R", 1);
+    const s1 = join(r, "cW", "tokW", "Alice", 1, "u1").state;
+    const res = join(s1, "cB", "tokB", "Bob", 1, null);
+    assert.equal(res.state.black?.userId, undefined);
+  });
+
+  it("reconnect with a userId sets it; reconnect with null userId preserves a previously set one", () => {
+    // First set userId
+    const r = emptyRoom("R", 1);
+    const s1 = join(r, "cW", "tokW", "Alice", 1, "u1").state;
+    // Reconnect without userId (null) — should preserve "u1"
+    const res = join(s1, "cW2", "tokW", "Alice", 2, null);
+    assert.equal(res.state.white?.userId, "u1");
+    // Reconnect with a userId — should set it
+    const res2 = join(res.state, "cW3", "tokW", "Alice", 3, "u2");
+    assert.equal(res2.state.white?.userId, "u2");
+  });
+
+  it("spectator join with a userId does not crash and stores nothing on seats", () => {
+    let r = activeRoom();
+    const res = join(r, "cS", "tokS", "Sam", 1500, "uSpec");
+    assert.equal(res.state.spectators.length, 1);
+    assert.equal(res.state.white?.userId, undefined);
+    assert.equal(res.state.black?.userId, undefined);
+  });
+});

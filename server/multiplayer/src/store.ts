@@ -20,12 +20,16 @@ export interface RoomStore {
   putConnection(rec: ConnectionRecord): Promise<void>;
   getConnection(connectionId: string): Promise<ConnectionRecord | null>;
   deleteConnection(connectionId: string): Promise<void>;
+  /** Verified session user for a connection (written at $connect). */
+  putConnectionUser(connectionId: string, userId: string): Promise<void>;
+  getConnectionUser(connectionId: string): Promise<string | null>;
 }
 
 /** In-memory store for tests and local runs. */
 export class InMemoryRoomStore implements RoomStore {
   private rooms = new Map<string, RoomState>();
   private connections = new Map<string, ConnectionRecord>();
+  private connUsers = new Map<string, string>();
 
   async getRoom(roomId: string): Promise<RoomState | null> {
     const r = this.rooms.get(roomId);
@@ -43,6 +47,13 @@ export class InMemoryRoomStore implements RoomStore {
   }
   async deleteConnection(connectionId: string): Promise<void> {
     this.connections.delete(connectionId);
+    this.connUsers.delete(connectionId);
+  }
+  async putConnectionUser(connectionId: string, userId: string): Promise<void> {
+    this.connUsers.set(connectionId, userId);
+  }
+  async getConnectionUser(connectionId: string): Promise<string | null> {
+    return this.connUsers.get(connectionId) ?? null;
   }
 }
 
@@ -95,8 +106,35 @@ export class DynamoRoomStore implements RoomStore {
   }
 
   async deleteConnection(connectionId: string): Promise<void> {
+    await Promise.all([
+      this.doc.send(
+        new DeleteCommand({ TableName: this.tableName, Key: { PK: `CONN#${connectionId}`, SK: "META" } })
+      ),
+      this.doc.send(
+        new DeleteCommand({ TableName: this.tableName, Key: { PK: `CONNUSER#${connectionId}`, SK: "META" } })
+      ),
+    ]);
+  }
+
+  async putConnectionUser(connectionId: string, userId: string): Promise<void> {
     await this.doc.send(
-      new DeleteCommand({ TableName: this.tableName, Key: { PK: `CONN#${connectionId}`, SK: "META" } })
+      new PutCommand({
+        TableName: this.tableName,
+        Item: {
+          PK: `CONNUSER#${connectionId}`,
+          SK: "META",
+          userId,
+          ttl: Math.floor(Date.now() / 1000) + CONN_TTL_SECONDS,
+        },
+      })
     );
+  }
+
+  async getConnectionUser(connectionId: string): Promise<string | null> {
+    const res = await this.doc.send(
+      new GetCommand({ TableName: this.tableName, Key: { PK: `CONNUSER#${connectionId}`, SK: "META" } })
+    );
+    if (!res.Item) return null;
+    return (res.Item.userId as string) ?? null;
   }
 }

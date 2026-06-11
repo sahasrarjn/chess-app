@@ -2,10 +2,17 @@ import { SoundPlayer } from "../audio/soundPlayer";
 import type { GameResult, Square } from "../engine/types";
 import { getGuestName, getPlayerToken } from "../online/guestIdentity";
 import { MultiplayerController } from "../online/multiplayerController";
+import { getSessionToken } from "../auth/session";
 import { BoardView } from "./boardView";
 import { MoveListView } from "./moveListView";
 import { MuteButton } from "./muteButton";
 import { createSettingsButton, closeSettingsPanel } from "./settingsPanel";
+
+function wsUrlWithSession(base: string): string {
+  const token = getSessionToken();
+  if (!token) return base;
+  return `${base}${base.includes("?") ? "&" : "?"}session=${encodeURIComponent(token)}`;
+}
 
 const WS_URL = import.meta.env.VITE_MULTIPLAYER_WS_URL as string | undefined;
 
@@ -54,7 +61,7 @@ class OnlineGameScreen {
     this.ctrl = new MultiplayerController(
       roomId,
       { token: getPlayerToken(), name: getGuestName() },
-      WS_URL as string,
+      wsUrlWithSession(WS_URL as string),
       () => this.update(),
       (event) => this.sound.play(event)
     );

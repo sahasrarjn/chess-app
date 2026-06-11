@@ -13,6 +13,8 @@ web/dist/
 server/worker/node_modules/
 server/multiplayer/node_modules/
 server/multiplayer/dist/
+server/accounts/node_modules/
+server/accounts/dist/
 server/worker/.dev.vars
 .wrangler/
 server/worker/.wrangler/

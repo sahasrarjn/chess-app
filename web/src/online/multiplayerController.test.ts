@@ -5,6 +5,7 @@ import { ChessGame } from "../engine/chessGame";
 import { MultiplayerController } from "./multiplayerController";
 import type { StateMessage } from "./protocol";
 import type { SocketLike } from "./wsClient";
+import type { CompletedGameRecord } from "../game/gameHistory";
 
 class FakeSocket implements SocketLike {
   sent: string[] = [];
@@ -109,5 +110,97 @@ describe("MultiplayerController", () => {
     fake.open();
     ctrl.offerRematch();
     assert.ok(fake.parsed().some((m) => m.type === "rematch"));
+  });
+});
+
+describe("MultiplayerController — online history recording", () => {
+  function makeCtrl(
+    recorder: (state: StateMessage, game: ChessGame) => void
+  ): { fake: FakeSocket; ctrl: MultiplayerController } {
+    const fake = new FakeSocket();
+    const ctrl = new MultiplayerController(
+      "R",
+      { token: "t", name: "Alice" },
+      "wss://x",
+      () => {},
+      () => {},
+      () => fake,
+      recorder
+    );
+    ctrl.start();
+    fake.open();
+    return { fake, ctrl };
+  }
+
+  it("calls recorder once on active → finished as white", () => {
+    const calls: Array<{ state: StateMessage; game: ChessGame }> = [];
+    const { fake, ctrl } = makeCtrl((state, game) => calls.push({ state, game }));
+
+    // First: active state
+    fake.recv(stateMsg({
+      status: "active",
+      role: "white",
+      color: "white",
+      players: { white: { name: "Alice", connected: true }, black: { name: "Bob", connected: true } },
+      result: { type: "ongoing" },
+    }));
+    assert.equal(calls.length, 0);
+
+    // Now: finished
+    fake.recv(stateMsg({
+      status: "finished",
+      role: "white",
+      color: "white",
+      players: { white: { name: "Alice", connected: true }, black: { name: "Bob", connected: true } },
+      result: { type: "checkmate", winner: "white" },
+    }));
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].state.status, "finished");
+    void ctrl;
+  });
+
+  it("does not call recorder when connecting straight into a finished room", () => {
+    const calls: Array<StateMessage> = [];
+    const { fake } = makeCtrl((state) => calls.push(state));
+
+    // First state is already finished (no preceding active state)
+    fake.recv(stateMsg({
+      status: "finished",
+      role: "white",
+      color: "white",
+      result: { type: "checkmate", winner: "white" },
+    }));
+    assert.equal(calls.length, 0);
+  });
+
+  it("does not call recorder for spectator role", () => {
+    const calls: Array<StateMessage> = [];
+    const { fake } = makeCtrl((state) => calls.push(state));
+
+    fake.recv(stateMsg({ status: "active", role: "spectator", color: null }));
+    fake.recv(stateMsg({
+      status: "finished",
+      role: "spectator",
+      color: null,
+      result: { type: "checkmate", winner: "white" },
+    }));
+    assert.equal(calls.length, 0);
+  });
+
+  it("calls recorder again after rematch finishes (twice total)", () => {
+    const calls: Array<StateMessage> = [];
+    const { fake } = makeCtrl((state) => calls.push(state));
+
+    const activePlayers = { white: { name: "Alice", connected: true }, black: { name: "Bob", connected: true } };
+
+    // First game: active → finished
+    fake.recv(stateMsg({ status: "active", role: "white", color: "white", players: activePlayers, result: { type: "ongoing" } }));
+    fake.recv(stateMsg({ status: "finished", role: "white", color: "white", players: activePlayers, result: { type: "checkmate", winner: "white" } }));
+    assert.equal(calls.length, 1);
+
+    // Rematch: finished → active (moves reset), then a second finish
+    fake.recv(stateMsg({ status: "active", role: "white", color: "white", players: activePlayers, moves: [], result: { type: "ongoing" } }));
+    fake.recv(stateMsg({ status: "finished", role: "white", color: "white", players: activePlayers, result: { type: "resignation", winner: "black" } }));
+    assert.equal(calls.length, 2);
   });
 });

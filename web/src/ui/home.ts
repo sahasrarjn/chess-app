@@ -1,6 +1,7 @@
 import { type BotDifficulty, difficultyElo } from "../engine/types";
 import { roomIdFromInput } from "../online/guestIdentity";
 import { createSettingsButton } from "./settingsPanel";
+import { createAuthWidget } from "../auth/authWidget";
 
 const LOGO_SRC =
   (import.meta.env.VITE_LOGO_CDN_URL as string | undefined) ??
@@ -92,6 +93,9 @@ export function renderHome(
     const gear = createSettingsButton();
     gear.classList.add("home-settings");
     home.appendChild(gear);
+
+    const auth = createAuthWidget();
+    if (auth) home.appendChild(auth);
 
     root.appendChild(home);
   };

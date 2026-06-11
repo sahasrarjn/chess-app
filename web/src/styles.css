@@ -877,9 +877,13 @@ select {
   outline: 2px solid var(--accent);
 }
 
+.theme-swatch:hover {
+  background: var(--bg);
+}
+
 .home-settings {
   position: absolute;
   top: calc(12px + env(safe-area-inset-top));
-  right: 12px;
+  right: max(12px, env(safe-area-inset-right));
   color: var(--muted);
 }

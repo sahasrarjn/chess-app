@@ -15,7 +15,7 @@ import {
 import { BoardView } from "./boardView";
 import { MoveListView } from "./moveListView";
 import { MuteButton } from "./muteButton";
-import { createSettingsButton } from "./settingsPanel";
+import { createSettingsButton, closeSettingsPanel } from "./settingsPanel";
 
 
 const HINT_SVG =
@@ -194,6 +194,7 @@ class GameScreen {
     this.ctrl.dispose();
     this.promotionEl?.remove();
     this.gameOverEl?.remove();
+    closeSettingsPanel();
     this.root.innerHTML = "";
   }
 

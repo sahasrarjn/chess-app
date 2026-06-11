@@ -6,6 +6,7 @@ import { handleEvent, type Broadcaster, type WsEvent } from "./handler";
 import type { ServerMessage } from "./protocol";
 import { gameFromMoves } from "./room";
 import { InMemoryRoomStore } from "./store";
+import type { StateMessage } from "./protocol";
 
 class CapturingBroadcaster implements Broadcaster {
   sent: { connId: string; message: ServerMessage }[] = [];
@@ -77,5 +78,25 @@ describe("handler", () => {
     const room = await store.getRoom("R");
     assert.equal(room?.white?.connected, false);
     assert.equal(bc.to("cB").length, 1, "opponent gets updated state");
+  });
+});
+
+describe("store: putConnectionUser / getConnectionUser", () => {
+  it("round-trips a userId for a connection", async () => {
+    const store = new InMemoryRoomStore();
+    await store.putConnectionUser("conn1", "user-xyz");
+    assert.equal(await store.getConnectionUser("conn1"), "user-xyz");
+  });
+
+  it("returns null for an unknown connection", async () => {
+    const store = new InMemoryRoomStore();
+    assert.equal(await store.getConnectionUser("missing"), null);
+  });
+
+  it("deleteConnection also clears the CONNUSER entry", async () => {
+    const store = new InMemoryRoomStore();
+    await store.putConnectionUser("conn1", "user-xyz");
+    await store.deleteConnection("conn1");
+    assert.equal(await store.getConnectionUser("conn1"), null);
   });
 });

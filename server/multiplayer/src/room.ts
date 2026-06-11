@@ -8,6 +8,8 @@ export interface Seat {
   name: string;
   connId: string | null;
   connected: boolean;
+  /** userId from a verified session JWT; absent for guest seats. */
+  userId?: string;
 }
 
 export interface RoomState {
@@ -153,7 +155,8 @@ export function join(
   connId: string,
   token: string,
   name: string,
-  now: number
+  now: number,
+  userId: string | null = null
 ): ReduceResult {
   const state = cloneRoom(prev);
   touch(state, now);
@@ -162,14 +165,18 @@ export function join(
     state.white.connId = connId;
     state.white.connected = true;
     state.white.name = name;
+    if (userId) state.white.userId = userId;
   } else if (state.black?.token === token) {
     state.black.connId = connId;
     state.black.connected = true;
     state.black.name = name;
+    if (userId) state.black.userId = userId;
   } else if (!state.white) {
     state.white = { token, name, connId, connected: true };
+    if (userId) state.white.userId = userId;
   } else if (!state.black) {
     state.black = { token, name, connId, connected: true };
+    if (userId) state.black.userId = userId;
   } else {
     if (!state.spectators.some((s) => s.connId === connId)) {
       state.spectators.push({ connId });

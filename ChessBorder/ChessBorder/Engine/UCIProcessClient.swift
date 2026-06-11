@@ -68,6 +68,24 @@ final class UCIProcessClient: @unchecked Sendable {
         return nil
     }
 
+    /// Collect all lines emitted until a line containing `needle` is received (inclusive).
+    func waitForLines(until needle: String, timeout: TimeInterval) async -> [String] {
+        let deadline = Date().addingTimeInterval(timeout)
+        var collected: [String] = []
+        while Date() < deadline {
+            lock.lock()
+            let pending = lines
+            lines.removeAll()
+            lock.unlock()
+            for line in pending {
+                collected.append(line)
+                if line.contains(needle) { return collected }
+            }
+            try? await Task.sleep(nanoseconds: 15_000_000)
+        }
+        return collected
+    }
+
     func discardPendingOutput() {
         lock.lock()
         lines.removeAll()
@@ -183,6 +201,24 @@ final class UCISpawnClient: @unchecked Sendable {
             try? await Task.sleep(nanoseconds: 15_000_000)
         }
         return nil
+    }
+
+    /// Collect all lines emitted until a line containing `needle` is received (inclusive).
+    func waitForLines(until needle: String, timeout: TimeInterval) async -> [String] {
+        let deadline = Date().addingTimeInterval(timeout)
+        var collected: [String] = []
+        while Date() < deadline {
+            lock.lock()
+            let pending = lines
+            lines.removeAll()
+            lock.unlock()
+            for line in pending {
+                collected.append(line)
+                if line.contains(needle) { return collected }
+            }
+            try? await Task.sleep(nanoseconds: 15_000_000)
+        }
+        return collected
     }
 
     func discardPendingOutput() {

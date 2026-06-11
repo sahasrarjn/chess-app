@@ -52,7 +52,7 @@ struct ChessBot {
         }
 
         if depth == 0 {
-            return evaluate(game: game, for: rootColor)
+            return evaluateCp(game: game, for: rootColor)
         }
 
         let moves = game.legalMoves(for: maximizing)
@@ -98,7 +98,7 @@ struct ChessBot {
         }
     }
 
-    private func evaluate(game: ChessGame, for color: PieceColor) -> Int {
+    func evaluateCp(game: ChessGame, for color: PieceColor) -> Int {
         var score = game.materialScore(for: color)
 
         let centerSquares = [(4, 4), (4, 5), (5, 4), (5, 5)]

@@ -72,6 +72,15 @@ echo ""
 echo "==> API"
 check "health" "$BASE/health"
 
+if [[ -n "${ACCOUNTS_API_URL:-}" ]]; then
+  code="$("$CURL" -s -o /dev/null -w "%{http_code}" "${ACCOUNTS_API_URL%/}/v1/me" || echo "000")"
+  if [[ "$code" == "401" ]]; then
+    echo "OK   accounts api (unauthenticated /v1/me -> 401)"
+  else
+    echo "FAIL accounts api (expected 401, got $code)"; FAIL=1
+  fi
+fi
+
 echo -n "     bot move … "
 MOVE_RESP="$("$CURL" -s -X POST "$BASE/v1/move" \
   -H "Content-Type: application/json" \

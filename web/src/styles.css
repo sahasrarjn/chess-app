@@ -116,6 +116,7 @@ select {
   gap: 20px;
   max-width: 420px;
   margin: 0 auto;
+  position: relative;
 }
 
 .home-logo {
@@ -813,4 +814,72 @@ select {
 .join-input {
   flex: 1;
   min-width: 0;
+}
+
+/* Settings */
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 50;
+}
+
+.settings-modal {
+  max-width: 420px;
+  max-height: min(80dvh, 560px);
+  overflow-y: auto;
+}
+
+.settings-modal h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.theme-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 10px;
+}
+
+.theme-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  background: var(--bg);
+  border-radius: 10px;
+}
+
+.theme-swatch::before {
+  content: "";
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  background: conic-gradient(
+    var(--sw-light) 25%,
+    var(--sw-dark) 0 50%,
+    var(--sw-light) 0 75%,
+    var(--sw-dark) 0
+  );
+}
+
+.theme-swatch span {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.theme-swatch.active {
+  outline: 2px solid var(--accent);
+}
+
+.home-settings {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top));
+  right: 12px;
+  color: var(--muted);
 }

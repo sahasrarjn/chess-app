@@ -1,4 +1,5 @@
 import type { PieceColor } from "../engine/types";
+import type { MoveClassification } from "../coach/classify";
 
 export interface MoveListEntry {
   san: string;
@@ -10,20 +11,36 @@ export interface MoveListEntry {
 export class MoveListView {
   readonly el: HTMLDivElement;
   private lastLen = 0;
+  private lastClassifications: (MoveClassification | undefined)[] | undefined;
 
   constructor(private readonly onSelect: (ply: number) => void) {
     this.el = document.createElement("div");
     this.el.className = "move-list";
   }
 
-  update(moves: MoveListEntry[], previewPly: number | null): void {
-    if (moves.length < this.lastLen) {
+  /**
+   * Update the move list. When `classifications` is provided each entry
+   * gains a badge (`?!` / `?` / `??`) for inaccuracy/mistake/blunder; `ok`
+   * renders nothing. The parameter is optional so all existing call sites
+   * compile unchanged.
+   */
+  update(
+    moves: MoveListEntry[],
+    previewPly: number | null,
+    classifications?: (MoveClassification | undefined)[]
+  ): void {
+    const classChanged =
+      classifications !== this.lastClassifications &&
+      JSON.stringify(classifications) !== JSON.stringify(this.lastClassifications);
+
+    if (moves.length < this.lastLen || classChanged) {
       this.el.replaceChildren();
       this.lastLen = 0;
     }
 
     if (moves.length === 0 && this.lastLen === 0) {
       this.el.replaceChildren(span("", "No moves yet"));
+      this.lastClassifications = classifications;
       return;
     }
 
@@ -44,12 +61,23 @@ export class MoveListView {
       entry.type = "button";
       entry.className = "move-entry";
       entry.textContent = rec.san;
+
+      // Add classification badge if provided
+      const cls = classifications?.[i];
+      if (cls && cls !== "ok") {
+        const badge = document.createElement("span");
+        badge.className = `coach-badge coach-badge--${cls}`;
+        badge.textContent = cls === "inaccuracy" ? "?!" : cls === "mistake" ? "?" : "??";
+        entry.appendChild(badge);
+      }
+
       const ply = rec.ply + 1;
       entry.onclick = () => this.onSelect(ply);
       this.el.appendChild(entry);
     }
 
     this.lastLen = moves.length;
+    this.lastClassifications = classifications;
     this.el.scrollTop = this.el.scrollHeight;
 
     const entries = this.el.querySelectorAll<HTMLButtonElement>("button.move-entry");

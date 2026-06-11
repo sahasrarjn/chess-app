@@ -4,16 +4,16 @@ export type BoardThemeId =
   | "ocean"
   | "slate"
   | "tournament"
-  | "contrast"
+  | "high-contrast"
   | "rosewood"
   | "blossom";
 
-export type BoardThemePreset = {
+export interface BoardThemePreset {
   id: BoardThemeId;
   name: string;
   lightSquare: string;
   darkSquare: string;
-};
+}
 
 export const BOARD_THEMES: readonly BoardThemePreset[] = [
   { id: "classic", name: "Classic Green", lightSquare: "#eeeed1", darkSquare: "#769656" },
@@ -21,7 +21,7 @@ export const BOARD_THEMES: readonly BoardThemePreset[] = [
   { id: "ocean", name: "Ocean", lightSquare: "#e3ecf2", darkSquare: "#6e98b5" },
   { id: "slate", name: "Slate", lightSquare: "#e4e6e9", darkSquare: "#7d848d" },
   { id: "tournament", name: "Tournament", lightSquare: "#ffce9e", darkSquare: "#d18b47" },
-  { id: "contrast", name: "High Contrast", lightSquare: "#ffffff", darkSquare: "#444444" },
+  { id: "high-contrast", name: "High Contrast", lightSquare: "#ffffff", darkSquare: "#444444" },
   { id: "rosewood", name: "Rosewood", lightSquare: "#f1dcd6", darkSquare: "#a8716e" },
   { id: "blossom", name: "Blossom", lightSquare: "#fbeef2", darkSquare: "#d98ea4" },
 ];

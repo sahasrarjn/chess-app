@@ -133,6 +133,9 @@ struct HomeView: View {
         .task {
             await updateChecker.checkForUpdate()
         }
+        .task {
+            await auth.restore()
+        }
     }
 
     private var onlineSection: some View {

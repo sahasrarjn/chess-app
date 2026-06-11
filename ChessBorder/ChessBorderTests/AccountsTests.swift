@@ -3,6 +3,11 @@ import XCTest
 
 final class AccountsTests: XCTestCase {
 
+    override func setUp() {
+        super.setUp()
+        CapturingURLProtocol.reset()
+    }
+
     // MARK: - UserProfile decoding
 
     func testUserProfileDecodesFullJSON() throws {
@@ -232,6 +237,12 @@ final class CapturingURLProtocol: URLProtocol {
     static var lastRequest: URLRequest?
     static var responseData: Data = Data()
     static var statusCode: Int = 200
+
+    static func reset() {
+        lastRequest = nil
+        responseData = Data()
+        statusCode = 200
+    }
 
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }

@@ -32,7 +32,7 @@ struct AccountsAPI {
 
     /// POST /v1/auth/login {provider, idToken, name?}
     func login(provider: String, idToken: String, name: String?) async throws -> LoginResponse {
-        var request = URLRequest(url: baseURL.appending(path: "/v1/auth/login"))
+        var request = URLRequest(url: baseURL.appending(path: "v1/auth/login"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
@@ -48,7 +48,7 @@ struct AccountsAPI {
 
     /// GET /v1/me (Bearer)
     func me(token: String) async throws -> UserProfile {
-        var request = URLRequest(url: baseURL.appending(path: "/v1/me"))
+        var request = URLRequest(url: baseURL.appending(path: "v1/me"))
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         let (data, response) = try await session.data(for: request)
@@ -59,7 +59,7 @@ struct AccountsAPI {
 
     /// POST /v1/me {displayName} (Bearer)
     func updateDisplayName(token: String, displayName: String) async throws -> UserProfile {
-        var request = URLRequest(url: baseURL.appending(path: "/v1/me"))
+        var request = URLRequest(url: baseURL.appending(path: "v1/me"))
         request.httpMethod = "POST"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

@@ -13,6 +13,8 @@ final class AuthStore: NSObject, ObservableObject {
     @Published var lastError: String?
 
     private static let tokenAccount = "session"
+    private var appleSignInController: ASAuthorizationController?
+    private var isRestoring = false
 
     private var api: AccountsAPI? {
         AccountsConfig.serverURL.map { AccountsAPI(baseURL: $0) }
@@ -23,7 +25,12 @@ final class AuthStore: NSObject, ObservableObject {
     // MARK: - Restore
 
     /// Call at launch (SettingsView/HomeView .task): validate the stored token.
+    /// Guard against duplicate concurrent calls (e.g. HomeView + SettingsView both running .task).
     func restore() async {
+        guard !isRestoring else { return }
+        isRestoring = true
+        defer { isRestoring = false }
+
         guard let api,
               let token = KeychainStore.read(Self.tokenAccount) else { return }
         do {
@@ -47,6 +54,7 @@ final class AuthStore: NSObject, ObservableObject {
         let controller = ASAuthorizationController(authorizationRequests: [request])
         controller.delegate = self
         controller.presentationContextProvider = self
+        appleSignInController = controller
         controller.performRequests()
     }
 
@@ -138,6 +146,7 @@ extension AuthStore: ASAuthorizationControllerDelegate {
 
         Task { @MainActor in
             await loginToBackend(provider: "apple", idToken: idToken, name: nameHint)
+            appleSignInController = nil
         }
     }
 
@@ -147,6 +156,7 @@ extension AuthStore: ASAuthorizationControllerDelegate {
     ) {
         // User cancelled or error; never block play
         Task { @MainActor in
+            defer { appleSignInController = nil }
             if let authError = error as? ASAuthorizationError,
                authError.code == .canceled { return }
             lastError = "Sign-in failed. You can keep playing as a guest."
@@ -159,26 +169,13 @@ extension AuthStore: ASAuthorizationControllerDelegate {
 extension AuthStore: ASAuthorizationControllerPresentationContextProviding {
     nonisolated func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
         #if os(iOS)
-        // ASAuthorizationControllerPresentationContextProviding requires a synchronous
-        // nonisolated method. We dispatch to the main thread synchronously to satisfy
-        // the requirement while accessing UIApplication on the main actor.
-        var anchor: ASPresentationAnchor = ASPresentationAnchor()
-        if Thread.isMainThread {
-            anchor = UIApplication.shared.connectedScenes
-                .compactMap { $0 as? UIWindowScene }
-                .flatMap { $0.windows }
-                .first { $0.isKeyWindow }
-                ?? ASPresentationAnchor()
-        } else {
-            DispatchQueue.main.sync {
-                anchor = UIApplication.shared.connectedScenes
-                    .compactMap { $0 as? UIWindowScene }
-                    .flatMap { $0.windows }
-                    .first { $0.isKeyWindow }
-                    ?? ASPresentationAnchor()
-            }
-        }
-        return anchor
+        // ASAuthorizationController always calls this on the main thread.
+        assert(Thread.isMainThread, "presentationAnchor(for:) expected on main thread")
+        return UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow }
+            ?? ASPresentationAnchor()
         #else
         return ASPresentationAnchor()
         #endif

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { ConditionalCheckFailedException, DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import type { RoomState, Seat } from "./room";
 
@@ -18,7 +18,11 @@ export interface OnlineGameRecord {
 
 export interface UserGamesWriter {
   putGame(userId: string, game: OnlineGameRecord): Promise<void>;
-  addStat(userId: string, key: string): Promise<void>;
+  /** Increment a flat stats counter by 1 and return the post-increment value. */
+  addStat(userId: string, key: string): Promise<number>;
+  /** Refresh the LEADERBOARD GSI key for a new online-win count. Monotonic:
+   *  a stale (lower) value must be a silent no-op. */
+  setLeaderboardEntry(userId: string, wins: number): Promise<void>;
 }
 
 /** Record a finished online game for each signed-in seat. Per-player failures
@@ -55,7 +59,12 @@ export async function recordFinishedGame(
         endedAt,
       });
       const key = winner == null ? "online_d" : winner === color ? "online_w" : "online_l";
-      await writer.addStat(seat.userId, key);
+      const count = await writer.addStat(seat.userId, key);
+      if (key === "online_w") {
+        // Only wins can reorder the board. Losses/draws stay fresh via the
+        // GSI projection of the stats map (same META item addStat mutates).
+        await writer.setLeaderboardEntry(seat.userId, count);
+      }
     } catch (err) {
       console.error(`recordFinishedGame: failed for ${color}`, err);
     }
@@ -80,8 +89,8 @@ export class DynamoUserGamesWriter implements UserGamesWriter {
     );
   }
 
-  async addStat(userId: string, key: string): Promise<void> {
-    await this.doc.send(
+  async addStat(userId: string, key: string): Promise<number> {
+    const res = await this.doc.send(
       new UpdateCommand({
         TableName: this.tableName,
         Key: { PK: `USER#${userId}`, SK: "META" },
@@ -89,7 +98,37 @@ export class DynamoUserGamesWriter implements UserGamesWriter {
         ConditionExpression: "attribute_exists(PK)",
         ExpressionAttributeNames: { "#k": key },
         ExpressionAttributeValues: { ":one": 1 },
+        ReturnValues: "UPDATED_NEW",
       })
     );
+    // UPDATED_NEW on a nested path returns only the modified portion:
+    // { stats: { [key]: <new count> } }.
+    const updated = (res.Attributes?.stats as Record<string, number> | undefined)?.[key];
+    if (typeof updated !== "number") {
+      throw new Error(`addStat: missing updated count for ${key}`);
+    }
+    return updated;
+  }
+
+  async setLeaderboardEntry(userId: string, wins: number): Promise<void> {
+    // Deliberate copy of server/accounts/src/store.ts setLeaderboardEntry —
+    // keep the key format and condition in sync.
+    const clamped = Math.max(0, Math.min(Math.floor(wins), 99_999_999));
+    const sk = `W#${String(clamped).padStart(8, "0")}#${userId}`;
+    try {
+      await this.doc.send(
+        new UpdateCommand({
+          TableName: this.tableName,
+          Key: { PK: `USER#${userId}`, SK: "META" },
+          UpdateExpression: "SET LBPK = :lb, LBSK = :sk",
+          ConditionExpression:
+            "attribute_exists(PK) AND (attribute_not_exists(LBSK) OR LBSK < :sk)",
+          ExpressionAttributeValues: { ":lb": "LB", ":sk": sk },
+        })
+      );
+    } catch (err) {
+      if (err instanceof ConditionalCheckFailedException) return; // newer count already landed
+      throw err;
+    }
   }
 }

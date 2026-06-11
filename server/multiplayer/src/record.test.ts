@@ -9,15 +9,28 @@ import { recordFinishedGame } from "./record";
 class FakeWriter implements UserGamesWriter {
   games: { userId: string; game: OnlineGameRecord }[] = [];
   stats: { userId: string; key: string }[] = [];
+  lbCalls: { userId: string; wins: number }[] = [];
   shouldThrowForUserId: string | null = null;
+  /** When set, setLeaderboardEntry throws for any userId */
+  shouldThrowLbForUserId: string | null = null;
+
+  private counts = new Map<string, number>();
 
   async putGame(userId: string, game: OnlineGameRecord): Promise<void> {
     if (this.shouldThrowForUserId === userId) throw new Error("simulated write failure");
     this.games.push({ userId, game });
   }
-  async addStat(userId: string, key: string): Promise<void> {
+  async addStat(userId: string, key: string): Promise<number> {
     if (this.shouldThrowForUserId === userId) throw new Error("simulated stat failure");
     this.stats.push({ userId, key });
+    const mapKey = `${userId}:${key}`;
+    const next = (this.counts.get(mapKey) ?? 0) + 1;
+    this.counts.set(mapKey, next);
+    return next;
+  }
+  async setLeaderboardEntry(userId: string, wins: number): Promise<void> {
+    if (this.shouldThrowLbForUserId === userId) throw new Error("simulated lb failure");
+    this.lbCalls.push({ userId, wins });
   }
 }
 
@@ -138,5 +151,59 @@ describe("recordFinishedGame", () => {
     // Black's record still written
     const blackGame = writer.games.find((g) => g.userId === "u-bob");
     assert.ok(blackGame, "black's record should still be written");
+  });
+
+  it("checkmate white wins: exactly one setLeaderboardEntry for the winner with wins === 1", async () => {
+    const writer = new FakeWriter();
+    const room = finishedRoom();
+    await recordFinishedGame(writer, room, 3000);
+
+    assert.equal(writer.lbCalls.length, 1, "exactly one leaderboard call");
+    assert.equal(writer.lbCalls[0].userId, "u-alice", "winner's userId");
+    assert.equal(writer.lbCalls[0].wins, 1, "post-increment count is 1");
+  });
+
+  it("second win for same user: setLeaderboardEntry carries wins === 2", async () => {
+    const writer = new FakeWriter();
+    const room1 = finishedRoom();
+    const room2 = finishedRoom({ roomId: "R2" });
+    await recordFinishedGame(writer, room1, 3000);
+    await recordFinishedGame(writer, room2, 4000);
+
+    assert.equal(writer.lbCalls.length, 2);
+    assert.equal(writer.lbCalls[0].wins, 1, "first win count is 1");
+    assert.equal(writer.lbCalls[1].wins, 2, "second win count is 2 (flows from addStat return)");
+  });
+
+  it("stalemate: zero setLeaderboardEntry calls (draws never touch LBSK)", async () => {
+    const writer = new FakeWriter();
+    const room = finishedRoom({ result: { type: "stalemate" } });
+    await recordFinishedGame(writer, room, 3000);
+
+    assert.equal(writer.lbCalls.length, 0, "no leaderboard calls for draws");
+  });
+
+  it("winner is a guest: no leaderboard calls", async () => {
+    const writer = new FakeWriter();
+    const room = finishedRoom({
+      white: seat("Alice"), // no userId = guest, but white wins
+    });
+    await recordFinishedGame(writer, room, 3000);
+
+    assert.equal(writer.lbCalls.length, 0, "no leaderboard call when winner is a guest");
+  });
+
+  it("setLeaderboardEntry throws for winner: winner's putGame+addStat happened and loser's calls still land", async () => {
+    const writer = new FakeWriter();
+    writer.shouldThrowLbForUserId = "u-alice"; // winner's lb call throws
+    const room = finishedRoom();
+    // Should not propagate
+    await assert.doesNotReject(() => recordFinishedGame(writer, room, 3000));
+    // Winner's game and stat were already recorded before lb failure
+    assert.ok(writer.games.find((g) => g.userId === "u-alice"), "winner putGame landed");
+    assert.ok(writer.stats.find((s) => s.userId === "u-alice" && s.key === "online_w"), "winner addStat landed");
+    // Loser's records also landed
+    assert.ok(writer.games.find((g) => g.userId === "u-bob"), "loser putGame landed");
+    assert.ok(writer.stats.find((s) => s.userId === "u-bob" && s.key === "online_l"), "loser addStat landed");
   });
 });

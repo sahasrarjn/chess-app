@@ -38,9 +38,13 @@ class FakeWriter implements UserGamesWriter {
     if (this.shouldThrow) throw new Error("simulated failure");
     this.games.push({ userId, game });
   }
-  async addStat(userId: string, key: string): Promise<void> {
+  async addStat(userId: string, key: string): Promise<number> {
     if (this.shouldThrow) throw new Error("simulated failure");
     this.stats.push({ userId, key });
+    return 0;
+  }
+  async setLeaderboardEntry(_userId: string, _wins: number): Promise<void> {
+    // no-op in handler tests — behavioral coverage is in record.test.ts
   }
 }
 

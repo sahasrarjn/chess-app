@@ -8,6 +8,24 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import type { GameRecord, Provider, RecordableMode } from "./protocol";
 
+export interface LeaderboardRow {
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  wins: number;  // stats.online_w (projected map is always current)
+  games: number; // online_w + online_l + online_d
+}
+
+const LB_PK = "LB";
+const MAX_LB_WINS = 99_999_999;
+
+/** LEADERBOARD GSI sort key: fixed-width so lexicographic order == numeric
+ *  order. KEEP IN SYNC with server/multiplayer/src/record.ts. */
+export function lbsk(wins: number, userId: string): string {
+  const clamped = Math.max(0, Math.min(Math.floor(wins), MAX_LB_WINS));
+  return `W#${String(clamped).padStart(8, "0")}#${userId}`;
+}
+
 export interface UserRecord {
   userId: string;
   email: string; // "" when the provider never disclosed one (Apple edge case)
@@ -45,6 +63,14 @@ export interface UserStore {
   getGame(userId: string, gameId: string): Promise<StoredGame | null>;
   /** Increment a flat stats counter by 1. Throws if the user item is missing. */
   addStat(userId: string, key: string): Promise<void>;
+  /** Refresh the LEADERBOARD GSI key after an online win. Monotonic: a stale
+   *  (lower) wins value is silently ignored, so racing wins commute. In
+   *  production this is called ONLY by the multiplayer Lambda's writer
+   *  (record.ts duplicates the Dynamo impl below) — it lives here so the GSI
+   *  key contract sits beside the reader and tests can seed board state. */
+  setLeaderboardEntry(userId: string, wins: number): Promise<void>;
+  /** Top players by online wins, descending (ties: userId descending). */
+  getLeaderboard(limit: number): Promise<LeaderboardRow[]>;
 }
 
 /** In-memory store for tests. */
@@ -53,6 +79,7 @@ export class InMemoryUserStore implements UserStore {
   private idp = new Map<string, string>();
   private emails = new Map<string, string>();
   private games = new Map<string, StoredGame[]>();
+  private lb = new Map<string, number>();
 
   async getUser(userId: string): Promise<UserRecord | null> {
     const u = this.users.get(userId);
@@ -126,6 +153,33 @@ export class InMemoryUserStore implements UserStore {
     const u = this.users.get(userId);
     if (!u) throw new Error(`User not found: ${userId}`);
     u.stats[key] = (u.stats[key] ?? 0) + 1;
+  }
+
+  async setLeaderboardEntry(userId: string, wins: number): Promise<void> {
+    if (!this.users.has(userId)) throw new Error(`User not found: ${userId}`);
+    const prev = this.lb.get(userId);
+    // Mirrors the Dynamo condition (attribute_not_exists(LBSK) OR LBSK < :sk):
+    // for a fixed userId, LBSK comparison reduces to the wins comparison.
+    if (prev !== undefined && prev >= wins) return;
+    this.lb.set(userId, wins);
+  }
+
+  async getLeaderboard(limit: number): Promise<LeaderboardRow[]> {
+    const ordered = [...this.lb.entries()]
+      .map(([userId, wins]) => ({ userId, sk: lbsk(wins, userId) }))
+      .sort((a, b) => (a.sk < b.sk ? 1 : a.sk > b.sk ? -1 : 0))
+      .slice(0, limit);
+    return ordered.map(({ userId }) => {
+      const u = this.users.get(userId);
+      const stats = u?.stats ?? {};
+      return {
+        userId,
+        displayName: u?.displayName ?? "Player",
+        avatarUrl: u?.avatarUrl ?? null,
+        wins: stats.online_w ?? 0,
+        games: (stats.online_w ?? 0) + (stats.online_l ?? 0) + (stats.online_d ?? 0),
+      };
+    });
   }
 }
 
@@ -284,6 +338,52 @@ export class DynamoUserStore implements UserStore {
         ExpressionAttributeValues: { ":one": 1 },
       })
     );
+  }
+
+  async setLeaderboardEntry(userId: string, wins: number): Promise<void> {
+    try {
+      await this.doc.send(
+        new UpdateCommand({
+          TableName: this.tableName,
+          Key: { PK: `USER#${userId}`, SK: "META" },
+          UpdateExpression: "SET LBPK = :lb, LBSK = :sk",
+          ConditionExpression:
+            "attribute_exists(PK) AND (attribute_not_exists(LBSK) OR LBSK < :sk)",
+          ExpressionAttributeValues: { ":lb": LB_PK, ":sk": lbsk(wins, userId) },
+        })
+      );
+    } catch (err) {
+      // A concurrent win already wrote a higher LBSK — the count is intact
+      // (ADD is atomic); only this stale key refresh loses, by design.
+      // Note: attribute_exists(PK) failure also arrives here as
+      // ConditionalCheckFailedException; it is swallowed unlike InMemory's throw
+      // (production writer always operates on existing users).
+      if (err instanceof ConditionalCheckFailedException) return;
+      throw err;
+    }
+  }
+
+  async getLeaderboard(limit: number): Promise<LeaderboardRow[]> {
+    const res = await this.doc.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        IndexName: "LEADERBOARD",
+        KeyConditionExpression: "LBPK = :lb",
+        ExpressionAttributeValues: { ":lb": LB_PK },
+        ScanIndexForward: false, // highest LBSK (most wins) first
+        Limit: limit,
+      })
+    );
+    return (res.Items ?? []).map((it) => {
+      const stats = (it.stats as Record<string, number>) ?? {};
+      return {
+        userId: String(it.PK ?? "").replace(/^USER#/, ""), // table keys are always projected
+        displayName: (it.displayName as string) ?? "Player",
+        avatarUrl: (it.avatarUrl as string | null) ?? null,
+        wins: stats.online_w ?? 0,
+        games: (stats.online_w ?? 0) + (stats.online_l ?? 0) + (stats.online_d ?? 0),
+      };
+    });
   }
 }
 

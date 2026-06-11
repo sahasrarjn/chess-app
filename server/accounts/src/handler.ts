@@ -2,13 +2,14 @@ import { randomUUID } from "node:crypto";
 import { verifyIdToken } from "./idtoken";
 import type { IdpIdentity } from "./idtoken";
 import {
+  onlineTotals,
   parseGameRecordInput,
   parseLoginRequest,
   parseUpdateMeRequest,
   statsKeyFor,
   validateDisplayName,
 } from "./protocol";
-import type { Profile, Provider } from "./protocol";
+import type { LeaderboardMe, Profile, Provider } from "./protocol";
 import { issueSession, verifySession } from "./session";
 import { DynamoUserStore } from "./store";
 import type { StoredGame, UserRecord, UserStore } from "./store";
@@ -44,8 +45,12 @@ export interface HandlerDeps {
 
 const JSON_HEADERS = { "content-type": "application/json" };
 
-function json(statusCode: number, body: unknown): HttpResponse {
-  return { statusCode, headers: JSON_HEADERS, body: JSON.stringify(body) };
+function json(
+  statusCode: number,
+  body: unknown,
+  headers: Record<string, string> = {}
+): HttpResponse {
+  return { statusCode, headers: { ...JSON_HEADERS, ...headers }, body: JSON.stringify(body) };
 }
 
 function bearerToken(headers: Record<string, string | undefined>): string | null {
@@ -189,6 +194,51 @@ export async function handleRequest(
       const game = await deps.store.getGame(auth.user.userId, gameId);
       if (!game) return json(404, { error: "not found" });
       return json(200, { game });
+    }
+
+    case "GET /v1/leaderboard": {
+      // PUBLIC. A Bearer token is optional and only enriches the response;
+      // an invalid/expired one degrades to the anonymous view, never 401.
+      const rows = await deps.store.getLeaderboard(100);
+      const entries = rows.map((row, i) => ({
+        rank: i + 1,
+        displayName: row.displayName,
+        avatarUrl: row.avatarUrl,
+        wins: row.wins,
+        games: row.games,
+      }));
+
+      let me: LeaderboardMe | null = null;
+      const token = bearerToken(event.headers);
+      if (token) {
+        try {
+          const userId = await verifySession(deps.jwtSecret, token);
+          const user = await deps.store.getUser(userId);
+          if (user) {
+            const idx = rows.findIndex((r) => r.userId === userId);
+            const totals = onlineTotals(user.stats);
+            me = {
+              rank: idx >= 0 ? idx + 1 : null,
+              displayName: user.displayName,
+              avatarUrl: user.avatarUrl,
+              wins: totals.wins,
+              games: totals.games,
+              stats: user.stats,
+            };
+          }
+        } catch {
+          // Anonymous view.
+        }
+      }
+
+      return json(
+        200,
+        { entries, me },
+        {
+          "cache-control": me ? "private, max-age=60" : "public, max-age=60",
+          vary: "Authorization",
+        }
+      );
     }
 
     default:

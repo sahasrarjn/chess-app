@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 
 import type { IdpIdentity } from "./idtoken";
 import type { Provider } from "./protocol";
-import { verifySession } from "./session";
+import { issueSession, verifySession } from "./session";
 import { InMemoryUserStore } from "./store";
 import { handleRequest, type HandlerDeps, type HttpEvent } from "./handler";
 
@@ -733,5 +733,229 @@ describe("GET /v1/games/{gameId}", () => {
       NOW
     );
     assert.equal(res.statusCode, 404);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /v1/leaderboard
+// ---------------------------------------------------------------------------
+
+async function seedBoardUser(
+  store: InMemoryUserStore,
+  userId: string,
+  opts: { displayName?: string; wins?: number; losses?: number; draws?: number; botWins?: number; avatarUrl?: string | null } = {}
+): Promise<void> {
+  const wins = opts.wins ?? 0;
+  const losses = opts.losses ?? 0;
+  const draws = opts.draws ?? 0;
+  const stats: Record<string, number> = {};
+  if (wins > 0) stats.online_w = wins;
+  if (losses > 0) stats.online_l = losses;
+  if (draws > 0) stats.online_d = draws;
+  if (opts.botWins != null) stats.bot_medium_w = opts.botWins;
+  await store.putUser({
+    userId,
+    email: `${userId}@test.com`,
+    displayName: opts.displayName ?? userId,
+    avatarUrl: opts.avatarUrl ?? null,
+    createdAt: "2025-01-01T00:00:00Z",
+    stats,
+  });
+  if (wins > 0) {
+    await store.setLeaderboardEntry(userId, wins);
+  }
+}
+
+describe("GET /v1/leaderboard — anonymous", () => {
+  it("no Authorization → 200, entries ranked by wins descending, me: null", async () => {
+    const store = new InMemoryUserStore();
+    const deps = makeDeps({ store });
+    await seedBoardUser(store, "u1", { wins: 3 });
+    await seedBoardUser(store, "u2", { wins: 9 });
+    await seedBoardUser(store, "u3", { wins: 5 });
+
+    const res = await handleRequest(ev("GET /v1/leaderboard"), deps, NOW);
+    assert.equal(res.statusCode, 200);
+    const body = JSON.parse(res.body) as { entries: { rank: number; wins: number; displayName: string }[]; me: null };
+    assert.equal(body.me, null);
+    assert.equal(body.entries.length, 3);
+    assert.equal(body.entries[0].rank, 1);
+    assert.equal(body.entries[0].wins, 9);
+    assert.equal(body.entries[1].rank, 2);
+    assert.equal(body.entries[1].wins, 5);
+    assert.equal(body.entries[2].rank, 3);
+    assert.equal(body.entries[2].wins, 3);
+  });
+
+  it("entries have exactly the right shape: no userId, no bot_* keys", async () => {
+    const store = new InMemoryUserStore();
+    const deps = makeDeps({ store });
+    await seedBoardUser(store, "u1", { wins: 5, botWins: 99, displayName: "Alice" });
+
+    const res = await handleRequest(ev("GET /v1/leaderboard"), deps, NOW);
+    const body = JSON.parse(res.body) as { entries: Record<string, unknown>[] };
+    assert.equal(body.entries.length, 1);
+    const entry = body.entries[0];
+    const serialized = JSON.stringify(body);
+
+    // Shape check
+    assert.equal(typeof entry.rank, "number");
+    assert.equal(typeof entry.displayName, "string");
+    assert.ok("avatarUrl" in entry);
+    assert.equal(typeof entry.wins, "number");
+    assert.equal(typeof entry.games, "number");
+
+    // userId must not appear
+    assert.equal("userId" in entry, false);
+    // bot_* counters must not leak for other users
+    assert.equal(serialized.includes("bot_"), false);
+  });
+
+  it("101+ seeded users → exactly 100 entries", async () => {
+    const store = new InMemoryUserStore();
+    const deps = makeDeps({ store });
+    for (let i = 1; i <= 101; i++) {
+      await seedBoardUser(store, `user${i}`, { wins: i });
+    }
+
+    const res = await handleRequest(ev("GET /v1/leaderboard"), deps, NOW);
+    const body = JSON.parse(res.body) as { entries: unknown[] };
+    assert.equal(body.entries.length, 100);
+  });
+
+  it("empty board → 200, entries: []", async () => {
+    const deps = makeDeps();
+    const res = await handleRequest(ev("GET /v1/leaderboard"), deps, NOW);
+    assert.equal(res.statusCode, 200);
+    const body = JSON.parse(res.body) as { entries: unknown[]; me: null };
+    assert.deepEqual(body.entries, []);
+    assert.equal(body.me, null);
+  });
+
+  it("anonymous response has cache-control: public, max-age=60 and vary: Authorization", async () => {
+    const deps = makeDeps();
+    const res = await handleRequest(ev("GET /v1/leaderboard"), deps, NOW);
+    assert.equal(res.headers["cache-control"], "public, max-age=60");
+    assert.equal(res.headers["vary"], "Authorization");
+  });
+});
+
+describe("GET /v1/leaderboard — authenticated", () => {
+  it("valid token, caller in top 100 → me.rank equals position, me.stats has full map, private cache", async () => {
+    const store = new InMemoryUserStore();
+    const deps = makeDeps({ store });
+
+    // Create the caller via login so we have a real userId
+    const loginRes = await handleRequest(
+      ev("POST /v1/auth/login", { provider: "google", idToken: "tok" }),
+      deps,
+      NOW
+    );
+    const { token, profile } = JSON.parse(loginRes.body) as { token: string; profile: { userId: string } };
+
+    // Give the caller some stats then seed the board
+    const callerUser = await store.getUser(profile.userId);
+    assert.ok(callerUser);
+    await store.putUser({ ...callerUser, stats: { online_w: 5, online_l: 2, bot_medium_w: 3 } });
+    await store.setLeaderboardEntry(profile.userId, 5);
+
+    // Another user ranked above
+    await seedBoardUser(store, "top-user", { wins: 9 });
+
+    const res = await handleRequest(ev("GET /v1/leaderboard", undefined, authHeader(token)), deps, NOW);
+    assert.equal(res.statusCode, 200);
+    const body = JSON.parse(res.body) as {
+      entries: { rank: number; wins: number }[];
+      me: { rank: number | null; wins: number; games: number; stats: Record<string, number> } | null;
+    };
+
+    assert.ok(body.me !== null, "me should not be null for valid token");
+    assert.equal(body.me.rank, 2); // top-user has 9 wins, caller has 5
+    assert.equal(body.me.wins, 5);
+    assert.equal(body.me.games, 7);
+    assert.equal(body.me.stats.bot_medium_w, 3);
+    assert.equal(res.headers["cache-control"], "private, max-age=60");
+    assert.equal(res.headers["vary"], "Authorization");
+  });
+
+  it("valid token, caller NOT on board (only bot stats) → me.rank === null, correct wins/games", async () => {
+    const store = new InMemoryUserStore();
+    const deps = makeDeps({ store });
+
+    const loginRes = await handleRequest(
+      ev("POST /v1/auth/login", { provider: "google", idToken: "tok" }),
+      deps,
+      NOW
+    );
+    const { token, profile } = JSON.parse(loginRes.body) as { token: string; profile: { userId: string } };
+
+    // Give caller only bot stats — no online wins, not on the board
+    const callerUser = await store.getUser(profile.userId);
+    assert.ok(callerUser);
+    await store.putUser({ ...callerUser, stats: { bot_medium_w: 7, online_l: 2 } });
+
+    await seedBoardUser(store, "board-user", { wins: 3 });
+
+    const res = await handleRequest(ev("GET /v1/leaderboard", undefined, authHeader(token)), deps, NOW);
+    const body = JSON.parse(res.body) as {
+      me: { rank: number | null; wins: number; games: number } | null;
+    };
+    assert.ok(body.me !== null);
+    assert.equal(body.me.rank, null);
+    assert.equal(body.me.wins, 0);
+    assert.equal(body.me.games, 2); // only online_l counted
+  });
+
+  it("garbage token → 200, me: null, public cache header (never 401)", async () => {
+    const deps = makeDeps();
+    await seedBoardUser(deps.store as InMemoryUserStore, "u1", { wins: 1 });
+    const res = await handleRequest(
+      ev("GET /v1/leaderboard", undefined, { authorization: "Bearer garbage-token" }),
+      deps,
+      NOW
+    );
+    assert.equal(res.statusCode, 200);
+    const body = JSON.parse(res.body) as { me: null };
+    assert.equal(body.me, null);
+    assert.equal(res.headers["cache-control"], "public, max-age=60");
+  });
+
+  it("bot_* keys do not appear in entries for other users even when me has them", async () => {
+    const store = new InMemoryUserStore();
+    const deps = makeDeps({ store });
+
+    const loginRes = await handleRequest(
+      ev("POST /v1/auth/login", { provider: "google", idToken: "tok" }),
+      deps,
+      NOW
+    );
+    const { token, profile } = JSON.parse(loginRes.body) as { token: string; profile: { userId: string } };
+
+    // Another board user has bot stats
+    const otherId = "other-user";
+    await store.putUser({
+      userId: otherId,
+      email: "",
+      displayName: "Other",
+      avatarUrl: null,
+      createdAt: "",
+      stats: { online_w: 7, bot_hard_w: 50 },
+    });
+    await store.setLeaderboardEntry(otherId, 7);
+
+    const callerUser = await store.getUser(profile.userId);
+    assert.ok(callerUser);
+    await store.putUser({ ...callerUser, stats: { online_w: 3, bot_medium_w: 2 } });
+    await store.setLeaderboardEntry(profile.userId, 3);
+
+    const res = await handleRequest(ev("GET /v1/leaderboard", undefined, authHeader(token)), deps, NOW);
+    const body = JSON.parse(res.body) as { entries: Record<string, unknown>[] };
+
+    // Find the "other-user" entry
+    const otherEntry = body.entries.find((e) => e.displayName === "Other");
+    assert.ok(otherEntry, "other user should be on the board");
+    // Serialized entries should not contain bot_hard_w
+    const entriesStr = JSON.stringify(body.entries);
+    assert.equal(entriesStr.includes("bot_hard_w"), false);
   });
 });

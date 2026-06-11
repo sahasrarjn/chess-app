@@ -155,6 +155,41 @@ export function parseGameRecordInput(raw: string | undefined | null): GameRecord
   };
 }
 
+// ---------------------------------------------------------------------------
+// Leaderboard (Phase 4)
+// ---------------------------------------------------------------------------
+
+/** Public leaderboard row. Deliberately carries no userId. */
+export interface LeaderboardEntry {
+  rank: number; // 1-based
+  displayName: string;
+  avatarUrl: string | null;
+  wins: number;
+  games: number;
+}
+
+/** The caller's own entry. rank is null when outside the fetched top 100. */
+export interface LeaderboardMe {
+  rank: number | null;
+  displayName: string;
+  avatarUrl: string | null;
+  wins: number;
+  games: number;
+  /** Full flat stats map (bot_* + online_*) — returned only for the caller. */
+  stats: Record<string, number>;
+}
+
+export interface LeaderboardResponse {
+  entries: LeaderboardEntry[];
+  me: LeaderboardMe | null;
+}
+
+/** Online win/games totals from the flat stats map. */
+export function onlineTotals(stats: Record<string, number>): { wins: number; games: number } {
+  const wins = stats.online_w ?? 0;
+  return { wins, games: wins + (stats.online_l ?? 0) + (stats.online_d ?? 0) };
+}
+
 /** Flat stats counter key for a recorded game, or null when the game
  *  doesn't attribute a result to the user (pass-and-play). */
 export function statsKeyFor(record: {

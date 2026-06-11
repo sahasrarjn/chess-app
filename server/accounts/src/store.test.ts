@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { InMemoryUserStore } from "./store.ts";
+import { InMemoryUserStore, lbsk } from "./store.ts";
 import type { StoredGame } from "./store.ts";
 
 function makeUser(userId: string) {
@@ -138,6 +138,95 @@ describe("InMemoryUserStore — addStat", () => {
   it("addStat for a missing user throws", async () => {
     const store = new InMemoryUserStore();
     await assert.rejects(() => store.addStat("no-such-user", "bot_easy_w"));
+  });
+});
+
+describe("lbsk", () => {
+  it("lbsk(42, 'u1') → 'W#00000042#u1'", () => {
+    assert.equal(lbsk(42, "u1"), "W#00000042#u1");
+  });
+
+  it("lbsk(100_000_000, 'u1') clamps to 'W#99999999#u1'", () => {
+    assert.equal(lbsk(100_000_000, "u1"), "W#99999999#u1");
+  });
+});
+
+describe("InMemoryUserStore — leaderboard", () => {
+  it("three users → getLeaderboard returns 9/5/3 wins descending", async () => {
+    const store = new InMemoryUserStore();
+    await store.putUser({ userId: "a", email: "", displayName: "Alice", avatarUrl: null, createdAt: "", stats: { online_w: 5, online_l: 2 } });
+    await store.putUser({ userId: "b", email: "", displayName: "Bob",   avatarUrl: null, createdAt: "", stats: { online_w: 3, online_l: 1 } });
+    await store.putUser({ userId: "c", email: "", displayName: "Carol", avatarUrl: null, createdAt: "", stats: { online_w: 9, online_l: 1 } });
+    await store.setLeaderboardEntry("a", 5);
+    await store.setLeaderboardEntry("b", 3);
+    await store.setLeaderboardEntry("c", 9);
+
+    const rows = await store.getLeaderboard(100);
+    assert.equal(rows.length, 3);
+    assert.equal(rows[0].wins, 9);
+    assert.equal(rows[0].games, 10);
+    assert.equal(rows[1].wins, 5);
+    assert.equal(rows[1].games, 7);
+    assert.equal(rows[2].wins, 3);
+    assert.equal(rows[2].games, 4);
+  });
+
+  it("tie at 5 wins: userId 'zzz' before 'aaa' (userId descending tiebreak)", async () => {
+    const store = new InMemoryUserStore();
+    await store.putUser({ userId: "aaa", email: "", displayName: "A", avatarUrl: null, createdAt: "", stats: { online_w: 5 } });
+    await store.putUser({ userId: "zzz", email: "", displayName: "Z", avatarUrl: null, createdAt: "", stats: { online_w: 5 } });
+    await store.setLeaderboardEntry("aaa", 5);
+    await store.setLeaderboardEntry("zzz", 5);
+
+    const rows = await store.getLeaderboard(100);
+    assert.equal(rows.length, 2);
+    assert.equal(rows[0].userId, "zzz");
+    assert.equal(rows[1].userId, "aaa");
+  });
+
+  it("getLeaderboard(2) with 3 entries → 2 rows", async () => {
+    const store = new InMemoryUserStore();
+    for (const [id, w] of [["u1", 1], ["u2", 2], ["u3", 3]] as [string, number][]) {
+      await store.putUser({ userId: id, email: "", displayName: id, avatarUrl: null, createdAt: "", stats: { online_w: w } });
+      await store.setLeaderboardEntry(id, w);
+    }
+    const rows = await store.getLeaderboard(2);
+    assert.equal(rows.length, 2);
+  });
+
+  it("monotonic guard: stale write ignored, then higher write accepted", async () => {
+    const store = new InMemoryUserStore();
+    await store.putUser({ userId: "u1", email: "", displayName: "U1", avatarUrl: null, createdAt: "", stats: { online_w: 6 } });
+    await store.setLeaderboardEntry("u1", 5);
+    await store.setLeaderboardEntry("u1", 4); // stale — should be ignored, no throw
+    let rows = await store.getLeaderboard(100);
+    assert.equal(rows[0].userId, "u1");
+    // rank is by LBSK (wins=5 used to sort); display wins come from stats.online_w=6
+    // verify the entry is still at the lb-registered wins level via lbsk sort
+    // (the in-memory impl sorts by lbsk(wins, userId), where wins = lb.get(userId) = 5)
+    await store.setLeaderboardEntry("u1", 6); // higher — should update
+    rows = await store.getLeaderboard(100);
+    assert.equal(rows[0].userId, "u1");
+    // Display wins are read from stats map (6), not lb map
+    assert.equal(rows[0].wins, 6);
+  });
+
+  it("user with stats but no setLeaderboardEntry call → not on board", async () => {
+    const store = new InMemoryUserStore();
+    await store.putUser({ userId: "ghost", email: "", displayName: "Ghost", avatarUrl: null, createdAt: "", stats: { online_w: 5 } });
+    const rows = await store.getLeaderboard(100);
+    assert.equal(rows.length, 0);
+  });
+
+  it("setLeaderboardEntry for missing user throws", async () => {
+    const store = new InMemoryUserStore();
+    await assert.rejects(() => store.setLeaderboardEntry("no-such-user", 1));
+  });
+
+  it("empty board → getLeaderboard returns []", async () => {
+    const store = new InMemoryUserStore();
+    const rows = await store.getLeaderboard(100);
+    assert.deepEqual(rows, []);
   });
 });
 

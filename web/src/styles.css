@@ -1144,3 +1144,157 @@ select {
   background: transparent;
   padding: 8px;
 }
+
+/* Leaderboard screen */
+
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 16px 24px;
+}
+
+.leaderboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.leaderboard-note {
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+  margin: 16px 0;
+}
+
+.leaderboard-note--separator {
+  margin: 8px 0 4px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.leaderboard-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+}
+
+.leaderboard-row--header {
+  background: transparent;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 12px;
+}
+
+.lb-me {
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.lb-cell {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lb-rank {
+  min-width: 24px;
+  text-align: right;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.lb-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lb-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboard-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.lb-wins,
+.lb-games,
+.lb-winrate {
+  text-align: right;
+  min-width: 36px;
+}
+
+.lb-winrate {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* Your stats section */
+.your-stats {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.your-stats h3 {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.lb-stats-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lb-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.lb-stats-label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.lb-stats-wld {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.lb-stats-rate {
+  min-width: 40px;
+  text-align: right;
+  font-size: 0.85rem;
+  color: var(--muted);
+}

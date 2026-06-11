@@ -26,6 +26,29 @@ struct GamePage: Codable {
 
 private struct GameEnvelope: Codable { let game: CompletedGameRecord }
 
+struct LeaderboardEntry: Codable, Identifiable {
+    let rank: Int
+    let displayName: String
+    let avatarUrl: String?
+    let wins: Int
+    let games: Int
+    var id: Int { rank }
+}
+
+struct LeaderboardMe: Codable {
+    let rank: Int?          // nil ⇒ outside the top 100 (render "—")
+    let displayName: String
+    let avatarUrl: String?
+    let wins: Int
+    let games: Int
+    let stats: [String: Int]
+}
+
+struct LeaderboardResponse: Codable {
+    let entries: [LeaderboardEntry]
+    let me: LeaderboardMe?
+}
+
 enum AccountsAPIError: Error {
     case http(Int)
     case invalidResponse
@@ -91,6 +114,18 @@ struct AccountsAPI {
         guard let http = response as? HTTPURLResponse else { throw AccountsAPIError.invalidResponse }
         guard (200..<300).contains(http.statusCode) else { throw AccountsAPIError.http(http.statusCode) }
         return try JSONDecoder().decode(GamePage.self, from: data)
+    }
+
+    /// GET /v1/leaderboard — public; Bearer optional (adds `me`).
+    func leaderboard(token: String?) async throws -> LeaderboardResponse {
+        var request = URLRequest(url: baseURL.appending(path: "v1/leaderboard"))
+        if let token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw AccountsAPIError.invalidResponse }
+        guard (200..<300).contains(http.statusCode) else { throw AccountsAPIError.http(http.statusCode) }
+        return try JSONDecoder().decode(LeaderboardResponse.self, from: data)
     }
 
     /// POST /v1/me {displayName} (Bearer)

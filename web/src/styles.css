@@ -980,6 +980,12 @@ select {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
+/* Explicit override so the [hidden] attribute wins over display:flex */
+.home-auth-menu[hidden],
+.home-auth-popover[hidden] {
+  display: none;
+}
+
 .home-auth-menu-email {
   margin: 0;
   font-size: 0.78rem;

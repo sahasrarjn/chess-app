@@ -31,6 +31,15 @@ function clearBootShell(): void {
   document.getElementById("boot-loading")?.remove();
 }
 
+// Top-level routes (/leaderboard, /past-games) and the legacy /play/ base all load
+// the same bundle. Read the pathname to decide what to render first.
+function currentRoute(): "leaderboard" | "past-games" | "home" {
+  const path = location.pathname.replace(/\/+$/, "");
+  if (path === "/leaderboard") return "leaderboard";
+  if (path === "/past-games") return "past-games";
+  return "home";
+}
+
 try {
   const appEl = document.getElementById("app");
   if (!appEl) throw new Error("#app not found");
@@ -67,6 +76,7 @@ try {
   }
 
   function showPastGames(): void {
+    history.pushState(null, "", "/past-games");
     void import("./ui/pastGamesView")
       .then(({ renderPastGames }) => {
         teardownGame?.();
@@ -79,6 +89,7 @@ try {
   }
 
   function showLeaderboard(): void {
+    history.pushState(null, "", "/leaderboard");
     void import("./ui/leaderboardView")
       .then(({ renderLeaderboard }) => {
         teardownGame?.();
@@ -110,25 +121,45 @@ try {
       url.searchParams.delete("room");
       history.replaceState(null, "", url.toString());
     }
+    // Navigate to /play/ when going home from a top-level route
+    if (currentRoute() !== "home") {
+      history.pushState(null, "", "/play/");
+    }
     renderHome(app, startGame, (roomId) => startOnline(roomId ?? newRoomId()), showPastGames, showLeaderboard);
   }
 
-  const roomParam = new URLSearchParams(location.search).get("room");
-  if (roomParam) {
-    startOnline(roomParam);
+  // Handle browser back/forward
+  window.addEventListener("popstate", () => {
+    const route = currentRoute();
+    if (route === "leaderboard") { showLeaderboard(); return; }
+    if (route === "past-games") { showPastGames(); return; }
+    showHome();
+  });
+
+  // Initial render based on the current URL path
+  const route = currentRoute();
+  if (route === "leaderboard") {
+    showLeaderboard();
+  } else if (route === "past-games") {
+    showPastGames();
   } else {
-    const saved = loadSavedGame();
-    if (saved) {
-      void import("./ui/gameView")
-        .then(({ renderGame }) => {
-          teardownGame = renderGame(app, saved.mode, saved.botDifficulty, showHome, saved);
-        })
-        .catch((err: unknown) => {
-          console.error(err);
-          showHome();
-        });
+    const roomParam = new URLSearchParams(location.search).get("room");
+    if (roomParam) {
+      startOnline(roomParam);
     } else {
-      showHome();
+      const saved = loadSavedGame();
+      if (saved) {
+        void import("./ui/gameView")
+          .then(({ renderGame }) => {
+            teardownGame = renderGame(app, saved.mode, saved.botDifficulty, showHome, saved);
+          })
+          .catch((err: unknown) => {
+            console.error(err);
+            showHome();
+          });
+      } else {
+        showHome();
+      }
     }
   }
 } catch (err: unknown) {

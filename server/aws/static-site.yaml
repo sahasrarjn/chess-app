@@ -107,12 +107,12 @@ Resources:
         function handler(event) {
           var request = event.request;
           var uri = request.uri;
-          if (uri === "/play") {
+          if (uri === "/play" || uri === "/leaderboard" || uri === "/past-games") {
             return {
               statusCode: 301,
               statusDescription: "Moved Permanently",
               headers: {
-                location: { value: "/play/" },
+                location: { value: uri + "/" },
               },
             };
           }
@@ -230,6 +230,26 @@ Resources:
               - EventType: viewer-request
                 FunctionARN: !GetAtt StaticUrlRewriteFunction.FunctionMetadata.FunctionARN
           - PathPattern: /privacy/index.html
+            TargetOriginId: S3Static
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD, OPTIONS]
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt StaticUrlRewriteFunction.FunctionMetadata.FunctionARN
+          - PathPattern: /leaderboard*
+            TargetOriginId: S3Static
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD, OPTIONS]
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt StaticUrlRewriteFunction.FunctionMetadata.FunctionARN
+          - PathPattern: /past-games*
             TargetOriginId: S3Static
             ViewerProtocolPolicy: redirect-to-https
             AllowedMethods: [GET, HEAD, OPTIONS]

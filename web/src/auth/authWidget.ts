@@ -98,25 +98,31 @@ export function createAuthWidget(): HTMLElement | null {
     };
     menu.appendChild(signOutBtn);
 
-    // Close menu on outside click
-    const onDocClick = (e: MouseEvent) => {
+    // Close menu on outside click (mousedown fires before onclick so toggle works correctly)
+    const onDocMousedown = (e: MouseEvent) => {
       if (!container.contains(e.target as Node)) {
         menuOpen = false;
         menu.hidden = true;
-        document.removeEventListener("click", onDocClick);
+        document.removeEventListener("mousedown", onDocMousedown);
         cleanupMenuListener = null;
       }
     };
 
+    const closeMenu = () => {
+      menuOpen = false;
+      menu.hidden = true;
+      document.removeEventListener("mousedown", onDocMousedown);
+      cleanupMenuListener = null;
+    };
+
     trigger.onclick = () => {
-      menuOpen = !menuOpen;
-      menu.hidden = !menuOpen;
       if (menuOpen) {
-        document.addEventListener("click", onDocClick);
-        cleanupMenuListener = () => document.removeEventListener("click", onDocClick);
+        closeMenu();
       } else {
-        document.removeEventListener("click", onDocClick);
-        cleanupMenuListener = null;
+        menuOpen = true;
+        menu.hidden = false;
+        document.addEventListener("mousedown", onDocMousedown);
+        cleanupMenuListener = () => document.removeEventListener("mousedown", onDocMousedown);
       }
     };
 

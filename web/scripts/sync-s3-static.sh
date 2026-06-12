@@ -104,6 +104,16 @@ aws s3 cp static/privacy/index.html "s3://${BUCKET}/privacy/index.html" \
   --content-type "text/html; charset=utf-8" \
   --cache-control "$HTML_CACHE"
 
+echo "==> Uploading app sub-pages (/leaderboard, /past-games)"
+# These pages serve the same SPA bundle as /play/ — the bundle reads
+# location.pathname at boot and renders the right screen.
+for page in leaderboard past-games; do
+  aws s3 cp dist/index.html "s3://${BUCKET}/${page}/index.html" \
+    --region "$REGION" \
+    --content-type "text/html; charset=utf-8" \
+    --cache-control "$HTML_CACHE"
+done
+
 echo "==> Uploading logo + piece SVGs (ChessBorder CDN paths)"
 aws s3 cp public/logo_v2.png "s3://${BUCKET}/logo_v2.png" \
   --region "$REGION" \
@@ -127,7 +137,7 @@ if [[ -n "$DIST_ID" && "$DIST_ID" != "None" ]]; then
   echo "==> Invalidating CloudFront (${DIST_ID})"
   aws cloudfront create-invalidation \
     --distribution-id "$DIST_ID" \
-    --paths "/index.html" "/play" "/play/" "/play/index.html" "/privacy/index.html" "/play/assets/*" "/play/sounds/*" \
+    --paths "/index.html" "/play" "/play/" "/play/index.html" "/privacy/index.html" "/play/assets/*" "/play/sounds/*" "/leaderboard" "/leaderboard/" "/leaderboard/index.html" "/past-games" "/past-games/" "/past-games/index.html" \
     --query 'Invalidation.Id' \
     --output text >/dev/null
 else

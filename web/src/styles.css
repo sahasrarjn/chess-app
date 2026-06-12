@@ -1562,3 +1562,92 @@ select {
   text-align: center;
   padding: 8px 0;
 }
+
+/* Sign-in / onboarding screen */
+.signin-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 32px 24px;
+  gap: 12px;
+  text-align: center;
+}
+
+.signin-screen h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.signin-tagline {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+.signin-logo {
+  width: 88px;
+  height: 88px;
+  border-radius: 20px;
+}
+
+.signin-card {
+  width: 100%;
+  max-width: 340px;
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.signin-prompt {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.signin-gis-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.signin-sep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.signin-sep-line {
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--muted) 25%, transparent);
+}
+
+.signin-sep-text {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.signin-guest {
+  width: 100%;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--muted) 35%, transparent);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.signin-guest:hover {
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+}
+
+.signin-error {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #ff8a80;
+  text-align: center;
+}

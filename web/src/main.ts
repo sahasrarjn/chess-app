@@ -4,6 +4,9 @@ import { loadSavedGame } from "./game/savedGame";
 import { renderHome, type HomeStart } from "./ui/home";
 import { newRoomId } from "./online/guestIdentity";
 import type { CompletedGameRecord } from "./game/gameHistory";
+import { hasChosenGuestThisSession } from "./ui/signInView";
+import { getSessionToken } from "./auth/session";
+import { isAuthConfigured } from "./auth/config";
 
 applyBoardTheme(boardThemeById(loadBoardThemeId()));
 
@@ -113,6 +116,22 @@ try {
       });
   }
 
+  function needsSignIn(): boolean {
+    if (!isAuthConfigured) return false;           // auth not set up → skip
+    if (getSessionToken()) return false;            // already signed in
+    if (hasChosenGuestThisSession()) return false;  // chose guest this session
+    return true;
+  }
+
+  function showSignIn(): void {
+    teardownGame?.();
+    teardownGame = undefined;
+    if (currentRoute() !== "home") history.pushState(null, "", "/play/");
+    void import("./ui/signInView").then(({ renderSignIn }) => {
+      teardownGame = renderSignIn(app, showHome, showHome);
+    });
+  }
+
   function showHome(): void {
     teardownGame?.();
     teardownGame = undefined;
@@ -146,6 +165,8 @@ try {
     const roomParam = new URLSearchParams(location.search).get("room");
     if (roomParam) {
       startOnline(roomParam);
+    } else if (needsSignIn()) {
+      showSignIn();
     } else {
       const saved = loadSavedGame();
       if (saved) {

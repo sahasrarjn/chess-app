@@ -118,6 +118,14 @@ final class AuthStore: NSObject, ObservableObject {
 
     // MARK: - Backend login helper
 
+    /// Direct sign-in from the onboarding screen (Apple or Google id token already obtained).
+    func signIn(provider: String, idToken: String, nameHint: String?) async throws {
+        guard let api else { throw URLError(.cannotConnectToHost) }
+        let response = try await api.login(provider: provider, idToken: idToken, name: nameHint)
+        KeychainStore.write(Self.tokenAccount, value: response.token)
+        profile = response.profile
+    }
+
     private func loginToBackend(provider: String, idToken: String, name: String?) async {
         guard let api else { return }
         do {

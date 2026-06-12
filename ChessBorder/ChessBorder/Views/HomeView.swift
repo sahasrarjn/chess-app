@@ -9,14 +9,23 @@ struct HomeView: View {
     @State private var joinCode = ""
     @State private var onlineRoom: OnlineRoom?
     @State private var showSettings = false
+    @StateObject private var auth = AuthStore.shared
+    @AppStorage("chessborder.guestSession") private var choseGuest = false
 
     private struct OnlineRoom: Identifiable, Hashable {
         let id: String
     }
 
+    private var needsSignIn: Bool {
+        guard AccountsConfig.isConfigured else { return false }
+        return auth.profile == nil && !choseGuest
+    }
+
     var body: some View {
         Group {
-            if let saved = restoredGame, !showHomeDespiteSave {
+            if needsSignIn {
+                SignInView(onContinueAsGuest: { choseGuest = true })
+            } else if let saved = restoredGame, !showHomeDespiteSave {
                 GameView(saved: saved, onReturnHome: { showHomeDespiteSave = true })
             } else {
                 homeContent
@@ -27,9 +36,10 @@ struct HomeView: View {
                 restoredGame = SavedGameStore.load()
             }
         }
+        .task {
+            await auth.restore()
+        }
     }
-
-    @StateObject private var auth = AuthStore.shared
 
     private var homeContent: some View {
         NavigationStack {

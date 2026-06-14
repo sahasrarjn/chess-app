@@ -429,6 +429,9 @@ select {
   margin: 0 auto;
   aspect-ratio: 1;
   flex-shrink: 0;
+  /* Keep the board square inside the coach slot (align-items: stretch would
+     give the wrap a definite height and make the browser ignore aspect-ratio). */
+  align-self: center;
   touch-action: none;
 }
 
@@ -664,6 +667,12 @@ select {
     --board-edge-inset: 6px;
     --game-chrome-reserve: 0px;
     --piece-scale: 0.94;
+  }
+
+  /* Friends-on-phone shared screen: board stays static (white at bottom) and
+     black's pieces face the player across the table. */
+  .board-grid.shared-screen .piece-img[data-color="black"] {
+    transform: rotate(180deg);
   }
 
   .game-screen {

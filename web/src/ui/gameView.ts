@@ -82,7 +82,9 @@ class GameScreen {
   private lastCapturedPly = -1;
   private lastPersistKey = "";
   private autoFlipBtn: HTMLButtonElement | null = null;
-  private flipBtn!: HTMLButtonElement;
+  private flipBtn: HTMLButtonElement | null = null;
+  /** Friends mode on a phone: static board, pieces face each side of the table. */
+  private readonly sharedScreen: boolean;
   private muteBtn!: MuteButton;
   private hintBtn!: HTMLButtonElement;
   private readonly sound = new SoundPlayer();
@@ -146,10 +148,19 @@ class GameScreen {
         this.ctrl.restoreGame(game, saved.boardFlipped, saved.autoFlipBoard);
       }
     }
+    this.sharedScreen =
+      this.mode === "localTwoPlayer" && !this.replay && isPhoneViewport();
+    if (this.sharedScreen) {
+      // Two friends sit across the table: keep the board static (white at the
+      // bottom) instead of flipping each turn; CSS rotates black's pieces.
+      this.ctrl.autoFlipBoard = false;
+      this.ctrl.boardFlipped = false;
+    }
     this.board = new BoardView(this.ctrl, (square) => {
       this.sound.unlock();
       this.ctrl.handleSquareTap(square);
     });
+    this.board.setSharedScreen(this.sharedScreen);
   }
 
   mount(): void {
@@ -168,16 +179,19 @@ class GameScreen {
       header.appendChild(
         el("h2", "", this.mode === "vsBot" ? `Play vs Bot (${this.difficulty})` : "Play with Friend")
       );
-      if (this.mode === "localTwoPlayer") {
+      if (this.mode === "localTwoPlayer" && !this.sharedScreen) {
         this.autoFlipBtn = el("button", "auto-flip active", "Auto-flip") as HTMLButtonElement;
         this.autoFlipBtn.onclick = () => this.ctrl.toggleAutoFlipBoard();
         header.appendChild(this.autoFlipBtn);
       }
     }
 
-    this.flipBtn = el("button", "", "Flip") as HTMLButtonElement;
-    this.flipBtn.onclick = () => this.ctrl.toggleBoardFlip();
-    header.appendChild(this.flipBtn);
+    // Flipping is meaningless on the static shared screen (pieces face each side).
+    if (!this.sharedScreen) {
+      this.flipBtn = el("button", "", "Flip") as HTMLButtonElement;
+      this.flipBtn.onclick = () => this.ctrl.toggleBoardFlip();
+      header.appendChild(this.flipBtn);
+    }
 
     this.muteBtn = new MuteButton(this.sound);
     header.appendChild(this.muteBtn.el);
@@ -326,8 +340,10 @@ class GameScreen {
     if (this.autoFlipBtn) {
       this.autoFlipBtn.classList.toggle("active", this.ctrl.autoFlipBoard);
     }
-    this.flipBtn.disabled =
-      this.mode === "localTwoPlayer" && this.ctrl.autoFlipBoard;
+    if (this.flipBtn) {
+      this.flipBtn.disabled =
+        this.mode === "localTwoPlayer" && this.ctrl.autoFlipBoard;
+    }
 
     this.updateStatus();
     this.updateCaptured();
@@ -730,6 +746,15 @@ class GameScreen {
     overlay.appendChild(panel);
     return overlay;
   }
+}
+
+/** Matches the phone breakpoint in styles.css (max-width: 599px). */
+function isPhoneViewport(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(max-width: 599px)").matches
+  );
 }
 
 function el(tag: string, className: string, text?: string): HTMLElement {

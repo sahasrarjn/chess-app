@@ -47,6 +47,14 @@ export class BoardView {
     return `${row},${col}`;
   }
 
+  /**
+   * Shared-screen (friends-on-phone) mode: keep the board static and let CSS
+   * rotate the far side's pieces 180° so each player reads their own pieces.
+   */
+  setSharedScreen(on: boolean): void {
+    this.grid.classList.toggle("shared-screen", on);
+  }
+
   private rebuildGrid(): void {
     this.cells.clear();
     this.grid.replaceChildren();
@@ -127,11 +135,13 @@ export class BoardView {
         img.className = "piece-img";
         img.src = asset!;
         img.alt = piece.kind;
+        img.dataset.color = piece.color;
         cell.btn.appendChild(img);
         cell.img = img;
       } else if (cell.img.src !== asset) {
         cell.img.src = asset!;
         cell.img.alt = piece.kind;
+        cell.img.dataset.color = piece.color;
       }
     }
   }

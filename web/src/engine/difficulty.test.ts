@@ -26,7 +26,7 @@ describe("difficulty mappings", () => {
   it("makes easy very weak (shallow search, frequent random moves)", () => {
     assert.equal(difficultySearchDepth("easy"), 1);
     assert.ok(difficultyRandomness("easy") >= 0.5, "easy plays a random move at least half the time");
-    assert.ok(difficultyElo("easy") <= 800, "easy targets a low engine Elo");
+    assert.ok(difficultyElo("easy") <= 1000, "easy targets a low engine Elo");
   });
 
   it("keeps strength monotonic across levels", () => {

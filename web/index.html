@@ -22,7 +22,7 @@
         var RELOAD_KEY = "chessborder.scriptReload";
         function showBootFailure() {
           var app = document.getElementById("app");
-          if (!app || app.querySelector(".home, .game-screen, .boot-error")) return;
+          if (!app || app.querySelector(".home, .game-screen, .leaderboard, .past-games, .signin-screen, .boot-error")) return;
           app.innerHTML =
             '<div class="boot-error"><p>Could not load Border Chess.</p><button type="button" onclick="location.reload()">Reload</button></div>';
         }

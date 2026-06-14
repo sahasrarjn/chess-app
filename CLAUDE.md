@@ -53,3 +53,4 @@ curl -s https://borderchess.org/health
 - Minimize diff scope; match existing naming and patterns.
 - No commits unless asked; no force-push to `main`.
 - Only create commits when user requests — use HEREDOC commit messages.
+- **Work only on `main`.** Do not create feature branches — commit directly to `main` and push. (Overrides the global "branch first" rule for this repo.)

@@ -448,6 +448,7 @@ select {
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
+  background-color: var(--dark-square);
 }
 
 .board-frame {

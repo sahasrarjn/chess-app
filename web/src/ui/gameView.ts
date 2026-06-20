@@ -158,7 +158,12 @@ class GameScreen {
     const top = el("div", "game-top");
     const header = el("div", "game-header");
     const back = el("button", "back", "← Back");
-    back.onclick = () => this.onBack();
+    back.onclick = () => {
+      if (!this.replay && this.ctrl.game.result.type === "ongoing") {
+        if (!confirm("Leave game? Your progress is saved — tap Resume on the home screen to continue.")) return;
+      }
+      this.onBack();
+    };
     header.appendChild(back);
 
     if (this.replay) {

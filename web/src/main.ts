@@ -144,11 +144,33 @@ try {
     if (currentRoute() !== "home") {
       history.pushState(null, "", "/play/");
     }
-    renderHome(app, startGame, (roomId) => startOnline(roomId ?? newRoomId()), showPastGames, showLeaderboard);
+
+    const saved = loadSavedGame();
+    const onResume = saved
+      ? () => {
+          void import("./ui/gameView")
+            .then(({ renderGame }) => {
+              teardownGame?.();
+              teardownGame = renderGame(app, saved.mode, saved.botDifficulty, showHome, saved);
+            })
+            .catch((err: unknown) => {
+              console.error(err);
+              showBootError("Could not resume the game. Try reloading the page.");
+            });
+        }
+      : undefined;
+
+    renderHome(app, startGame, (roomId) => startOnline(roomId ?? newRoomId()), showPastGames, showLeaderboard, onResume);
   }
 
   // Handle browser back/forward
   window.addEventListener("popstate", () => {
+    if (teardownGame !== undefined) {
+      if (!confirm("Leave game? Your progress is saved — tap Resume on the home screen to continue.")) {
+        history.pushState(null, "", location.href);
+        return;
+      }
+    }
     const route = currentRoute();
     if (route === "leaderboard") { showLeaderboard(); return; }
     if (route === "past-games") { showPastGames(); return; }

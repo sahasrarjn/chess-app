@@ -19,7 +19,8 @@ export function renderHome(
   onStart: (opts: HomeStart) => void,
   onPlayOnline: (roomId?: string) => void,
   onPastGames: () => void = () => {},
-  onLeaderboard: () => void = () => {}
+  onLeaderboard: () => void = () => {},
+  onResume?: () => void
 ): void {
   let difficulty: BotDifficulty = "medium";
 
@@ -58,6 +59,13 @@ export function renderHome(
     home.appendChild(el("p", "elo-note", `Bot strength ≈ ${difficultyElo(difficulty)} ELO`));
 
     const actions = el("div", "home-actions");
+
+    if (onResume) {
+      const resumeBtn = el("button", "primary", "Resume Game");
+      resumeBtn.onclick = onResume;
+      actions.appendChild(resumeBtn);
+    }
+
     const botBtn = el("button", "primary", "Play vs Bot");
     botBtn.onclick = () => onStart({ mode: "vsBot", difficulty });
     actions.appendChild(botBtn);

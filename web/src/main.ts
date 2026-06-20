@@ -50,11 +50,13 @@ try {
   clearBootShell();
 
   let teardownGame: (() => void) | undefined;
+  let isLiveLocalGame = false;
 
   function startGame(opts: HomeStart): void {
     void import("./ui/gameView")
       .then(({ renderGame }) => {
         teardownGame?.();
+        isLiveLocalGame = true;
         teardownGame = renderGame(app, opts.mode, opts.difficulty, showHome);
       })
       .catch((err: unknown) => {
@@ -64,6 +66,7 @@ try {
   }
 
   function startOnline(roomId: string): void {
+    isLiveLocalGame = false;
     const url = new URL(location.href);
     url.searchParams.set("room", roomId);
     history.replaceState(null, "", url.toString());
@@ -79,6 +82,7 @@ try {
   }
 
   function showPastGames(): void {
+    isLiveLocalGame = false;
     history.pushState(null, "", "/past-games");
     void import("./ui/pastGamesView")
       .then(({ renderPastGames }) => {
@@ -92,6 +96,7 @@ try {
   }
 
   function showLeaderboard(): void {
+    isLiveLocalGame = false;
     history.pushState(null, "", "/leaderboard");
     void import("./ui/leaderboardView")
       .then(({ renderLeaderboard }) => {
@@ -105,6 +110,7 @@ try {
   }
 
   function showReplay(record: CompletedGameRecord): void {
+    isLiveLocalGame = false;
     void import("./ui/gameView")
       .then(({ renderReplay }) => {
         teardownGame?.();
@@ -124,6 +130,7 @@ try {
   }
 
   function showSignIn(): void {
+    isLiveLocalGame = false;
     teardownGame?.();
     teardownGame = undefined;
     if (currentRoute() !== "home") history.pushState(null, "", "/play/");
@@ -133,6 +140,7 @@ try {
   }
 
   function showHome(): void {
+    isLiveLocalGame = false;
     teardownGame?.();
     teardownGame = undefined;
     const url = new URL(location.href);
@@ -151,6 +159,7 @@ try {
           void import("./ui/gameView")
             .then(({ renderGame }) => {
               teardownGame?.();
+              isLiveLocalGame = true;
               teardownGame = renderGame(app, saved.mode, saved.botDifficulty, showHome, saved);
             })
             .catch((err: unknown) => {
@@ -165,7 +174,7 @@ try {
 
   // Handle browser back/forward
   window.addEventListener("popstate", () => {
-    if (teardownGame !== undefined) {
+    if (isLiveLocalGame) {
       if (!confirm("Leave game? Your progress is saved — tap Resume on the home screen to continue.")) {
         history.pushState(null, "", location.href);
         return;

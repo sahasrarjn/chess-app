@@ -1446,6 +1446,30 @@ select {
   padding: 8px 0;
 }
 
+/* History review banner: shown when browsing past moves in a live game */
+.history-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  background: color-mix(in srgb, var(--accent) 15%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 8px;
+  margin-top: 4px;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.history-banner-text {
+  color: var(--muted);
+}
+
+.history-banner-live {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
 /* Sign-in / onboarding screen */
 .signin-screen {
   display: flex;

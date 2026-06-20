@@ -68,6 +68,7 @@ class GameScreen {
   private forwardBtn!: HTMLButtonElement;
   private liveBtn!: HTMLButtonElement;
   private resignBtn!: HTMLButtonElement;
+  private historyBannerEl: HTMLElement | null = null;
   private promotionEl: HTMLElement | null = null;
   private gameOverEl: HTMLElement | null = null;
   private gameOverDismissed = false;
@@ -216,6 +217,11 @@ class GameScreen {
     this.statusSpinnerEl.setAttribute("aria-hidden", "true");
     this.statusEl.appendChild(this.statusSpinnerEl);
     statusWrap.appendChild(this.statusEl);
+    if (!this.replay) {
+      this.historyBannerEl = el("div", "history-banner");
+      this.historyBannerEl.hidden = true;
+      statusWrap.appendChild(this.historyBannerEl);
+    }
     top.appendChild(statusWrap);
     screen.appendChild(top);
 
@@ -338,6 +344,7 @@ class GameScreen {
     this.updateHintButton();
     this.updatePromotion();
     this.updateGameOver();
+    this.updateHistoryBanner();
   }
 
   private updateHintButton(): void {
@@ -382,6 +389,20 @@ class GameScreen {
   }
 
 
+  private updateHistoryBanner(): void {
+    if (!this.historyBannerEl || this.replay) return;
+    const ply = this.ctrl.previewPly;
+    this.historyBannerEl.hidden = ply === null;
+    if (ply !== null) {
+      this.historyBannerEl.replaceChildren();
+      const text = el("span", "history-banner-text", `Viewing move ${ply}`);
+      const btn = el("button", "primary history-banner-live", "Live ▶") as HTMLButtonElement;
+      btn.onclick = () => this.ctrl.returnToLive();
+      this.historyBannerEl.appendChild(text);
+      this.historyBannerEl.appendChild(btn);
+    }
+  }
+
   private updateControls(): void {
     const canBrowse = this.ctrl.canBrowseHistory;
     const viewPly = this.ctrl.previewPly ?? this.ctrl.livePly;
@@ -400,6 +421,7 @@ class GameScreen {
     this.retryBtn.hidden = !this.ctrl.canRetryBot;
     this.retryBtn.disabled = !this.ctrl.canRetryBot;
     this.liveBtn.disabled = this.ctrl.previewPly == null;
+    this.liveBtn.classList.toggle("primary", this.ctrl.previewPly !== null);
   }
 
   private updatePromotion(): void {

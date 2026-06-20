@@ -99,6 +99,13 @@ aws s3 cp static/index.html "s3://${BUCKET}/index.html" \
   --content-type "text/html; charset=utf-8" \
   --cache-control "$HTML_CACHE"
 
+if [[ -f static/board-preview.png ]]; then
+  aws s3 cp static/board-preview.png "s3://${BUCKET}/board-preview.png" \
+    --region "$REGION" \
+    --content-type "image/png" \
+    --cache-control "public, max-age=31536000, immutable"
+fi
+
 aws s3 cp static/privacy/index.html "s3://${BUCKET}/privacy/index.html" \
   --region "$REGION" \
   --content-type "text/html; charset=utf-8" \

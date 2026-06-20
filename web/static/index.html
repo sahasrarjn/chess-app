@@ -43,15 +43,12 @@
   .btn-primary { background: var(--accent); color: #04120d; }
   .btn-ghost { border-color: var(--border); color: var(--text); background: var(--surface); }
   .btn-soon { opacity: .55; cursor: default; pointer-events: none; }
-  .board {
-    aspect-ratio: 1; border-radius: 18px; overflow: hidden;
+  .board-preview {
+    width: 100%; aspect-ratio: 1; border-radius: 18px; overflow: hidden;
     border: 1px solid var(--border);
     box-shadow: 0 24px 80px rgba(0,0,0,.45);
-    display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr);
+    object-fit: cover;
   }
-  .sq.border { background: #1a3d32; }
-  .sq.light { background: var(--light); }
-  .sq.dark { background: var(--dark); }
   .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding-bottom: 48px; }
   @media (max-width: 640px) { .cards { grid-template-columns: 1fr; } }
   .card {
@@ -81,9 +78,7 @@
         <a class="btn btn-ghost" href="https://apps.apple.com/app/border-chess/id6774101655" target="_blank" rel="noopener">Get it on iPhone</a>
       </div>
     </div>
-    <div class="board" aria-hidden="true">
-      <div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq border"></div><div class="sq border"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq border"></div><div class="sq border"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq border"></div><div class="sq border"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq border"></div><div class="sq border"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq border"></div><div class="sq border"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq border"></div><div class="sq border"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq border"></div><div class="sq border"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq dark"></div><div class="sq light"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div><div class="sq border"></div>
-    </div>
+    <img src="/board-preview.png" alt="Border Chess game in progress" class="board-preview">
   </section>
 
   <section class="cards">

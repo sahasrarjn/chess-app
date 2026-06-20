@@ -9,7 +9,6 @@ import {
   type MoveClassification,
   type PositionEval,
 } from "./classify";
-import { explainMove } from "./explain";
 
 export interface ReviewedMove {
   ply: number; // 1-based, matches move list
@@ -166,23 +165,6 @@ export async function analyzeGameReview(
     if (beforeEval != null && afterEval != null) {
       classification = classifyMove(beforeEval, afterEval, mover);
       swing = computeSwing(beforeEval, afterEval, mover);
-      if (classification === "mistake" || classification === "blunder") {
-        const fenBefore = positions[i]?.fen ?? "";
-        try {
-          explanation = explainMove({
-            fen: fenBefore,
-            movePlayed: uci,
-            bestMoveUci: bestData.bestMoveUci,
-            pv: bestData.pv,
-            before: beforeEval,
-            after: afterEval,
-            classification,
-            mover,
-          });
-        } catch {
-          explanation = null;
-        }
-      }
     }
 
     reviewedMoves.push({

@@ -18,14 +18,10 @@ import {
   type BotDifficulty,
   type GameMode,
 } from "../engine/types";
-import { toFEN } from "../engine/fen";
 import { BoardView } from "./boardView";
 import { MoveListView } from "./moveListView";
 import { MuteButton } from "./muteButton";
 import { createSettingsButton, closeSettingsPanel } from "./settingsPanel";
-import { EvalBar } from "./evalBar";
-import { LiveCoach } from "../coach/liveCoach";
-import { loadCoachEnabled } from "../coach/coachSettings";
 import { analyzeGameReview, type ReviewResult } from "../coach/review";
 import type { MoveClassification } from "../coach/classify";
 import { moveUci } from "../engine/types";
@@ -88,14 +84,6 @@ class GameScreen {
   private muteBtn!: MuteButton;
   private hintBtn!: HTMLButtonElement;
   private readonly sound = new SoundPlayer();
-
-  // Coach fields
-  private readonly coach = new LiveCoach(() => this.updateCoach());
-  private readonly evalBar = new EvalBar();
-  private coachBannerEl: HTMLElement | null = null;
-  private hintWhyEl: HTMLElement | null = null;
-  private lastCoachPly = -1;
-  private lastFen = "";
 
   // Review fields
   private reviewResult: ReviewResult | null = null;
@@ -223,19 +211,11 @@ class GameScreen {
     this.statusSpinnerEl.setAttribute("aria-hidden", "true");
     this.statusEl.appendChild(this.statusSpinnerEl);
     statusWrap.appendChild(this.statusEl);
-    // Coach banner container (hidden initially)
-    this.coachBannerEl = el("div", "");
-    statusWrap.appendChild(this.coachBannerEl);
-    // Hint-why line
-    this.hintWhyEl = el("div", "hint-why");
-    this.hintWhyEl.hidden = true;
-    statusWrap.appendChild(this.hintWhyEl);
     top.appendChild(statusWrap);
     screen.appendChild(top);
 
-    const boardSlot = el("div", "game-board-slot game-board-slot--coach");
+    const boardSlot = el("div", "game-board-slot");
     boardSlot.appendChild(this.board.el);
-    boardSlot.appendChild(this.evalBar.el);
     screen.appendChild(boardSlot);
 
     const bottom = el("div", "game-bottom");
@@ -327,7 +307,6 @@ class GameScreen {
 
   destroy(): void {
     this.ctrl.dispose();
-    this.coach.dispose();
     this.reviewAbort?.abort();
     this.promotionEl?.remove();
     this.gameOverEl?.remove();
@@ -354,79 +333,6 @@ class GameScreen {
     this.updateHintButton();
     this.updatePromotion();
     this.updateGameOver();
-    this.updateLiveCoach();
-    this.updateCoach();
-  }
-
-  private updateLiveCoach(): void {
-    if (this.replay) return; // No live coach in replay mode
-
-    // Enable coach only in offline modes, when not in replay
-    const coachEnabled = loadCoachEnabled() && !this.replay;
-    this.coach.enabled = coachEnabled;
-
-    const livePly = this.ctrl.livePly;
-    // Only trigger analysis when live ply changed and not browsing history
-    if (livePly !== this.lastCoachPly && this.ctrl.previewPly == null) {
-      const recordedMoves = this.ctrl.game.recordedMoves;
-      const lastRecord = livePly > 0 ? recordedMoves[livePly - 1] : undefined;
-      const lastMove = lastRecord?.move ?? null;
-      const mover = lastRecord?.color ?? null;
-
-      // shouldClassify: localTwoPlayer always, vsBot only for white (player)
-      const shouldClassify =
-        this.mode === "localTwoPlayer" ? true : mover === "white";
-
-      this.coach.onPositionChanged(
-        this.ctrl.game,
-        livePly,
-        lastMove,
-        this.lastFen || null,
-        mover,
-        shouldClassify
-      );
-
-      this.lastFen = toFEN(this.ctrl.game);
-      this.lastCoachPly = livePly;
-    }
-  }
-
-  private updateCoach(): void {
-    if (!this.coachBannerEl || !this.hintWhyEl) return;
-
-    // Update eval bar
-    this.evalBar.update(this.coach.enabled ? this.coach.evalForBar : null);
-
-    // Update coach banner
-    const banner = this.coach.banner;
-    if (banner && this.coach.enabled) {
-      const bannerEl = el("div", `coach-banner coach-banner--${banner.classification}`);
-      const dot = el("span", "coach-banner-dot");
-      const text = el("span", "coach-banner-text", banner.text);
-      const dismiss = el("button", "coach-banner-dismiss", "×");
-      (dismiss as HTMLButtonElement).type = "button";
-      dismiss.addEventListener("click", () => this.coach.dismissBanner());
-      bannerEl.appendChild(dot);
-      bannerEl.appendChild(text);
-      bannerEl.appendChild(dismiss);
-      this.coachBannerEl.replaceChildren(bannerEl);
-    } else {
-      this.coachBannerEl.replaceChildren();
-    }
-
-    // Update hint-why line
-    const hintMove = this.ctrl.hintMove;
-    if (hintMove && this.coach.enabled && !this.replay) {
-      const why = this.coach.hintWhyText(this.ctrl.game, hintMove);
-      if (why) {
-        this.hintWhyEl.textContent = why;
-        this.hintWhyEl.hidden = false;
-      } else {
-        this.hintWhyEl.hidden = true;
-      }
-    } else {
-      this.hintWhyEl.hidden = true;
-    }
   }
 
   private updateHintButton(): void {
@@ -531,9 +437,6 @@ class GameScreen {
     this.removeGameOverOverlay();
     clearSavedGame();
     this.lastPersistKey = "";
-    this.coach.reset();
-    this.lastCoachPly = -1;
-    this.lastFen = "";
     this.ctrl.newGame();
     this.sound.unlock();
     this.sound.play("game-start");

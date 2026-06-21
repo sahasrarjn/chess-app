@@ -57,7 +57,7 @@ try {
       .then(({ renderGame }) => {
         teardownGame?.();
         isLiveLocalGame = true;
-        teardownGame = renderGame(app, opts.mode, opts.difficulty, showHome);
+        teardownGame = renderGame(app, opts.mode, opts.difficulty, showHomeScreen);
       })
       .catch((err: unknown) => {
         console.error(err);
@@ -139,7 +139,8 @@ try {
     });
   }
 
-  function showHome(): void {
+  // Always renders the home screen — used when the user explicitly navigates away from a game.
+  function showHomeScreen(): void {
     isLiveLocalGame = false;
     teardownGame?.();
     teardownGame = undefined;
@@ -148,34 +149,46 @@ try {
       url.searchParams.delete("room");
       history.replaceState(null, "", url.toString());
     }
-    // Navigate to /play/ when going home from a top-level route
     if (currentRoute() !== "home") {
       history.pushState(null, "", "/play/");
     }
+    renderHome(app, startGame, (roomId) => startOnline(roomId ?? newRoomId()), showPastGames, showLeaderboard);
+  }
 
+  // Auto-resumes a saved game if one exists; otherwise shows the home screen.
+  function showHome(): void {
     const saved = loadSavedGame();
-    const onResume = saved
-      ? () => {
-          void import("./ui/gameView")
-            .then(({ renderGame }) => {
-              teardownGame?.();
-              isLiveLocalGame = true;
-              teardownGame = renderGame(app, saved.mode, saved.botDifficulty, showHome, saved);
-            })
-            .catch((err: unknown) => {
-              console.error(err);
-              showBootError("Could not resume the game. Try reloading the page.");
-            });
-        }
-      : undefined;
-
-    renderHome(app, startGame, (roomId) => startOnline(roomId ?? newRoomId()), showPastGames, showLeaderboard, onResume);
+    if (saved) {
+      isLiveLocalGame = false;
+      teardownGame?.();
+      teardownGame = undefined;
+      const url = new URL(location.href);
+      if (url.searchParams.has("room")) {
+        url.searchParams.delete("room");
+        history.replaceState(null, "", url.toString());
+      }
+      if (currentRoute() !== "home") {
+        history.pushState(null, "", "/play/");
+      }
+      void import("./ui/gameView")
+        .then(({ renderGame }) => {
+          teardownGame?.();
+          isLiveLocalGame = true;
+          teardownGame = renderGame(app, saved.mode, saved.botDifficulty, showHomeScreen, saved);
+        })
+        .catch((err: unknown) => {
+          console.error(err);
+          showHomeScreen();
+        });
+      return;
+    }
+    showHomeScreen();
   }
 
   // Handle browser back/forward
   window.addEventListener("popstate", () => {
     if (isLiveLocalGame) {
-      if (!confirm("Leave game? Your progress is saved — tap Resume on the home screen to continue.")) {
+      if (!confirm("Leave game? Your progress is saved and will resume automatically next time.")) {
         history.pushState(null, "", location.href);
         return;
       }
@@ -199,19 +212,7 @@ try {
     } else if (needsSignIn()) {
       showSignIn();
     } else {
-      const saved = loadSavedGame();
-      if (saved) {
-        void import("./ui/gameView")
-          .then(({ renderGame }) => {
-            teardownGame = renderGame(app, saved.mode, saved.botDifficulty, showHome, saved);
-          })
-          .catch((err: unknown) => {
-            console.error(err);
-            showHome();
-          });
-      } else {
-        showHome();
-      }
+      showHome();
     }
   }
 } catch (err: unknown) {

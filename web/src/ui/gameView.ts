@@ -161,7 +161,7 @@ class GameScreen {
     const back = el("button", "back", "← Back");
     back.onclick = () => {
       if (!this.replay && this.ctrl.game.result.type === "ongoing") {
-        if (!confirm("Leave game? Your progress is saved — tap Resume on the home screen to continue.")) return;
+        if (!confirm("Leave game? Your progress is saved and will resume automatically next time.")) return;
       }
       this.onBack();
     };

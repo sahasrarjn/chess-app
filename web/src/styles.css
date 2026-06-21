@@ -1447,6 +1447,10 @@ select {
 }
 
 /* History review banner: shown when browsing past moves in a live game */
+.history-banner[hidden] {
+  display: none;
+}
+
 .history-banner {
   display: flex;
   align-items: center;
